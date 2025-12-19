@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Featured Packages - TravelFin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#0EA5E9',
+                        accent: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header Component -->
+    <custom-header></custom-header>
+
+    <main class="pt-20">
+        <!-- Featured Packages -->
+        <section id="packages" class="py-16 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center mb-10">
+                    <h2 class="text-3xl font-bold">🔥 Popular Packages This Week</h2>
+                    <a href="#" class="text-primary font-semibold">View All</a>
+                </div>
+
+                <!-- Filters -->
+                <div id="package-filters" class="bg-white p-4 rounded-lg shadow mb-8">
+                    <div class="flex flex-wrap gap-3">
+                        <select id="filter-destination" class="bg-gray-100 border-0 rounded-lg px-4 py-2">
+                            <option>All Destinations</option>
+                            <option>Bali</option>
+                            <option>Japan</option>
+                            <option>Europe</option>
+                            <option>Singapore</option>
+                        </select>
+                        <select id="filter-budget" class="bg-gray-100 border-0 rounded-lg px-4 py-2">
+                            <option value="all">Any Budget</option>
+                            <option value="0-5000000">Under 5M</option>
+                            <option value="5000000-10000000">5M - 10M</option>
+                            <option value="10000000-999999999">10M+</option>
+                        </select>
+                        <select id="filter-duration" class="bg-gray-100 border-0 rounded-lg px-4 py-2">
+                            <option value="all">Any Duration</option>
+                            <option value="1-7">3-7 Days</option>
+                            <option value="8-99">1 Week+</option>
+                        </select>
+                        <select id="filter-sort" class="bg-gray-100 border-0 rounded-lg px-4 py-2">
+                            <option value="popular">Sort By: Popular</option>
+                            <option value="price-asc">Price: Low to High</option>
+                            <option value="price-desc">Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Package Grid -->
+                <div id="package-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Package 1 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-red-200" data-destination="Bali" data-price="3450000" data-duration="4" data-popularity="12">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1938&auto=format&fit=crop" alt="Bali Package" class="w-full h-48 object-cover">
+                            <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">Hot Deal</span>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Bali - 4D3N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 3,450,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 575,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">12 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 2 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Japan" data-price="8900000" data-duration="5" data-popularity="8">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?q=80&w=2070&auto=format&fit=crop" alt="Japan Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Japan - 5D4N</h3>
+                                    <p class="text-gray-600 text-sm">3-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 8,900,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 1,483,333/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">8 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 3 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-blue-200" data-destination="Europe" data-price="25000000" data-duration="10" data-popularity="5">
+                        <div class="relative">
+                            <img src="https://www.trvme.com/img/tours/austria-honeymoon-im2.jpg" alt="Europe Package" class="w-full h-48 object-cover">
+                            <span class="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">Group Discount</span>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Europe - 10D9N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotels + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 25,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 2,083,333/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 30%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">5 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 4 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://img.inews.co.id/files/inews_new/2022/09/19/tips_berlibur_ke_singapura_lebih_hemat.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Singapore - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,500,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 90%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">10 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 5 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.tripsavvy.com/thmb/7iT5AHIS7N-xq4SauTuixASKX2g=/960x0/filters:no_upscale():max_bytes(150000):strip_icc()/malaysia-travel-583d01ac5f9b58d5b13cec0d.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Kuala Lumpur - 2D1N</h3>
+                                    <p class="text-gray-600 text-sm">3-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 2,500,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 208,500/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">25 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 6 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.travelladda.com/package/New_delhi_tr.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">New Delhi - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,500,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 700,500/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 80%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">7 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package 7 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.tripsavvy.com/thmb/qFqPcg6Wo24Hu4fLokNfAZdC-xQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/fuji-mountain-in-autumn-822273028-5a6a8a9c3418c600363958d3.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Moun Fuji - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,750,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 750,500/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">8 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 8 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://jw-webmagazine.com/wp-content/uploads/2019/07/jw-5d1f16749768f5.10952725.jpeg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Shinjiku - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 3,750,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 550,500/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 67%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">5 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 9 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://tse2.mm.bing.net/th/id/OIP.ZM4vBmdsOC8sZWZvIMFB0gHaFj?cb=ucfimg2&ucfimg=1&rs=1&pid=ImgDetMain&o=7&rm=3" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Tokyo Disneland - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,250,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 700,500/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 35%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">9 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 10 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.shoreexcursions.asia/wp-content/uploads/2018/06/Arashiyama-Bamboo-Forest.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Arashiyama Bamboo Forest - 2D1N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 700,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 55%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">10 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 11 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://media.tacdn.com/media/attractions-splice-spp-360x240/07/0e/d4/7c.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Mutianyu Gread Wall - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,600,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 720,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 88%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">14 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 12 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0b/58/93/1e/sultan-omar-ali-saifuddin.jpg?w=1000&h=600&s=1" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Burnei Darusalam - 5D4N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 18,600,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 1,720,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 33%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">14 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 13 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://tourkekorea.net/wp-content/uploads/2018/08/Itaewon-Tempat-Belanja-Turis-dan-Pusat-Muslim-di-Korea.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Itaewon - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 5,600,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 98%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">8 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 14 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://thumbs.dreamstime.com/b/chongqing-skyline-night-bridge-hongyadong-cave-china-june-171195158.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Chongqing - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">5-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 6,600,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 40%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">9 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 15 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://img.traveltriangle.com/blog/wp-content/uploads/2019/12/Beijing-TTD-1.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Beijing - 7D6N</h3>
+                                    <p class="text-gray-600 text-sm">5-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 25,600,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 2,750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 40%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">20 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 16 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://wallpaperaccess.com/full/5688418.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Turki - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 4,500,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">7 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                    <!-- Package 17 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://live.staticflickr.com/4672/26708542578_ff91054705_b.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Zermatt - 10D9N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 30,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 2.750,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">7 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+
+                    <!-- Package 18 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://i0.wp.com/pamitrantours.com/wp-content/uploads/2020/01/Jakarta.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Jakarta - 5D4N</h3>
+                                    <p class="text-gray-600 text-sm">5-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 5,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 400,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 33%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">10 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+
+                    <!-- Package 19 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.agoda.com/wp-content/uploads/2024/04/Featured-image-Dubai-UAE.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Dubai - 3D2N</h3>
+                                    <p class="text-gray-600 text-sm">3-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">3% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 45,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 2.500,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 97%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">9 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+
+                    <!-- Package 20 -->
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Singapore" data-price="4500000" data-duration="3" data-popularity="10">
+                        <div class="relative">
+                            <img src="https://www.addictionresource.net/wp-content/uploads/2019/08/new-york-city-drug-rehab-options.jpg" alt="Singapore Package" class="w-full h-48 object-cover">
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">New York - 4D3N</h3>
+                                    <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">7% Installment</span>
+                            </div>
+                            
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 12,000,000</p>
+                                <p class="text-gray-600 text-sm">Installment: Rp 2,000,000/month</p>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full" style="width: 69%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">12 people saving for this package</p>
+                            </div>
+                            
+                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div> 
+                    
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Component -->
+    <custom-footer></custom-footer>
+
+    <!-- Scripts -->
+    <script src="components/header.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>

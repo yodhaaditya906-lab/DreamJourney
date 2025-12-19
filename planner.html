@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Planner - TravelFin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#0EA5E9',
+                        accent: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header Component -->
+    <custom-header></custom-header>
+
+    <main class="pt-20">
+        <!-- Trip Planner -->
+        <section id="planner" class="py-16 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-10 text-center">🎨 Design Your Dream Vacation</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Steps -->
+                    <div class="space-y-8">
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0">1</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Choose Destination</h3>
+                                <p class="text-gray-600">Select from our worldwide destinations or create a multi-city itinerary</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0">2</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Set Budget</h3>
+                                <p class="text-gray-600">Adjust your budget allocation for flights, hotels, activities and dining</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0">3</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Select Dates</h3>
+                                <p class="text-gray-600">Pick your travel dates with seasonal price recommendations</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0">4</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Payment Options</h3>
+                                <p class="text-gray-600">Choose to pay upfront, in installments, or start a savings plan</p>
+                            </div>
+                        </div>
+                        
+                        <button class="mt-6 bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold">
+                            Start Designing Your Trip
+                        </button>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <div class="relative h-64 mb-4 rounded-lg overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop" alt="Trip Preview" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
+                            <div class="absolute bottom-4 left-4 text-white">
+                                <h3 class="font-bold text-xl">Family Trip to Italy</h3>
+                                <p>Rome, Florence, Venice - 10 Days</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="text-center">
+                                <div class="text-primary font-bold text-xl">Rp 45,000,000</div>
+                                <div class="text-gray-600 text-sm">Total Budget</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-secondary font-bold text-xl">June 2024</div>
+                                <div class="text-gray-600 text-sm">Travel Date</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-accent font-bold text-xl">4 People</div>
+                                <div class="text-gray-600 text-sm">Travelers</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="font-bold mb-2">Budget Breakdown</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span>Flights</span>
+                                    <span class="font-semibold">Rp 18,000,000</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Hotels</span>
+                                    <span class="font-semibold">Rp 15,000,000</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Activities</span>
+                                    <span class="font-semibold">Rp 7,000,000</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Dining</span>
+                                    <span class="font-semibold">Rp 5,000,000</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-bold mb-2">Payment Options</h4>
+                            <div class="space-y-3 text-sm">
+                                <label class="flex items-center">
+                                    <input type="radio" name="payment" class="mr-2" checked>
+                                    <span>Full Payment (Rp 45,000,000)</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="payment" class="mr-2">
+                                    <span>Installment (Rp 1,416,667/month for 6 months)</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="payment" class="mr-2">
+                                    <span>Savings Plan (Save Rp 1,875,000/month for 24 months)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Component -->
+    <custom-footer></custom-footer>
+
+    <!-- Scripts -->
+    <script src="components/header.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community - TravelFin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#0EA5E9',
+                        accent: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header Component -->
+    <custom-header></custom-header>
+
+    <main class="pt-20">
+        <!-- Community Section -->
+        <section id="community" class="py-16 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-10 text-center">👥 Community Saving Together</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Member 1 -->
+                    <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+                        <div class="flex items-center mb-4">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full mr-4 object-cover">
+                            <div>
+                                <h3 class="font-bold">Andi (28)</h3>
+                                <p class="text-gray-600 text-sm">Jakarta</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-800 mb-1">🎯 Target: Japan Cherry Blossom 2024</p>
+                            <p class="text-gray-600 text-sm">💰 Need: Rp 25,000,000</p>
+                            <p class="text-gray-600 text-sm">📅 Deadline: 8 months left</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">75% complete</p>
+                        </div>
+                        
+                        <p class="text-gray-700 italic mb-4">"3 months to go! Can't wait to see the sakura!"</p>
+                        
+                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-sm">
+                            Cheer! (24 cheers)
+                        </button>
+                    </div>
+                    
+                    <!-- Member 2 -->
+                    <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+                        <div class="flex items-center mb-4">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1887&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full mr-4 object-cover">
+                            <div>
+                                <h3 class="font-bold">Sarah (32)</h3>
+                                <p class="text-gray-600 text-sm">Bandung</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-800 mb-1">🎯 Target: Europe Summer 2024</p>
+                            <p class="text-gray-600 text-sm">💰 Need: Rp 40,000,000</p>
+                            <p class="text-gray-600 text-sm">📅 Deadline: 12 months left</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 30%"></div>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">30% complete</p>
+                        </div>
+                        
+                        <p class="text-gray-700 italic mb-4">"Saving with my husband for our 5th anniversary trip!"</p>
+                        
+                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-sm">
+                            Cheer! (42 cheers)
+                        </button>
+                    </div>
+                    
+                    <!-- Member 3 -->
+                    <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+                        <div class="flex items-center mb-4">
+                            <img src="https://images.unsplash.com/photo-1552058544-f2b08422138a?q=80&w=1899&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full mr-4 object-cover">
+                            <div>
+                                <h3 class="font-bold">Budi (25)</h3>
+                                <p class="text-gray-600 text-sm">Surabaya</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-gray-800 mb-1">🎯 Target: Bali Solo Trip</p>
+                            <p class="text-gray-600 text-sm">💰 Need: Rp 5,000,000</p>
+                            <p class="text-gray-600 text-sm">📅 Deadline: 2 months left</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 90%"></div>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">90% complete</p>
+                        </div>
+                        
+                        <p class="text-gray-700 italic mb-4">"Almost there! First solo trip ever!"</p>
+                        
+                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold text-sm">
+                            Cheer! (15 cheers)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-10 text-center">
+                    <button class="bg-white border border-primary text-primary hover:bg-primary hover:text-white px-6 py-3 rounded-lg font-semibold transition">
+                        Join the Community
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Component -->
+    <custom-footer></custom-footer>
+
+    <!-- Scripts -->
+    <script src="components/header.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>

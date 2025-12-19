@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holiday Loan - TravelFin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#0EA5E9',
+                        accent: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header Component -->
+    <custom-header></custom-header>
+
+    <main class="pt-20">
+        <!-- Holiday Loan -->
+        <section id="loan" class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-10 text-center">🚀 Instant Holiday Funds - Approved in 24 Hours</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <!-- Form -->
+                    <div class="bg-gray-50 p-8 rounded-xl">
+                        <h3 class="font-bold text-xl mb-6">Loan Calculator</h3>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Loan Purpose</label>
+                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                    <option>Bali Vacation</option>
+                                    <option>Honeymoon</option>
+                                    <option>Family Trip</option>
+                                    <option>Business Travel</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Loan Amount (Rp)</label>
+                                <input type="range" min="5000000" max="100000000" step="1000000" value="10000000" class="w-full mb-2">
+                                <div class="flex justify-between text-sm text-gray-600">
+                                    <span>5,000,000</span>
+                                    <span>100,000,000</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Tenor (Months)</label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button class="bg-primary text-white py-2 rounded-lg">6</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 py-2 rounded-lg">12</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 py-2 rounded-lg">18</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 py-2 rounded-lg">24</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <h4 class="font-bold mb-3">Loan Summary</h4>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between">
+                                        <span>Monthly Payment</span>
+                                        <span class="font-semibold">Rp 1,750,000</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Interest Rate</span>
+                                        <span class="font-semibold">0.8% per month</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Total Repayment</span>
+                                        <span class="font-semibold">Rp 10,500,000</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button class="w-full bg-accent hover:bg-accent-dark text-white py-3 rounded-lg font-semibold">
+                                Apply for Loan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Benefits -->
+                    <div>
+                        <h3 class="font-bold text-xl mb-6">Why Choose Our Holiday Loan?</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">100% Online Process</h4>
+                                    <p class="text-gray-600">Complete your application digitally without paperwork</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">No Collateral Needed</h4>
+                                    <p class="text-gray-600">For loans up to Rp 50,000,000 with good credit</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">Low Interest Rates</h4>
+                                    <p class="text-gray-600">Starting from 0.8% per month (9.6% per year)</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">Instant Disbursement</h4>
+                                    <p class="text-gray-600">Funds transferred to your TravelFin Wallet within 24 hours</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div class="flex items-start">
+                                <div class="mr-4">
+                                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1887&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                </div>
+                                <div>
+                                    <p class="italic">"Borrowed 10 million, approved the next day! Booked my Japan trip immediately."</p>
+                                    <p class="font-semibold mt-2">- Rina, 29</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-green-50 p-4 rounded-lg border border-green-200">
+                            <div class="flex items-start">
+                                <div class="mr-4">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1888&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                </div>
+                                <div>
+                                    <p class="italic">"Prosesnya cepat dan 100% online. Sangat membantu untuk menutupi kekurangan dana liburan keluarga."</p>
+                                    <p class="font-semibold mt-2">- Budi, 35</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Component -->
+    <custom-footer></custom-footer>
+
+    <!-- Scripts -->
+    <script src="components/header.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>
