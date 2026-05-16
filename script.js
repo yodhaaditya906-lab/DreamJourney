@@ -34,52 +34,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         slider.addEventListener('input', () => {
             output.textContent = formatCurrency(slider.value);
-            // Update loan calculations if this is the loan slider
-            if (slider.closest('#loan')) {
-                updateLoanCalculation();
-            }
         });
     });
-    
-    // Loan calculation function
-    function updateLoanCalculation() {
-        const loanAmount = document.querySelector('#loan input[type="range"]').value;
-        const tenor = document.querySelector('#loan button.bg-primary')?.textContent || '6';
-        
-        // Simple interest calculation (for demo purposes)
-        const interestRate = 0.008; // 0.8% per month
-        const totalInterest = loanAmount * interestRate * tenor;
-        const totalRepayment = parseInt(loanAmount) + parseInt(totalInterest);
-        const monthlyPayment = Math.round(totalRepayment / tenor);
-        
-        // Update display
-        document.querySelectorAll('#loan .font-semibold')[0].textContent = formatCurrency(monthlyPayment);
-        document.querySelectorAll('#loan .font-semibold')[1].textContent = `${interestRate*100}% per month`;
-        document.querySelectorAll('#loan .font-semibold')[2].textContent = formatCurrency(totalRepayment);
-    }
     
     // Format currency helper
     function formatCurrency(amount) {
         return 'Rp ' + parseInt(amount).toLocaleString('id-ID');
-    }
-    
-    // Initialize loan calculation
-    if (document.getElementById('loan')) {
-        updateLoanCalculation();
-        
-        // Tenor selection
-        const tenorButtons = document.querySelectorAll('#loan button:not(.bg-primary)');
-        tenorButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                document.querySelector('#loan button.bg-primary')?.classList.remove('bg-primary', 'text-white');
-                document.querySelector('#loan button.bg-primary')?.classList.add('bg-gray-200', 'hover:bg-gray-300');
-                
-                button.classList.remove('bg-gray-200', 'hover:bg-gray-300');
-                button.classList.add('bg-primary', 'text-white');
-                
-                updateLoanCalculation();
-            });
-        });
     }
     
     // Mobile menu toggle
@@ -166,5 +126,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event listener to all filter selects
         filterSelects.forEach(select => select.addEventListener('change', filterAndSortPackages));
+    }
+
+    // Payment method toggle for design-trip.html
+    const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
+    const cashDetails = document.getElementById('cash-details');
+    const cashlessDetails = document.getElementById('cashless-details');
+
+    if (paymentRadios.length > 0 && cashDetails && cashlessDetails) {
+        paymentRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'cash') {
+                    cashDetails.classList.remove('hidden');
+                    cashlessDetails.classList.add('hidden');
+                } else {
+                    cashDetails.classList.add('hidden');
+                    cashlessDetails.classList.remove('hidden');
+                }
+            });
+        });
     }
 });
