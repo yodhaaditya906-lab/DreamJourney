@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Your Journey - DreamJourney</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#0EA5E9',
+                        accent: '#10B981',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <custom-header></custom-header>
+
+    <main class="pt-24 pb-16">
+        <div class="container mx-auto px-4 max-w-2xl">
+            <h2 class="text-3xl font-bold mb-8 text-center text-primary">Design Your Journey</h2>
+            
+            <form id="design-trip-form" class="bg-white p-8 rounded-xl shadow-lg space-y-10">
+                <!-- Step 1: Choose Destination -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
+                        <h3 class="text-xl font-bold">Choose Destination</h3>
+                    </div>
+                    <input type="text" placeholder="Where do you want to go? (e.g., Paris, Tokyo)" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary outline-none">
+                </div>
+
+                <!-- Step 2: Set Budget -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
+                        <h3 class="text-xl font-bold">Set Budget</h3>
+                    </div>
+                    <label class="block text-gray-600 text-sm">Adjust your total trip budget</label>
+                    <input type="range" min="1000000" max="100000000" step="1000000" value="10000000" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Rp 1.000.000</span>
+                        <span>Rp 100.000.000</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Select Dates -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
+                        <h3 class="text-xl font-bold">Select Dates</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Departure Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Return Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Payment Options -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">4</span>
+                        <h3 class="text-xl font-bold">Payment Options</h3>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="payment-method" value="cash" class="w-4 h-4 text-primary" checked>
+                                <span class="font-medium">Cash (Lentera)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="payment-method" value="cashless" class="w-4 h-4 text-primary">
+                                <span class="font-medium">Cashless</span>
+                            </label>
+                        </div>
+
+                        <!-- Cash Fields -->
+                        <div id="cash-details" class="space-y-3 p-4 bg-gray-50 rounded-lg">
+                            <label class="block text-gray-700 font-medium">ID Lentera</label>
+                            <input type="text" placeholder="Masukkan ID Lentera Anda" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none">
+                        </div>
+
+                        <!-- Cashless Fields -->
+                        <div id="cashless-details" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-1">Pilih Bank / E-Wallet</label>
+                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none">
+                                    <option>BCA</option>
+                                    <option>Mandiri</option>
+                                    <option>GOPAY</option>
+                                    <option>OVO</option>
+                                    <option>DANA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-1">Nomor Rekening / Nomor E-Wallet</label>
+                                <input type="text" placeholder="Masukkan nomor akun" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-gray-100 text-center">
+                    <button type="submit" class="w-full bg-accent hover:bg-accent-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg transition">
+                        Confirm Journey Design
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <custom-footer></custom-footer>
+    <script src="header.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>
