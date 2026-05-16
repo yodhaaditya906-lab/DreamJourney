@@ -12,7 +12,6 @@ class CustomHeader extends HTMLElement {
                         <a href="index.html" class="text-gray-600 hover:text-primary font-medium transition">Home</a>
                         <a href="packages.html" class="text-gray-600 hover:text-primary font-medium transition">Packages</a>
                         <a href="planner.html" class="text-gray-600 hover:text-primary font-medium transition">Planner</a>
-                        <a href="loan.html" class="text-gray-600 hover:text-primary font-medium transition">Loan</a>
                         <a href="community.html" class="text-gray-600 hover:text-primary font-medium transition">Community</a>
                     </nav>
 
