@@ -113,16 +113,61 @@
                 <!-- JAVASCRIPT LOGIC -->
                 <script>
                     document.addEventListener("DOMContentLoaded", function () {
-                        const inputs = document.querySelectorAll('.filter-input');
+                        // Objek Element Filter
+                        const filterTimeRange = document.getElementById('filter-time-range');
+                        const filterOriginCity = document.getElementById('filter-kota-asal');
+                        const filterDestCity = document.getElementById('filter-kota-tujuan');
                         const priceSlider = document.getElementById('filter-price-range');
+                        
+                        // Objek Element UI Pendukung
                         const priceValueText = document.getElementById('price-value');
                         const priceContainer = document.querySelector('.filter-box-range');
                         const btnReset = document.getElementById('btn-reset-filter');
                         
-                        const initialPrice = "10000"; // Start position from 10.000
+                        const initialPrice = "10000"; // Batas bawah harga awal (Rp 10.000)
                 
-                        // Function to handle layout color shifts on selection
-                        function handleInputChange(element) {
+                        // 1. FUNGSI UTAMA FILTERING PAKET
+                        function filterPackages() {
+                            // Ambil nilai input filter saat ini
+                            const selectedTime = filterTimeRange.value;
+                            const selectedOrigin = filterOriginCity.value.toLowerCase().trim();
+                            const selectedDest = filterDestCity.value.toLowerCase().trim();
+                            const maxPrice = parseInt(priceSlider.value);
+                
+                            // Ambil seluruh komponen kartu paket wisata di bawah
+                            const packageItems = document.querySelectorAll('.package-item');
+                
+                            packageItems.forEach(item => {
+                                // Baca nilai atribut data dari masing-masing paket
+                                const itemTime = item.getAttribute('data-time');
+                                const itemOrigin = item.getAttribute('data-origin').toLowerCase().trim();
+                                const itemDestination = item.getAttribute('data-destination').toLowerCase().trim();
+                                const itemPrice = parseInt(item.getAttribute('data-price'));
+                
+                                // Logika Evaluasi Filter (Jika kosong/default dianggap COCOK)
+                                const matchesTime = (selectedTime === "" || itemTime === selectedTime);
+                                const matchesOrigin = (selectedOrigin === "" || itemOrigin === selectedOrigin);
+                                
+                                // Menggunakan 'includes' agar pengguna bisa mencari secara bebas berbasis teks (Essay Search)
+                                const matchesDest = (selectedDest === "" || itemDestination.includes(selectedDest));
+                                
+                                // Memastikan harga paket di bawah atau sama dengan batas slider harga saat ini
+                                // Jika slider di posisi 10.000, kita ubah logikanya: jika di posisi paling awal, tampilkan semua, atau filter ketat. 
+                                // Idealnya: harga paket harus <= batas maxPrice di slider, atau jika slider bernilai awal (10.000), tampilkan semua kecuali jika user memang membatasi.
+                                // Supaya user friendly, jika slider diset 10.000 (paling kiri), kita asumsikan batas maksimal adalah tidak terbatas/tampilkan semua.
+                                const matchesPrice = (maxPrice === parseInt(initialPrice) || itemPrice <= maxPrice);
+                
+                                // Eksekusi Tampilan: Jika lolos semua kriteria, tampilkan kartu. Jika tidak, sembunyikan.
+                                if (matchesTime && matchesOrigin && matchesDest && matchesPrice) {
+                                    item.classList.remove('hidden');
+                                } else {
+                                    item.classList.add('hidden');
+                                }
+                            });
+                        }
+                
+                        // 2. FUNGSI INTERAKSI PERUBAHAN WARNA KOTAK FILTER
+                        function handleStyleChange(element) {
                             if (element.value !== "") {
                                 element.classList.remove('bg-gray-100', 'border-transparent');
                                 element.classList.add('bg-blue-50', 'border-blue-500', 'text-blue-700', 'font-medium');
@@ -130,15 +175,18 @@
                                 element.classList.remove('bg-blue-50', 'border-blue-500', 'text-blue-700', 'font-medium');
                                 element.classList.add('bg-gray-100', 'border-transparent');
                             }
+                            // Jalankan pencarian setiap kali input berubah
+                            filterPackages();
                         }
                 
-                        // Event detection for text changes
-                        inputs.forEach(input => {
-                            input.addEventListener('input', () => handleInputChange(input));
-                            input.addEventListener('change', () => handleInputChange(input));
+                        // Event Listener untuk Dropdown dan Pencarian Esai (Destination City)
+                        const textInputs = [filterTimeRange, filterOriginCity, filterDestCity];
+                        textInputs.forEach(input => {
+                            input.addEventListener('input', () => handleStyleChange(input));
+                            input.addEventListener('change', () => handleStyleChange(input));
                         });
                 
-                        // Dynamic currency format for price slider
+                        // Event Listener untuk Slider Rentang Harga
                         priceSlider.addEventListener('input', function () {
                             let formattedValue = new Intl.NumberFormat('id-ID').format(this.value);
                             priceValueText.innerText = "Rp " + formattedValue;
@@ -150,26 +198,29 @@
                                 priceContainer.classList.remove('bg-blue-50', 'border-blue-500');
                                 priceContainer.classList.add('bg-gray-100', 'border-transparent');
                             }
+                            // Jalankan pencarian setiap kali slider digeser
+                            filterPackages();
                         });
                 
-                        // RESET BUTTON LOGIC (X BUTTON)
+                        // 3. LOGIKA BUTTON RESET (X)
                         btnReset.addEventListener('click', function() {
-                            // 1. Reset dropdowns and input fields
-                            inputs.forEach(input => {
+                            // Kembalikan semua input teks/dropdown ke kosong
+                            textInputs.forEach(input => {
                                 input.value = "";
-                                handleInputChange(input);
+                                handleStyleChange(input);
                             });
                 
-                            // 2. Reset price slider back to 10.000
+                            // Kembalikan slider harga ke posisi 10.000
                             priceSlider.value = initialPrice;
                             let formattedPrice = new Intl.NumberFormat('id-ID').format(initialPrice);
                             priceValueText.innerText = "Rp " + formattedPrice;
                             
-                            // Revert slider box wrapper color
                             priceContainer.classList.remove('bg-blue-50', 'border-blue-500');
                             priceContainer.classList.add('bg-gray-100', 'border-transparent');
                             
-                            console.log("All active filters cleared successfully.");
+                            // Panggil ulang fungsi filter agar semua paket muncul kembali
+                            filterPackages();
+                            console.log("Filters successfully reset.");
                         });
                     });
                 </script>
@@ -177,9 +228,12 @@
             
 
                 <!-- Package Grid -->
-                <div id="package-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Package 1 -->
-                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-red-200" data-destination="Bali" data-price="3450000" data-duration="4" data-popularity="12">
+                <div id="packages-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-gray-100" 
+                         data-time="Week 1-Week 4" 
+                         data-origin="Jakarta" 
+                         data-destination="Bali" 
+                         data-price="3450000">
                         <div class="relative">
                             <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1938&auto=format&fit=crop" alt="Bali Package" class="w-full h-48 object-cover">
                             <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">Hot Deal</span>
@@ -187,30 +241,62 @@
                         <div class="p-5">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h3 class="font-bold text-lg">Bali - 4D3N</h3>
+                                    <h3 class="font-bold text-lg">Bali Escape - 4D3N</h3>
                                     <p class="text-gray-600 text-sm">4-star Hotel + Breakfast</p>
                                 </div>
                                 <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
                             </div>
-                            
                             <div class="my-4">
                                 <p class="text-gray-800 font-bold">Rp 19,166/days</p>
                                 <p class="text-gray-600 text-sm">Price: Rp 3,450,000</p>
-                                <p class="text-gray-600 text-sm">Countdowun: 181 days</p>
+                                <p class="text-gray-600 text-sm">Countdown: 181 days</p>
                             </div>
-                            
                             <div class="mb-4">
                                 <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 75%"></div>
                                 </div>
                                 <p class="text-xs text-gray-600 mt-1">12 people saving for this package</p>
                             </div>
-                            
-                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg font-semibold">
+                            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition">
                                 Start Saving
                             </button>
                         </div>
                     </div>
+                
+                    <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border border-gray-100" 
+                         data-time="30 day" 
+                         data-origin="Bandung" 
+                         data-destination="Lombok" 
+                         data-price="5500000">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=1920&auto=format&fit=crop" alt="Lombok Package" class="w-full h-48 object-cover">
+                            <span class="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">Best Seller</span>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">Lombok Gili - 5D4N</h3>
+                                    <p class="text-gray-600 text-sm">Resort + Tour Guide</p>
+                                </div>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">0% Installment</span>
+                            </div>
+                            <div class="my-4">
+                                <p class="text-gray-800 font-bold">Rp 30,555/days</p>
+                                <p class="text-gray-600 text-sm">Price: Rp 5,500,000</p>
+                                <p class="text-gray-600 text-sm">Countdown: 180 days</p>
+                            </div>
+                            <div class="mb-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 40%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">8 people saving for this package</p>
+                            </div>
+                            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition">
+                                Start Saving
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                     <!-- Package 2 -->
                     <div class="package-item bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition" data-destination="Japan" data-price="8900000" data-duration="5" data-popularity="8">
