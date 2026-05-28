@@ -38,7 +38,8 @@
                 <!-- Filters -->
                <!-- Container Filters -->
                 <div id="package-filters" class="bg-white p-6 rounded-lg shadow-md mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <!-- Grid diubah menjadi 5 kolom di desktop untuk menampung tombol reset -->
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         
                         <!-- 1. FILTER TIME RANGE -->
                         <div class="flex flex-col gap-1">
@@ -89,7 +90,6 @@
                                 <label>Price Range</label>
                                 <span id="price-value" class="text-blue-600 font-bold">Rp 1.000.000</span>
                             </div>
-                            <!-- Nilai Max disesuaikan jadi 10.000.000 agar sinkron dengan teks bawahnya -->
                             <input type="range" id="filter-price-range" min="10000" max="10000000" step="10000" value="1000000" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
                             <div class="flex justify-between text-xs text-gray-500 mt-1">
                                 <span>10.000</span>
@@ -97,13 +97,32 @@
                             </div>
                         </div>  
                 
+                        <!-- 5. TOMBOL HAPUS SEMUA FILTER -->
+                        <div class="flex flex-col">
+                            <button type="button" id="btn-reset-filter" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 font-medium rounded-lg px-4 py-2.5 text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
+                                <!-- Icon Trash / Tempat Sampah SVG -->
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                                Hapus Filter
+                            </button>
+                        </div>
+                
                     </div>
                 </div>
                 
-                <!-- SCRIPT INTERAKSI PERUBAHAN WARNA -->
+                <!-- SCRIPT INTERAKSI + LOGIKA RESET -->
                 <script>
                     document.addEventListener("DOMContentLoaded", function () {
-                        // Fungsi untuk mengubah gaya elemen drop-down dan teks
+                        const inputs = document.querySelectorAll('.filter-input');
+                        const priceSlider = document.getElementById('filter-price-range');
+                        const priceValueText = document.getElementById('price-value');
+                        const priceContainer = document.querySelector('.filter-box-range');
+                        const btnReset = document.getElementById('btn-reset-filter');
+                        
+                        const initialPrice = "1000000"; // Nilai default awal slider
+                
+                        // Fungsi mengubah gaya warna input dropdown/esai
                         function handleInputChange(element) {
                             if (element.value !== "") {
                                 element.classList.remove('bg-gray-100', 'border-transparent');
@@ -114,25 +133,17 @@
                             }
                         }
                 
-                        // Ambil semua elemen input teks dan select
-                        const inputs = document.querySelectorAll('.filter-input');
+                        // Event listener untuk deteksi perubahan pada dropdown dan teks
                         inputs.forEach(input => {
                             input.addEventListener('input', () => handleInputChange(input));
                             input.addEventListener('change', () => handleInputChange(input));
                         });
                 
-                        // Logika Khusus untuk Price Range (Slider)
-                        const priceSlider = document.getElementById('filter-price-range');
-                        const priceValueText = document.getElementById('price-value');
-                        const priceContainer = document.querySelector('.filter-box-range');
-                        const initialPrice = priceSlider.value; // Menyimpan nilai awal default
-                
+                        // Event listener untuk deteksi slider harga
                         priceSlider.addEventListener('input', function () {
-                            // Format angka ke Rupiah agar UI makin interaktif
                             let formattedValue = new Intl.NumberFormat('id-ID').format(this.value);
                             priceValueText.innerText = "Rp " + formattedValue;
                 
-                            // Jika slider digeser dari nilai awal, ubah warna kotak menjadi biru
                             if (this.value !== initialPrice) {
                                 priceContainer.classList.remove('bg-gray-100', 'border-transparent');
                                 priceContainer.classList.add('bg-blue-50', 'border-blue-500');
@@ -140,6 +151,28 @@
                                 priceContainer.classList.remove('bg-blue-50', 'border-blue-500');
                                 priceContainer.classList.add('bg-gray-100', 'border-transparent');
                             }
+                        });
+                
+                        // LOGIKA TOMBOL RESET (HAPUS SEMUA FILTER)
+                        btnReset.addEventListener('click', function() {
+                            // 1. Reset semua input text dan select ke kosong
+                            inputs.forEach(input => {
+                                input.value = "";
+                                handleInputChange(input); // Kembalikan warna ke abu-abu normal
+                            });
+                
+                            // 2. Reset slider harga ke nilai default
+                            priceSlider.value = initialPrice;
+                            let formattedPrice = new Intl.NumberFormat('id-ID').format(initialPrice);
+                            priceValueText.innerText = "Rp " + formattedPrice;
+                            
+                            // Kembalikan warna kotak slider ke abu-abu normal
+                            priceContainer.classList.remove('bg-blue-50', 'border-blue-500');
+                            priceContainer.classList.add('bg-gray-100', 'border-transparent');
+                            
+                            // (Opsional) Mas Yodha bisa panggil fungsi fetch data paket di sini 
+                            // agar setelah di-reset, semua list data produk otomatis reload tampil utuh lagi.
+                            console.log("Semua filter berhasil dibersihkan.");
                         });
                     });
                 </script>
