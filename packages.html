@@ -36,27 +36,36 @@
                 </div>
 
                 <!-- Filters -->
-               <!-- Container Filters -->
-                <div id="package-filters" class="bg-white p-6 rounded-lg shadow-md mb-8">
-                    <!-- Grid diubah menjadi 5 kolom di desktop untuk menampung tombol reset -->
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                              <!-- Container Filters (Relative position added for top-right X button placement) -->
+                <div id="package-filters" class="bg-white p-6 rounded-lg shadow-md mb-8 relative">
+                    
+                    <!-- BUTTON RESET (Minimalist X button at top-right corner) -->
+                    <button type="button" id="btn-reset-filter" title="Clear all filters" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 p-1.5 rounded-full transition-all duration-200 cursor-pointer border border-transparent hover:border-red-100">
+                        <!-- Icon X (Close) SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                
+                    <!-- Grid divided into 4 columns equally aligned -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end pr-4">
                         
                         <!-- 1. FILTER TIME RANGE -->
-                        <div class="flex flex-col gap-1">
+                        <div class="h-[76px] flex flex-col justify-between">
                             <label class="text-sm font-semibold text-gray-700">Time Range</label>
-                            <select id="filter-time-range" class="filter-input bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 outline-none transition-all duration-200 text-sm">
-                                <option value="">Semua Rentang Waktu</option>
+                            <select id="filter-time-range" class="filter-input w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 outline-none transition-all duration-200 text-sm">
+                                <option value="">All Time Ranges</option>
                                 <option value="Monday-Sunday">Daily</option>
                                 <option value="Week 1-Week 4">Weekly</option>
                                 <option value="30 day">Monthly</option>
                             </select>
                         </div>
                 
-                        <!-- 2. FILTER KOTA ASAL -->
-                        <div class="flex flex-col gap-1">
-                            <label class="text-sm font-semibold text-gray-700">Kota Asal</label>
-                            <select id="filter-kota-asal" class="filter-input bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 outline-none transition-all duration-200 text-sm">
-                                <option value="">Semua Kota Asal</option>
+                        <!-- 2. FILTER ORIGIN CITY -->
+                        <div class="h-[76px] flex flex-col justify-between">
+                            <label class="text-sm font-semibold text-gray-700">Origin City</label>
+                            <select id="filter-kota-asal" class="filter-input w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 outline-none transition-all duration-200 text-sm">
+                                <option value="">All Origins</option>
                                 <option value="Jakarta">Jakarta</option>
                                 <option value="Bandung">Bandung</option>
                                 <option value="Surabaya">Surabaya</option>
@@ -72,10 +81,10 @@
                             </select> 
                         </div>
                 
-                        <!-- 3. FILTER KOTA TUJUAN (ESSAY SEARCH + DATALIST) -->
-                        <div class="flex flex-col gap-1">
-                            <label class="text-sm font-semibold text-gray-700">Kota Tujuan</label>
-                            <input type="text" id="filter-kota-tujuan" list="rekomendasi-wisata" placeholder="Ketik destinasi tujuan..." class="filter-input bg-gray-100 border border-transparent rounded-lg px-4 py-2 outline-none transition-all duration-200 text-sm placeholder-gray-400">
+                        <!-- 3. FILTER DESTINATION CITY (ESSAY SEARCH + DATALIST) -->
+                        <div class="h-[76px] flex flex-col justify-between">
+                            <label class="text-sm font-semibold text-gray-700">Destination City</label>
+                            <input type="text" id="filter-kota-tujuan" list="rekomendasi-wisata" placeholder="Type destination city..." class="filter-input w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 outline-none transition-all duration-200 text-sm placeholder-gray-400">
                             <datalist id="rekomendasi-wisata">
                                 <option value="Bali">
                                 <option value="Lombok">
@@ -85,33 +94,23 @@
                         </div>
                 
                         <!-- 4. FILTER PRICE RANGE -->
-                        <div class="flex flex-col gap-1 bg-gray-100 border border-transparent rounded-lg p-3 transition-all duration-200 filter-box-range">
-                            <div class="flex justify-between text-sm font-semibold text-gray-700 mb-1">
+                        <div class="h-[76px] flex flex-col justify-between bg-gray-100 border border-transparent rounded-lg p-3 transition-all duration-200 filter-box-range">
+                            <div class="flex justify-between text-sm font-semibold text-gray-700 items-center">
                                 <label>Price Range</label>
-                                <span id="price-value" class="text-blue-600 font-bold">Rp 1.000.000</span>
+                                <span id="price-value" class="text-blue-600 font-bold text-xs">Rp 10.000</span>
                             </div>
-                            <input type="range" id="filter-price-range" min="10000" max="10000000" step="10000" value="1000000" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <!-- Slider properly set from 10,000 to 10,000,000 -->
+                            <input type="range" id="filter-price-range" min="10000" max="10000000" step="10000" value="10000" class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-gray-500 leading-none">
                                 <span>10.000</span>
                                 <span>10.000.000</span>
                             </div>
                         </div>  
                 
-                        <!-- 5. TOMBOL HAPUS SEMUA FILTER -->
-                        <div class="flex flex-col">
-                            <button type="button" id="btn-reset-filter" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 font-medium rounded-lg px-4 py-2.5 text-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
-                                <!-- Icon Trash / Tempat Sampah SVG -->
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                </svg>
-                                Hapus Filter
-                            </button>
-                        </div>
-                
                     </div>
                 </div>
                 
-                <!-- SCRIPT INTERAKSI + LOGIKA RESET -->
+                <!-- JAVASCRIPT LOGIC -->
                 <script>
                     document.addEventListener("DOMContentLoaded", function () {
                         const inputs = document.querySelectorAll('.filter-input');
@@ -120,9 +119,9 @@
                         const priceContainer = document.querySelector('.filter-box-range');
                         const btnReset = document.getElementById('btn-reset-filter');
                         
-                        const initialPrice = "1000000"; // Nilai default awal slider
+                        const initialPrice = "10000"; // Start position from 10.000
                 
-                        // Fungsi mengubah gaya warna input dropdown/esai
+                        // Function to handle layout color shifts on selection
                         function handleInputChange(element) {
                             if (element.value !== "") {
                                 element.classList.remove('bg-gray-100', 'border-transparent');
@@ -133,13 +132,13 @@
                             }
                         }
                 
-                        // Event listener untuk deteksi perubahan pada dropdown dan teks
+                        // Event detection for text changes
                         inputs.forEach(input => {
                             input.addEventListener('input', () => handleInputChange(input));
                             input.addEventListener('change', () => handleInputChange(input));
                         });
                 
-                        // Event listener untuk deteksi slider harga
+                        // Dynamic currency format for price slider
                         priceSlider.addEventListener('input', function () {
                             let formattedValue = new Intl.NumberFormat('id-ID').format(this.value);
                             priceValueText.innerText = "Rp " + formattedValue;
@@ -153,30 +152,28 @@
                             }
                         });
                 
-                        // LOGIKA TOMBOL RESET (HAPUS SEMUA FILTER)
+                        // RESET BUTTON LOGIC (X BUTTON)
                         btnReset.addEventListener('click', function() {
-                            // 1. Reset semua input text dan select ke kosong
+                            // 1. Reset dropdowns and input fields
                             inputs.forEach(input => {
                                 input.value = "";
-                                handleInputChange(input); // Kembalikan warna ke abu-abu normal
+                                handleInputChange(input);
                             });
                 
-                            // 2. Reset slider harga ke nilai default
+                            // 2. Reset price slider back to 10.000
                             priceSlider.value = initialPrice;
                             let formattedPrice = new Intl.NumberFormat('id-ID').format(initialPrice);
                             priceValueText.innerText = "Rp " + formattedPrice;
                             
-                            // Kembalikan warna kotak slider ke abu-abu normal
+                            // Revert slider box wrapper color
                             priceContainer.classList.remove('bg-blue-50', 'border-blue-500');
                             priceContainer.classList.add('bg-gray-100', 'border-transparent');
                             
-                            // (Opsional) Mas Yodha bisa panggil fungsi fetch data paket di sini 
-                            // agar setelah di-reset, semua list data produk otomatis reload tampil utuh lagi.
-                            console.log("Semua filter berhasil dibersihkan.");
+                            console.log("All active filters cleared successfully.");
                         });
                     });
                 </script>
-                            
+                                            
             
 
                 <!-- Package Grid -->
