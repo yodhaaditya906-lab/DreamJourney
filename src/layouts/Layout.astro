@@ -1,0 +1,78 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+}
+
+const { title = "DreamJourney - Smart Travel Financing" } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <!-- Feather Icons CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" is:inline></script>
+    <script src="https://unpkg.com/feather-icons" is:inline></script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header Component -->
+    <Header />
+
+    <!-- Page Content Slot -->
+    <slot />
+
+    <!-- Footer Component -->
+    <Footer />
+
+    <!-- Mobile Bottom Nav (hidden on desktop) -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-45">
+        <div class="flex justify-around py-3">
+            <a href="/" class={`flex flex-col items-center ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>
+                <i data-feather="home" class="w-6 h-6"></i>
+                <span class="text-xs mt-1">Home</span>
+            </a>
+            <a href="/packages" class={`flex flex-col items-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>
+                <i data-feather="search" class="w-6 h-6"></i>
+                <span class="text-xs mt-1">Search</span>
+            </a>
+            <a href="/planner" class="flex flex-col items-center">
+                <div class="bg-primary text-white rounded-full p-2 -mt-6 shadow-md hover:bg-primary-dark transition">
+                    <i data-feather="plus" class="w-6 h-6"></i>
+                </div>
+                <span class={`text-xs mt-1 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Create</span>
+            </a>
+            <a href="/dashboard" class={`flex flex-col items-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600'}`}>
+                <i data-feather="credit-card" class="w-6 h-6"></i>
+                <span class="text-xs mt-1">Wallet</span>
+            </a>
+            <a href="/community" class={`flex flex-col items-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>
+                <i data-feather="users" class="w-6 h-6"></i>
+                <span class="text-xs mt-1">Community</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Client-side Feather Icons Initialization -->
+    <script is:inline>
+        function initFeather() {
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+        
+        // Initial run
+        initFeather();
+        
+        // Run on DOM updates / Astro navigation if applicable
+        document.addEventListener('astro:page-load', initFeather);
+        document.addEventListener('astro:after-swap', initFeather);
+    </script>
+</body>
+</html>

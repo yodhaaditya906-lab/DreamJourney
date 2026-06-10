@@ -1,0 +1,154 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Design Your Journey - DreamJourney">
+    <main class="pt-24 pb-16">
+        <div class="container mx-auto px-4 max-w-2xl">
+            <h2 class="text-3xl font-bold mb-8 text-center text-primary">Design Your Journey</h2>
+            
+            <form id="design-trip-form" class="bg-white p-8 rounded-xl shadow-lg space-y-10 mb-12">
+                <!-- Step 1: Choose Destination -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
+                        <h3 class="text-xl font-bold">Choose Destination</h3>
+                    </div>
+                    <input type="text" placeholder="Where do you want to go? (e.g., Paris, Tokyo)" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary outline-none text-sm transition-all duration-200">
+                </div>
+
+                <!-- Step 2: Set Budget -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
+                        <h3 class="text-xl font-bold">Set Budget</h3>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="block text-gray-600 text-sm">Adjust your total trip budget</label>
+                        <span id="budget-display-value" class="text-primary font-bold text-lg">Rp 10.000.000</span>
+                    </div>
+                    <input type="range" id="budget-range-slider" min="1000000" max="100000000" step="1000000" value="10000000" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Rp 1.000.000</span>
+                        <span>Rp 100.000.000</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Select Dates -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
+                        <h3 class="text-xl font-bold">Select Dates</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Departure Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Return Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Payment Options -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">4</span>
+                        <h3 class="text-xl font-bold">Payment Options</h3>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="payment-method" value="cash" class="w-4 h-4 text-primary" checked>
+                                <span class="font-medium text-gray-700">Cash (Lentera)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="payment-method" value="cashless" class="w-4 h-4 text-primary">
+                                <span class="font-medium text-gray-700">Cashless</span>
+                            </label>
+                        </div>
+
+                        <!-- Cash Fields -->
+                        <div id="cash-details" class="space-y-3 p-4 bg-gray-50 rounded-lg">
+                            <label class="block text-gray-700 text-sm font-medium">ID Lentera</label>
+                            <input type="text" placeholder="Masukkan ID Lentera Anda" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                        </div>
+
+                        <!-- Cashless Fields -->
+                        <div id="cashless-details" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Pilih Bank / E-Wallet</label>
+                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                                    <option>BCA</option>
+                                    <option>Mandiri</option>
+                                    <option>GOPAY</option>
+                                    <option>OVO</option>
+                                    <option>DANA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Nomor Rekening / Nomor E-Wallet</label>
+                                <input type="text" placeholder="Masukkan nomor akun" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-gray-100 text-center">
+                    <button type="submit" class="w-full bg-accent hover:bg-accent-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg transition cursor-pointer">
+                        Confirm Journey Design
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Payment method toggle logic
+        const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
+        const cashDetails = document.getElementById('cash-details');
+        const cashlessDetails = document.getElementById('cashless-details');
+
+        if (paymentRadios.length > 0 && cashDetails && cashlessDetails) {
+            paymentRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.value === 'cash') {
+                        cashDetails.classList.remove('hidden');
+                        cashlessDetails.classList.add('hidden');
+                    } else {
+                        cashDetails.classList.add('hidden');
+                        cashlessDetails.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // Budget range slider formatter logic
+        const slider = document.getElementById('budget-range-slider') as HTMLInputElement;
+        const displayVal = document.getElementById('budget-display-value');
+
+        if (slider && displayVal) {
+            const formatCurrency = (amount: string) => {
+                return 'Rp ' + parseInt(amount).toLocaleString('id-ID');
+            };
+
+            slider.addEventListener('input', () => {
+                displayVal.textContent = formatCurrency(slider.value);
+            });
+        }
+        
+        // Handle Form Submit Simulation
+        const form = document.getElementById('design-trip-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Your custom trip design has been confirmed! Sign up or login to save this to your profile.');
+            });
+        }
+    });
+</script>

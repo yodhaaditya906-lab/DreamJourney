@@ -1,31 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Savings Dashboard - DreamJourney</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#4F46E5',
-                        secondary: '#0EA5E9',
-                        accent: '#10B981',
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-gray-50 font-sans">
-    <!-- Header Component -->
-    <custom-header></custom-header>
+---
+import Layout from '../layouts/Layout.astro';
+---
 
+<Layout title="Savings Dashboard - DreamJourney">
     <main class="pt-20">
         <section class="py-16 bg-gray-50">
             <div class="container mx-auto px-4">
@@ -38,15 +15,15 @@
                             <h3 class="font-bold text-xl opacity-90">DREAMWALLET BALANCE</h3>
                             <div class="text-4xl font-bold mt-2">Rp 8,450,000</div>
                         </div>
-                        <button class="bg-white text-primary px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
+                        <button class="bg-white text-primary px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition shadow-md cursor-pointer dashboard-action-btn">
                             Top Up Wallet
                         </button>
                     </div>
                 </div>
 
-                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                     <!-- Active Savings -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                         <h3 class="font-bold text-xl mb-6 flex items-center">
                             <i data-feather="target" class="mr-2 text-primary"></i> Active Goals
                         </h3>
@@ -54,7 +31,7 @@
                         <div class="space-y-6">
                             <div>
                                 <div class="flex justify-between mb-2">
-                                    <span class="font-semibold">Bali Trip</span>
+                                    <span class="font-semibold text-gray-800">Bali Trip</span>
                                     <span class="text-primary font-bold">60%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3">
@@ -68,7 +45,7 @@
                             
                             <div>
                                 <div class="flex justify-between mb-2">
-                                    <span class="font-semibold">Honeymoon</span>
+                                    <span class="font-semibold text-gray-800">Honeymoon</span>
                                     <span class="text-secondary font-bold">40%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3">
@@ -82,7 +59,7 @@
                             
                             <div>
                                 <div class="flex justify-between mb-2">
-                                    <span class="font-semibold">Japan Fund</span>
+                                    <span class="font-semibold text-gray-800">Japan Fund</span>
                                     <span class="text-accent font-bold">10%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3">
@@ -97,7 +74,7 @@
                     </div>
 
                     <!-- Recent Transactions -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                         <h3 class="font-bold text-xl mb-6 flex items-center">
                             <i data-feather="clock" class="mr-2 text-primary"></i> Recent Activity
                         </h3>
@@ -109,7 +86,7 @@
                                         <i data-feather="arrow-up-right" class="w-4 h-4"></i>
                                     </div>
                                     <div>
-                                        <p class="font-semibold">Top Up</p>
+                                        <p class="font-semibold text-gray-800">Top Up</p>
                                         <p class="text-xs text-gray-500">Today, 10:00 AM</p>
                                     </div>
                                 </div>
@@ -122,7 +99,7 @@
                                         <i data-feather="briefcase" class="w-4 h-4"></i>
                                     </div>
                                     <div>
-                                        <p class="font-semibold">Allocated to Bali</p>
+                                        <p class="font-semibold text-gray-800">Allocated to Bali</p>
                                         <p class="text-xs text-gray-500">Yesterday</p>
                                     </div>
                                 </div>
@@ -130,7 +107,7 @@
                             </div>
                         </div>
                         
-                        <button class="w-full mt-4 text-primary font-semibold text-sm hover:underline">
+                        <button class="w-full mt-4 text-primary font-semibold text-sm hover:underline cursor-pointer dashboard-action-btn">
                             View All Transactions
                         </button>
                     </div>
@@ -138,16 +115,15 @@
             </div>
         </section>
     </main>
+</Layout>
 
-    <!-- Footer Component -->
-    <custom-footer></custom-footer>
-
-    <!-- Scripts -->
-    <script src="header.js"></script>
-    <script src="components/footer.js"></script>
-    <script src="script.js"></script>
-    <script>
-        feather.replace();
-    </script>
-</body>
-</html>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const actionButtons = document.querySelectorAll('.dashboard-action-btn');
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                alert('This is a demo dashboard. Please login to your official account to access wallet actions.');
+            });
+        });
+    });
+</script>

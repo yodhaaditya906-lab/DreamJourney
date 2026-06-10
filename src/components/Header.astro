@@ -1,0 +1,54 @@
+---
+const currentPath = Astro.url.pathname;
+---
+<header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+    <div class="container mx-auto px-4 h-20 flex justify-between items-center">
+        <a href="/" class="flex items-center gap-2 text-2xl font-bold text-primary">
+            <i data-feather="briefcase"></i>
+            <span>DreamJourney</span>
+        </a>
+        
+        <nav class="hidden lg:flex items-center gap-8">
+            <a href="/" class={`font-medium transition ${currentPath === '/' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Home</a>
+            <a href="/packages" class={`font-medium transition ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Packages</a>
+            <a href="/planner" class={`font-medium transition ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Planner</a>
+            <a href="/community" class={`font-medium transition ${currentPath === '/community' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Community</a>
+        </nav>
+
+        <div class="hidden lg:flex items-center gap-4">
+            <a href="#" class="text-gray-600 hover:text-primary font-medium transition">Login</a>
+            <a href="#" class="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition">Register</a>
+        </div>
+
+        <!-- Toggle Button for Mobile Menu (Hamburger) -->
+        <button class="lg:hidden text-gray-600 cursor-pointer p-2" id="mobile-menu-btn" aria-label="Toggle Menu">
+            <i data-feather="menu"></i>
+        </button>
+    </div>
+
+    <!-- Mobile Drawer Navigation -->
+    <div class="hidden lg:hidden bg-white border-t border-gray-100 shadow-inner px-4 py-6" id="mobile-menu-drawer">
+        <nav class="flex flex-col gap-4">
+            <a href="/" class={`font-medium transition py-2 ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>Home</a>
+            <a href="/packages" class={`font-medium transition py-2 ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>Packages</a>
+            <a href="/planner" class={`font-medium transition py-2 ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600'}`}>Planner</a>
+            <a href="/community" class={`font-medium transition py-2 ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>Community</a>
+            <hr class="border-gray-100 my-2">
+            <div class="flex flex-col gap-3">
+                <a href="#" class="text-gray-600 font-medium py-2 text-center">Login</a>
+                <a href="#" class="bg-primary hover:bg-primary-dark text-white py-2.5 rounded-full font-semibold text-center transition">Register</a>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<script>
+    // Toggle mobile menu drawer
+    const btn = document.getElementById('mobile-menu-btn');
+    const drawer = document.getElementById('mobile-menu-drawer');
+    if (btn && drawer) {
+        btn.addEventListener('click', () => {
+            drawer.classList.toggle('hidden');
+        });
+    }
+</script>

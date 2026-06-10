@@ -1,0 +1,216 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Holiday Loan - DreamJourney">
+    <main class="pt-20">
+        <!-- Holiday Loan -->
+        <section id="loan" class="py-16 bg-white">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-10 text-center">🚀 Instant Holiday Funds - Approved in 24 Hours</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+                    <!-- Form / Calculator -->
+                    <div class="bg-gray-50 p-8 rounded-xl border border-gray-150">
+                        <h3 class="font-bold text-xl mb-6">Loan Calculator</h3>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Loan Purpose</label>
+                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white text-sm outline-none focus:ring-2 focus:ring-primary">
+                                    <option>Bali Vacation</option>
+                                    <option>Honeymoon</option>
+                                    <option>Family Trip</option>
+                                    <option>Business Travel</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-gray-700 font-medium">Loan Amount (Rp)</label>
+                                    <span id="loan-amount-val" class="text-primary font-bold text-lg">Rp 10.000.000</span>
+                                </div>
+                                <input type="range" id="loan-amount-slider" min="5000000" max="100000000" step="1000000" value="10000000" class="w-full mb-2 cursor-pointer accent-primary">
+                                <div class="flex justify-between text-xs text-gray-500">
+                                    <span>5,000,000</span>
+                                    <span>100,000,000</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Tenor (Months)</label>
+                                <div class="grid grid-cols-4 gap-2" id="tenor-buttons-container">
+                                    <button class="bg-primary text-white py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="6">6</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="12">12</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="18">18</button>
+                                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="24">24</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-3 text-sm tracking-wide uppercase">Loan Summary</h4>
+                                <div class="space-y-2 text-sm text-gray-600">
+                                    <div class="flex justify-between">
+                                        <span>Monthly Payment</span>
+                                        <span class="font-bold text-primary" id="monthly-payment-val">Rp 1.746.666</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Interest Rate</span>
+                                        <span class="font-semibold text-gray-800">0.8% per month</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Total Repayment</span>
+                                        <span class="font-semibold text-gray-800" id="total-repayment-val">Rp 10.480.000</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-apply-loan" class="w-full bg-accent hover:bg-accent-dark text-white py-3 rounded-lg font-bold shadow-md transition cursor-pointer">
+                                Apply for Loan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Benefits -->
+                    <div>
+                        <h3 class="font-bold text-xl mb-6 text-gray-800">Why Choose Our Holiday Loan?</h3>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800">100% Online Process</h4>
+                                    <p class="text-gray-600 text-sm">Complete your application digitally without paperwork</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800">No Collateral Needed</h4>
+                                    <p class="text-gray-600 text-sm">For loans up to Rp 50,000,000 with good credit</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800">Low Interest Rates</h4>
+                                    <p class="text-gray-600 text-sm">Starting from 0.8% per month (9.6% per year)</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <div class="bg-green-100 text-green-800 rounded-full p-2 mr-4">
+                                    <i data-feather="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800">Instant Disbursement</h4>
+                                    <p class="text-gray-600 text-sm">Funds transferred to your DreamJourney Wallet within 24 hours</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Testimonials -->
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div class="flex items-start">
+                                    <div class="mr-4 flex-shrink-0">
+                                        <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1887&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full object-cover shadow-sm">
+                                    </div>
+                                    <div>
+                                        <p class="italic text-sm text-gray-700">"Borrowed 10 million, approved the next day! Booked my Japan trip immediately."</p>
+                                        <p class="font-bold mt-2 text-xs text-gray-800">- Rina, 29</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <div class="flex items-start">
+                                    <div class="mr-4 flex-shrink-0">
+                                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1888&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full object-cover shadow-sm">
+                                    </div>
+                                    <div>
+                                        <p class="italic text-sm text-gray-700">"Prosesnya cepat dan 100% online. Sangat membantu untuk menutupi kekurangan dana liburan keluarga."</p>
+                                        <p class="font-bold mt-2 text-xs text-gray-800">- Budi, 35</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const slider = document.getElementById('loan-amount-slider') as HTMLInputElement;
+        const amountDisplay = document.getElementById('loan-amount-val');
+        const monthlyDisplay = document.getElementById('monthly-payment-val');
+        const totalDisplay = document.getElementById('total-repayment-val');
+        const tenorButtons = document.querySelectorAll('.tenor-btn');
+
+        let selectedTenor = 6;
+        const interestRate = 0.008; // 0.8% per month
+
+        const formatCurrency = (val: number) => {
+            return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+        };
+
+        const calculateLoan = () => {
+            if (!slider || !monthlyDisplay || !totalDisplay) return;
+            const principal = parseInt(slider.value);
+            
+            // Flat Interest Formula
+            const totalInterest = principal * interestRate * selectedTenor;
+            const totalRepayment = principal + totalInterest;
+            const monthlyPayment = totalRepayment / selectedTenor;
+
+            if (monthlyDisplay) monthlyDisplay.textContent = formatCurrency(monthlyPayment);
+            if (totalDisplay) totalDisplay.textContent = formatCurrency(totalRepayment);
+        };
+
+        if (slider && amountDisplay) {
+            slider.addEventListener('input', () => {
+                amountDisplay.textContent = formatCurrency(parseInt(slider.value));
+                calculateLoan();
+            });
+        }
+
+        tenorButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                selectedTenor = parseInt(target.getAttribute('data-tenor') || "6");
+
+                // Toggle active button style
+                tenorButtons.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-white');
+                    b.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                });
+                target.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                target.classList.add('bg-primary', 'text-white');
+
+                calculateLoan();
+            });
+        });
+
+        // Initialize calculations
+        calculateLoan();
+
+        // Apply action
+        const applyBtn = document.getElementById('btn-apply-loan');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                const amountFormatted = amountDisplay ? amountDisplay.textContent : '';
+                alert(`Loan application of ${amountFormatted} for ${selectedTenor} months has been submitted! Sign in or register to complete verification.`);
+            });
+        }
+    });
+</script>
