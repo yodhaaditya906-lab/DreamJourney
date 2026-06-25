@@ -171,6 +171,24 @@ const activeLentera = lenteras.find(l => l.id === wallet.lenteraId);
                                     const bgClass = colorPair[0];
                                     const textClass = colorPair[1];
 
+                                    // --- ESTIMATION CALCULATION ---
+                                    const remainingAmount = Math.max(0, goal.targetAmount - goal.savedAmount);
+                                    let remainingCycles = 0;
+                                    if (goal.autoDebitAmount > 0) {
+                                        remainingCycles = Math.ceil(remainingAmount / goal.autoDebitAmount);
+                                    }
+                                    
+                                    let daysPerCycle = 30; // default Bulanan
+                                    if (goal.autoDebitFrequency === 'Harian') daysPerCycle = 1;
+                                    else if (goal.autoDebitFrequency === 'Mingguan') daysPerCycle = 7;
+                                    
+                                    const daysLeft = remainingCycles * daysPerCycle;
+                                    
+                                    const estimatedDate = new Date();
+                                    estimatedDate.setDate(estimatedDate.getDate() + daysLeft);
+                                    const dateOptions: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+                                    const formattedDate = estimatedDate.toLocaleDateString('id-ID', dateOptions);
+
                                     return (
                                         <div class="group relative">
                                             <div class="flex justify-between mb-2">
@@ -183,6 +201,15 @@ const activeLentera = lenteras.find(l => l.id === wallet.lenteraId);
                                             <div class="flex justify-between mt-1 text-sm text-gray-500">
                                                 <span>{formatRp(goal.savedAmount)} / {formatRp(goal.targetAmount)}</span>
                                                 <span class="bg-gray-100 px-2 py-0.5 rounded text-xs">{goal.autoDebitFrequency} ({formatRp(goal.autoDebitAmount)})</span>
+                                            </div>
+                                            
+                                            <div class="mt-2 bg-blue-50 text-blue-800 text-xs px-3 py-2 rounded-lg flex items-center border border-blue-100">
+                                                <i data-feather="calendar" class="w-3.5 h-3.5 mr-2"></i>
+                                                {daysLeft > 0 ? (
+                                                    <span>Estimasi Keberangkatan: <strong>{formattedDate}</strong> ({daysLeft} hari lagi)</span>
+                                                ) : (
+                                                    <span>Target tercapai! Siap berangkat kapan saja. ✈️</span>
+                                                )}
                                             </div>
                                             
                                             <div class="flex flex-wrap gap-2 mt-3">
