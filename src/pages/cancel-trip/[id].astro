@@ -15,17 +15,28 @@ if (!goal || goal.user_id !== userId) {
     return Astro.redirect('/dashboard');
 }
 
-// Simulasi H-14
-// Dalam implementasi nyata, ini akan dicek berdasarkan goal.target_date
-const isH14 = true; 
+// --- ESTIMASI H-14 DINAMIS ---
+const savedAmount = goal.saved_amount || 0;
+const remainingAmount = Math.max(0, goal.target_amount - savedAmount);
+let remainingCycles = 0;
+if (goal.auto_debit_amount > 0) {
+    remainingCycles = Math.ceil(remainingAmount / goal.auto_debit_amount);
+}
 
+let daysPerCycle = 30; // default Bulanan
+if (goal.auto_debit_frequency === 'Harian') daysPerCycle = 1;
+else if (goal.auto_debit_frequency === 'Mingguan') daysPerCycle = 7;
+
+const daysLeft = remainingCycles * daysPerCycle;
+
+// Memunculkan denda hanya jika sisa hari <= 14 hari
+const isH14 = daysLeft <= 14; 
 // Asumsi besaran potongan jika H-14 (dalam persen)
 const hotelPenaltyRate = 0.30; // 30%
 const transportPenaltyRate = 0.20; // 20%
 const attractionPenaltyRate = 0.15; // 15%
 const totalPenaltyRate = hotelPenaltyRate + transportPenaltyRate + attractionPenaltyRate; // 65%
 
-const savedAmount = goal.saved_amount || 0;
 
 // Kalkulasi nominal potongan
 const hotelPenalty = Math.floor(savedAmount * hotelPenaltyRate);
