@@ -36,25 +36,25 @@ const currentPath = Astro.url.pathname;
         <div class="flex justify-around py-3">
             <a href="/" class={`flex flex-col items-center ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="home" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Home</span>
+                <span class="text-xs mt-1">Beranda</span>
             </a>
             <a href="/packages" class={`flex flex-col items-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="search" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Search</span>
+                <span class="text-xs mt-1">Cari</span>
             </a>
             <a href="/planner" class="flex flex-col items-center">
                 <div class="bg-primary text-white rounded-full p-2 -mt-6 shadow-md hover:bg-primary-dark transition">
                     <i data-feather="plus" class="w-6 h-6"></i>
                 </div>
-                <span class={`text-xs mt-1 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Create</span>
+                <span class={`text-xs mt-1 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Buat</span>
             </a>
             <a href="/dashboard" class={`flex flex-col items-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="credit-card" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Wallet</span>
+                <span class="text-xs mt-1">Dompet</span>
             </a>
             <a href="/community" class={`flex flex-col items-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="users" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Community</span>
+                <span class="text-xs mt-1">Komunitas</span>
             </a>
         </div>
     </div>

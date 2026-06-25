@@ -1,0 +1,490 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { slug } = Astro.params;
+
+let pkg = null;
+let moreImages = [];
+let otherPackages = [];
+
+function slugify(text) {
+    if (!text) return '';
+    return text.toString().toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+}
+
+function parseCSVRow(row) {
+    const result = [];
+    let curVal = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+        if (row[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (row[i] === ',' && !inQuotes) {
+            result.push(curVal.trim());
+            curVal = '';
+        } else {
+            curVal += row[i];
+        }
+    }
+    result.push(curVal.trim());
+    return result;
+}
+
+try {
+  const response = await fetch('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  const csvText = await response.text();
+  
+  const defaultImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+  const rows = csvText.split('\n').slice(1);
+  const packages = rows.filter(row => row.trim() && !row.startsWith(',')).map((row, index) => {
+    const cols = parseCSVRow(row);
+    
+    const title = cols[0] || "Unknown";
+    const desc = cols[1] || "";
+    const dailyPrice = cols[2] || "";
+    const rawDailyPrice = cols[2] ? cols[2].replace(/[^\d]/g, '') : "0";
+    const parsedDailyPrice = parseInt(rawDailyPrice, 10) || 0;
+    const rawPrice = cols[3] ? cols[3].replace(/[^\d]/g, '') : "0";
+    const price = parseInt(rawPrice, 10) || 0;
+    const time = cols[4] || "";
+    const origin = cols[5] || "Unknown";
+    const destination = cols[6] || title;
+    
+    const facilitiesStr = cols[7] || "";
+    const facilities = facilitiesStr ? facilitiesStr.split('|').map(s => s.trim()) : [];
+    
+    const hotel = cols[8] || "";
+    const transportType = cols[9] || "";
+    
+    const depArr = cols[10] || ""; 
+    let departure = "";
+    let arrival = "";
+    if (depArr.includes(',')) {
+        const parts = depArr.split(',');
+        departure = parts[0].trim();
+        arrival = parts[1].trim();
+    } else {
+        departure = depArr;
+    }
+    
+    let mainImage = cols[11] || defaultImage;
+    if (mainImage && mainImage.startsWith('"')) mainImage = mainImage.substring(1, mainImage.length-1);
+
+    let g1 = cols[12] || mainImage;
+    let g2 = cols[13] || mainImage;
+    let g3 = cols[14] || mainImage;
+    let g4 = cols[15] || mainImage;
+    
+    const priceAkomodasi = parseInt(cols[16] ? cols[16].replace(/[^\d]/g, '') : "0", 10) || 0;
+    const priceTransport = parseInt(cols[17] ? cols[17].replace(/[^\d]/g, '') : "0", 10) || 0;
+    const priceWahana = parseInt(cols[18] ? cols[18].replace(/[^\d]/g, '') : "0", 10) || 0;
+    const priceLainnya = parseInt(cols[19] ? cols[19].replace(/[^\d]/g, '') : "0", 10) || 0;
+    
+    return {
+      title,
+      slug: slugify(title),
+      desc,
+      dailyPrice,
+      parsedDailyPrice,
+      price,
+      origin,
+      destination,
+      time,
+      badge: index === 0 ? "Hot Deal" : (index === 1 ? "Best Seller" : ""),
+      badgeColor: index === 0 ? "bg-red-500 text-white" : (index === 1 ? "bg-blue-500 text-white" : ""),
+      image: mainImage,
+      gallery: [mainImage, g1, g2, g3, g4],
+      facilities,
+      hotel,
+      transport: {
+          type: transportType,
+          departure: departure,
+          arrival: arrival
+      },
+      priceAkomodasi,
+      priceTransport,
+      priceWahana,
+      priceLainnya
+    };
+  });
+
+  pkg = packages.find(p => p.slug === slug);
+  otherPackages = packages.filter(p => p.slug !== slug).sort(() => 0.5 - Math.random()).slice(0, 4);
+  
+} catch (error) {
+  console.error("Failed to fetch packages:", error);
+}
+
+if (!pkg) {
+  return Astro.redirect('/404');
+}
+
+const hasCustomBreakdown = pkg.priceAkomodasi > 0 || pkg.priceTransport > 0 || pkg.priceWahana > 0 || pkg.priceLainnya > 0;
+
+let breakdown = [];
+if (hasCustomBreakdown) {
+    if (pkg.priceAkomodasi > 0) breakdown.push({ label: "Akomodasi Penginapan", price: pkg.priceAkomodasi });
+    if (pkg.priceTransport > 0) breakdown.push({ label: "Transportasi", price: pkg.priceTransport });
+    if (pkg.priceWahana > 0) breakdown.push({ label: "Tiket Masuk & Wahana", price: pkg.priceWahana });
+    if (pkg.priceLainnya > 0) breakdown.push({ label: "Konsumsi & Lainnya", price: pkg.priceLainnya });
+} else {
+    breakdown = [
+        { label: "Akomodasi & Transportasi", price: pkg.price * 0.45 },
+        { label: "Tiket Masuk & Wahana", price: pkg.price * 0.30 },
+        { label: "Konsumsi & Restoran", price: pkg.price * 0.15 },
+        { label: "Biaya Layanan & Asuransi", price: pkg.price * 0.10 }
+    ];
+}
+---
+
+<Layout title={`${pkg.title} - DreamJourney`}>
+    <main class="pt-24 pb-16 min-h-screen bg-gray-50">
+        <div class="container mx-auto px-4 max-w-7xl">
+            <!-- Back button -->
+            <a href="javascript:history.back()" class="inline-flex items-center text-gray-600 hover:text-primary mb-6 transition font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Kembali ke Daftar Paket
+            </a>
+
+            <!-- Bagian Atas: Galeri dan Judul -->
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-12 border border-gray-100">
+                <!-- Image Gallery -->
+                <div class="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-2 p-2">
+                    <div class="md:col-span-2 md:row-span-2">
+                        <img src={pkg.gallery[0]} alt={pkg.title} class="gallery-image cursor-pointer w-full h-[300px] md:h-[500px] object-cover rounded-xl shadow-sm hover:opacity-95 transition">
+                    </div>
+                    <div class="md:col-span-1 md:row-span-1 hidden md:block">
+                        <img src={pkg.gallery[1]} alt="Gallery 1" class="gallery-image cursor-pointer w-full h-[246px] object-cover rounded-xl shadow-sm hover:opacity-95 transition">
+                    </div>
+                    <div class="md:col-span-1 md:row-span-1 hidden md:block">
+                        <img src={pkg.gallery[2]} alt="Gallery 2" class="gallery-image cursor-pointer w-full h-[246px] object-cover rounded-xl shadow-sm hover:opacity-95 transition">
+                    </div>
+                    <div class="md:col-span-1 md:row-span-1 hidden md:block">
+                        <img src={pkg.gallery[3]} alt="Gallery 3" class="gallery-image cursor-pointer w-full h-[246px] object-cover rounded-xl shadow-sm hover:opacity-95 transition">
+                    </div>
+                    <div class="md:col-span-1 md:row-span-1 hidden md:block relative">
+                        <img src={pkg.gallery[4]} alt="Gallery 4" class="gallery-image cursor-pointer w-full h-[246px] object-cover rounded-xl shadow-sm hover:opacity-95 transition">
+                        <div class="pointer-events-none absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center transition">
+                            <span class="text-white font-bold text-lg">+ Foto Lainnya</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="p-8 md:p-10 lg:p-12">
+                    <div class="flex flex-col lg:flex-row gap-12">
+                        <!-- Left Details -->
+                        <div class="lg:w-2/3">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="bg-blue-100 text-blue-800 text-sm font-semibold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-sm border border-blue-200">
+                                    {pkg.time}
+                                </span>
+                                <span class="bg-green-100 text-green-800 text-sm font-semibold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-sm border border-green-200">
+                                    Aman untuk Solo Traveler
+                                </span>
+                                {pkg.badge && (
+                                    <span class={`${pkg.badgeColor} text-sm font-semibold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-sm`}>
+                                        {pkg.badge}
+                                    </span>
+                                )}
+                            </div>
+                            
+                            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">{pkg.title}</h1>
+                            <p class="text-gray-700 text-lg md:text-xl mb-10 leading-relaxed">
+                                {pkg.desc}
+                            </p>
+
+                            <!-- Fasilitas & Wahana -->
+                            <div class="mb-10">
+                                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Fasilitas & Wahana yang Didapat
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {pkg.facilities.map(ride => (
+                                        <div class="flex items-start bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                            <svg class="h-6 w-6 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span class="text-gray-800 font-medium text-lg">{ride}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <!-- Akomodasi & Transportasi -->
+                            <div class="mb-10 bg-gray-50 p-8 rounded-2xl border border-gray-200">
+                                <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Akomodasi & Transportasi
+                                </h3>
+                                <div class="space-y-6">
+                                    <div class="flex items-start gap-4">
+                                        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-900 text-lg">Penginapan Hotel</h4>
+                                            <p class="text-gray-600 text-base">{pkg.hotel}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-4">
+                                        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-900 text-lg">{pkg.transport.type}</h4>
+                                            <ul class="text-gray-600 text-base mt-1 space-y-1">
+                                                <li><span class="font-medium text-gray-800">{pkg.transport.departure}</span></li>
+                                                <li><span class="font-medium text-gray-800">{pkg.transport.arrival}</span></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Pricing / Booking -->
+                        <div class="lg:w-1/3">
+                            <div class="bg-white border-2 border-primary/20 rounded-2xl p-8 sticky top-28 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+                                <h3 class="text-2xl font-bold text-gray-900 mb-6">Ringkasan Harga</h3>
+                                
+                                <div class="space-y-4 mb-8">
+                                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
+                                        <span class="text-gray-500 font-medium text-lg">Mulai dari</span>
+                                        <span class="text-3xl font-extrabold text-primary">{pkg.dailyPrice}/hari</span>
+                                    </div>
+                                    
+                                    <div class="pt-2 pb-4">
+                                        <h4 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Rincian Pembayaran</h4>
+                                        {breakdown.map(item => (
+                                            <div class="flex justify-between text-sm mb-2">
+                                                <span class="text-gray-600">{item.label}</span>
+                                                <span class="font-semibold text-gray-800">Rp {item.price.toLocaleString('id-ID')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                        <span class="text-gray-700 font-bold text-lg">Total Harga</span>
+                                        <span class="text-2xl font-black text-gray-900">Rp {pkg.price.toLocaleString('id-ID')}</span>
+                                    </div>
+                                </div>
+
+                                <button id="start-saving-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-4 rounded-xl font-bold text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex justify-center items-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Mulai Menabung
+                                </button>
+                                
+                                <div class="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <span>Transaksi aman dan terverifikasi</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Bawah: Destinasi Lainnya -->
+            <div class="mt-16 mb-8">
+                <div class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+                    <h2 class="text-3xl font-bold text-gray-900">Eksplorasi Destinasi Lainnya</h2>
+                    <a href="/packages" class="text-primary hover:text-primary-dark font-semibold text-lg flex items-center transition">
+                        Lihat Semua 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {otherPackages.map((opkg, index) => (
+                        <div class="package-item bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col hover:-translate-y-1">
+                            <a href={`/package/${opkg.slug}`} class="block flex-grow cursor-pointer">
+                                <div class="relative">
+                                    <img src={opkg.image} alt={opkg.destination} class="w-full h-48 object-cover">
+                                    {opkg.badge && (
+                                        <span class={`absolute top-2 right-2 text-xs px-2 py-1 rounded-full font-medium ${opkg.badgeColor}`}>
+                                            {opkg.badge}
+                                        </span>
+                                    )}
+                                </div>
+                                <div class="p-5 pb-0 flex-grow">
+                                    <h3 class="font-bold text-lg text-gray-900 line-clamp-1">{opkg.title}</h3>
+                                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">{opkg.desc}</p>
+                                    <div class="my-4">
+                                        <p class="text-primary font-bold text-xl">{opkg.dailyPrice}<span class="text-sm font-normal text-gray-500">/hari</span></p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lightbox Modal -->
+        <div id="image-lightbox" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/90 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+            <!-- Close button -->
+            <button id="lightbox-close" class="absolute top-6 right-6 text-white hover:text-gray-300 focus:outline-none z-10 bg-black/20 p-2 rounded-full hover:bg-black/50 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <!-- Previous Button -->
+            <button id="lightbox-prev" class="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 focus:outline-none z-10 bg-black/40 hover:bg-black/70 p-3 rounded-full transition transform hover:scale-110">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            
+            <!-- Next Button -->
+            <button id="lightbox-next" class="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 focus:outline-none z-10 bg-black/40 hover:bg-black/70 p-3 rounded-full transition transform hover:scale-110">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+
+            <!-- Image -->
+            <img id="lightbox-img" src="" alt="Pemandangan Full" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl transform scale-95 transition-all duration-300 select-none">
+        </div>
+    </main>
+</Layout>
+
+<script define:vars={{ pkg, hasCustomBreakdown }}>
+    document.addEventListener("DOMContentLoaded", function () {
+        const startSavingBtn = document.getElementById('start-saving-btn');
+        if (startSavingBtn && pkg) {
+            startSavingBtn.addEventListener('click', () => {
+                const query = new URLSearchParams({
+                    title: pkg.title, 
+                    price: pkg.price, 
+                    dailyPrice: pkg.parsedDailyPrice, 
+                    time: pkg.time, 
+                    image: pkg.gallery[0] || '',
+                    akomodasi: hasCustomBreakdown ? pkg.priceAkomodasi : pkg.price * 0.45,
+                    transport: hasCustomBreakdown ? pkg.priceTransport : 0,
+                    wahana: hasCustomBreakdown ? pkg.priceWahana : pkg.price * 0.30,
+                    lainnya: hasCustomBreakdown ? pkg.priceLainnya : pkg.price * 0.25
+                }).toString();
+                window.location.href = `/setup-saving?${query}`;
+            });
+        }
+
+        // Lightbox logic
+        const lightbox = document.getElementById('image-lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+        const galleryImages = document.querySelectorAll('.gallery-image');
+        
+        let currentImageIndex = 0;
+        let imagesArray = [];
+
+        if (lightbox && lightboxImg && lightboxClose) {
+            // Collect all image sources
+            galleryImages.forEach(img => {
+                imagesArray.push(img.src);
+            });
+
+            function updateImage(index) {
+                lightboxImg.classList.add('opacity-50', 'scale-95');
+                setTimeout(() => {
+                    lightboxImg.src = imagesArray[index];
+                    lightboxImg.classList.remove('opacity-50', 'scale-95');
+                }, 150);
+            }
+
+            function openLightbox(index) {
+                currentImageIndex = index;
+                lightboxImg.src = imagesArray[currentImageIndex];
+                lightbox.classList.remove('hidden');
+                // Trigger reflow
+                void lightbox.offsetWidth;
+                lightbox.classList.remove('opacity-0');
+                lightboxImg.classList.remove('scale-95');
+                lightboxImg.classList.add('scale-100');
+                document.body.style.overflow = 'hidden'; // Prevent scrolling
+            }
+
+            function closeLightbox() {
+                lightbox.classList.add('opacity-0');
+                lightboxImg.classList.remove('scale-100');
+                lightboxImg.classList.add('scale-95');
+                setTimeout(() => {
+                    lightbox.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }, 300);
+            }
+
+            galleryImages.forEach((img, index) => {
+                img.addEventListener('click', () => {
+                    openLightbox(index);
+                });
+            });
+
+            if (lightboxPrev) {
+                lightboxPrev.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentImageIndex = (currentImageIndex - 1 + imagesArray.length) % imagesArray.length;
+                    updateImage(currentImageIndex);
+                });
+            }
+
+            if (lightboxNext) {
+                lightboxNext.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentImageIndex = (currentImageIndex + 1) % imagesArray.length;
+                    updateImage(currentImageIndex);
+                });
+            }
+
+            lightboxClose.addEventListener('click', closeLightbox);
+            
+            // Close when clicking outside image
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+            
+            // Handle Escape key and arrow keys
+            document.addEventListener('keydown', (e) => {
+                if (!lightbox.classList.contains('hidden')) {
+                    if (e.key === 'Escape') closeLightbox();
+                    if (e.key === 'ArrowLeft') {
+                        currentImageIndex = (currentImageIndex - 1 + imagesArray.length) % imagesArray.length;
+                        updateImage(currentImageIndex);
+                    }
+                    if (e.key === 'ArrowRight') {
+                        currentImageIndex = (currentImageIndex + 1) % imagesArray.length;
+                        updateImage(currentImageIndex);
+                    }
+                }
+            });
+        }
+    });
+</script>

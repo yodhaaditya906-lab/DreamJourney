@@ -7,7 +7,7 @@ import Layout from '../layouts/Layout.astro';
         <!-- Trip Planner -->
         <section id="planner" class="py-16 bg-gray-50">
             <div class="container mx-auto px-4">
-                <h2 class="text-3xl font-bold mb-10 text-center">🎨 Design Your Dream Vacation</h2>
+                <h2 class="text-3xl font-bold mb-10 text-center">🎨 Rancang Liburan Impian Anda</h2>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                     <!-- Steps -->
@@ -15,104 +15,85 @@ import Layout from '../layouts/Layout.astro';
                         <div class="flex items-start">
                             <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">1</div>
                             <div>
-                                <h3 class="font-bold text-xl mb-2">Choose Destination</h3>
-                                <p class="text-gray-600">Select from our worldwide destinations or create a multi-city itinerary</p>
+                                <h3 class="font-bold text-xl mb-2">Tentukan Informasi Dasar</h3>
+                                <p class="text-gray-600">Pilih destinasi impian, tipe perjalanan, dan tentukan target bulan keberangkatan Anda.</p>
                             </div>
                         </div>
                         
                         <div class="flex items-start">
                             <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">2</div>
                             <div>
-                                <h3 class="font-bold text-xl mb-2">Set Budget</h3>
-                                <p class="text-gray-600">Adjust your budget allocation for flights, hotels, activities and dining</p>
+                                <h3 class="font-bold text-xl mb-2">Input Detail Pengeluaran</h3>
+                                <p class="text-gray-600">Catat secara leluasa seluruh biaya akomodasi penginapan, transportasi, tiket wahana, hingga asuransi/visa.</p>
                             </div>
                         </div>
                         
                         <div class="flex items-start">
                             <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">3</div>
                             <div>
-                                <h3 class="font-bold text-xl mb-2">Select Dates</h3>
-                                <p class="text-gray-600">Pick your travel dates with seasonal price recommendations</p>
+                                <h3 class="font-bold text-xl mb-2">Kalkulasi Otomatis & Buffer Ekstra</h3>
+                                <p class="text-gray-600">Sistem akan merekap total biaya perjalanan secara otomatis. Anda juga bisa menambahkan uang jaga-jaga (buffer) darurat.</p>
                             </div>
                         </div>
                         
                         <div class="flex items-start">
                             <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">4</div>
                             <div>
-                                <h3 class="font-bold text-xl mb-2">Payment Options</h3>
-                                <p class="text-gray-600">Choose to pay upfront, in installments, or start a savings plan</p>
+                                <h3 class="font-bold text-xl mb-2">Simulasi Skema Menabung</h3>
+                                <p class="text-gray-600">Pilih untuk menabung harian, mingguan, atau bulanan. DreamJourney akan menghitung cicilan pas untuk Anda!</p>
                             </div>
                         </div>
                         
                         <a href="/design-trip" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md">
-                            Start Designing Your Trip
+                            Mulai Rancang Perjalanan Anda
                         </a>
                     </div>
                     
-                    <!-- Preview -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <div class="relative h-64 mb-4 rounded-lg overflow-hidden">
-                            <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop" alt="Trip Preview" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
-                            <div class="absolute bottom-4 left-4 text-white">
-                                <h3 class="font-bold text-xl">Family Trip to Italy</h3>
-                                <p>Rome, Florence, Venice - 10 Days</p>
+                    <!-- Interactive Quick Simulator -->
+                    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <!-- Decorative background elements -->
+                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+
+                        <div class="relative z-10 text-center mb-8">
+                            <div class="bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                                <i data-feather="pie-chart" class="w-8 h-8"></i>
                             </div>
+                            <h3 class="font-black text-2xl text-gray-800 tracking-tight">Simulasi Cepat</h3>
+                            <p class="text-gray-500 text-sm mt-2">Hitung estimasi tabungan untuk liburan impianmu!</p>
                         </div>
-                        
-                        <div class="grid grid-cols-3 gap-4 mb-6">
-                            <div class="text-center">
-                                <div class="text-primary font-bold text-lg md:text-xl">Rp 45,000,000</div>
-                                <div class="text-gray-600 text-xs md:text-sm">Total Budget</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-secondary font-bold text-lg md:text-xl">June 2024</div>
-                                <div class="text-gray-600 text-xs md:text-sm">Travel Date</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-accent font-bold text-lg md:text-xl">4 People</div>
-                                <div class="text-gray-600 text-xs md:text-sm">Travelers</div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-6">
-                            <h4 class="font-bold mb-2">Budget Breakdown</h4>
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-sm">
-                                    <span>Flights</span>
-                                    <span class="font-semibold">Rp 18,000,000</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span>Hotels</span>
-                                    <span class="font-semibold">Rp 15,000,000</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span>Activities</span>
-                                    <span class="font-semibold">Rp 7,000,000</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span>Dining</span>
-                                    <span class="font-semibold">Rp 5,000,000</span>
+
+                        <div class="relative z-10 space-y-6">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Target Dana Liburan</label>
+                                <div class="relative group">
+                                    <span class="absolute left-4 top-3.5 font-bold text-gray-400 group-focus-within:text-primary transition-colors">Rp</span>
+                                    <input type="text" id="quick-target" value="10.000.000" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 font-bold text-gray-800 focus:outline-none focus:border-primary focus:ring-2 focus:ring-blue-100 transition-all text-lg" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')">
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div>
-                            <h4 class="font-bold mb-2">Payment Options</h4>
-                            <div class="space-y-3 text-sm">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="payment" class="w-4 h-4 text-primary" checked>
-                                    <span>Full Payment (Rp 45,000,000)</span>
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between items-center">
+                                    Waktu Menabung
+                                    <span id="quick-time-label" class="text-primary bg-blue-50 px-3 py-1 rounded-full text-xs">6 Bulan</span>
                                 </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="payment" class="w-4 h-4 text-primary">
-                                    <span>Installment (Rp 1,416,667/month for 6 months)</span>
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="payment" class="w-4 h-4 text-primary">
-                                    <span>Savings Plan (Save Rp 1,875,000/month for 24 months)</span>
-                                </label>
+                                <input type="range" id="quick-time" min="1" max="24" value="6" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary mt-2">
+                                <div class="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                                    <span>1 Bln</span>
+                                    <span>24 Bln</span>
+                                </div>
                             </div>
+
+                            <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-blue-100 text-center shadow-inner mt-4 relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-primary"></div>
+                                <p class="text-sm text-blue-800 font-semibold mb-2">Cukup Sisihkan</p>
+                                <div class="text-4xl font-black text-primary mb-2 tracking-tight" id="quick-result">Rp 55.555<span class="text-xl text-blue-500 font-bold ml-1">/hari</span></div>
+                                <p class="text-xs text-blue-600 font-medium">Makin cepat mulai, makin ringan langkahmu! ✨</p>
+                            </div>
+                            
+                            <button onclick="window.location.href='/design-trip'" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center">
+                                <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -120,3 +101,30 @@ import Layout from '../layouts/Layout.astro';
         </section>
     </main>
 </Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const quickTarget = document.getElementById('quick-target');
+        const quickTime = document.getElementById('quick-time');
+        const quickTimeLabel = document.getElementById('quick-time-label');
+        const quickResult = document.getElementById('quick-result');
+
+        function calculateQuick() {
+            if(!quickTarget || !quickTime || !quickTimeLabel || !quickResult) return;
+            const target = parseInt(quickTarget.value.replace(/\./g, '')) || 0;
+            const months = parseInt(quickTime.value) || 1;
+            
+            quickTimeLabel.innerText = `${months} Bulan`;
+            
+            const days = months * 30;
+            const daily = Math.ceil(target / days);
+            
+            quickResult.innerHTML = `Rp ${daily.toLocaleString('id-ID')}<span class="text-xl text-blue-500 font-bold ml-1">/hari</span>`;
+        }
+
+        quickTarget?.addEventListener('input', calculateQuick);
+        quickTime?.addEventListener('input', calculateQuick);
+        
+        calculateQuick();
+    });
+</script>

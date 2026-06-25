@@ -2,32 +2,32 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Holiday Loan - DreamJourney">
+<Layout title="Pinjaman Liburan - DreamJourney">
     <main class="pt-20">
         <!-- Holiday Loan -->
         <section id="loan" class="py-16 bg-white">
             <div class="container mx-auto px-4">
-                <h2 class="text-3xl font-bold mb-10 text-center">🚀 Instant Holiday Funds - Approved in 24 Hours</h2>
+                <h2 class="text-3xl font-bold mb-10 text-center">🚀 Dana Liburan Instan - Disetujui dalam 24 Jam</h2>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
                     <!-- Form / Calculator -->
                     <div class="bg-gray-50 p-8 rounded-xl border border-gray-150">
-                        <h3 class="font-bold text-xl mb-6">Loan Calculator</h3>
+                        <h3 class="font-bold text-xl mb-6">Kalkulator Pinjaman</h3>
                         
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-gray-700 font-medium mb-2">Loan Purpose</label>
+                                <label class="block text-gray-700 font-medium mb-2">Tujuan Pinjaman</label>
                                 <select class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white text-sm outline-none focus:ring-2 focus:ring-primary">
-                                    <option>Bali Vacation</option>
-                                    <option>Honeymoon</option>
-                                    <option>Family Trip</option>
-                                    <option>Business Travel</option>
+                                    <option>Liburan Bali</option>
+                                    <option>Bulan Madu</option>
+                                    <option>Liburan Keluarga</option>
+                                    <option>Perjalanan Bisnis</option>
                                 </select>
                             </div>
                             
                             <div>
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-gray-700 font-medium">Loan Amount (Rp)</label>
+                                    <label class="text-gray-700 font-medium">Jumlah Pinjaman (Rp)</label>
                                     <span id="loan-amount-val" class="text-primary font-bold text-lg">Rp 10.000.000</span>
                                 </div>
                                 <input type="range" id="loan-amount-slider" min="5000000" max="100000000" step="1000000" value="10000000" class="w-full mb-2 cursor-pointer accent-primary">
@@ -38,7 +38,7 @@ import Layout from '../layouts/Layout.astro';
                             </div>
                             
                             <div>
-                                <label class="block text-gray-700 font-medium mb-2">Tenor (Months)</label>
+                                <label class="block text-gray-700 font-medium mb-2">Tenor (Bulan)</label>
                                 <div class="grid grid-cols-4 gap-2" id="tenor-buttons-container">
                                     <button class="bg-primary text-white py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="6">6</button>
                                     <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold cursor-pointer transition tenor-btn" data-tenor="12">12</button>
@@ -48,32 +48,32 @@ import Layout from '../layouts/Layout.astro';
                             </div>
                             
                             <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                <h4 class="font-bold text-gray-800 mb-3 text-sm tracking-wide uppercase">Loan Summary</h4>
+                                <h4 class="font-bold text-gray-800 mb-3 text-sm tracking-wide uppercase">Ringkasan Pinjaman</h4>
                                 <div class="space-y-2 text-sm text-gray-600">
                                     <div class="flex justify-between">
-                                        <span>Monthly Payment</span>
+                                        <span>Cicilan per Bulan</span>
                                         <span class="font-bold text-primary" id="monthly-payment-val">Rp 1.746.666</span>
                                     </div>
                                     <div class="flex justify-between">
-                                        <span>Interest Rate</span>
-                                        <span class="font-semibold text-gray-800">0.8% per month</span>
+                                        <span>Suku Bunga</span>
+                                        <span class="font-semibold text-gray-800">0.8% per bulan</span>
                                     </div>
                                     <div class="flex justify-between">
-                                        <span>Total Repayment</span>
+                                        <span>Total Pengembalian</span>
                                         <span class="font-semibold text-gray-800" id="total-repayment-val">Rp 10.480.000</span>
                                     </div>
                                 </div>
                             </div>
                             
                             <button id="btn-apply-loan" class="w-full bg-accent hover:bg-accent-dark text-white py-3 rounded-lg font-bold shadow-md transition cursor-pointer">
-                                Apply for Loan
+                                Ajukan Pinjaman
                             </button>
                         </div>
                     </div>
                     
                     <!-- Benefits -->
                     <div>
-                        <h3 class="font-bold text-xl mb-6 text-gray-800">Why Choose Our Holiday Loan?</h3>
+                        <h3 class="font-bold text-xl mb-6 text-gray-800">Mengapa Memilih Pinjaman Liburan Kami?</h3>
                         
                         <div class="space-y-4 mb-6">
                             <div class="flex items-start">
@@ -81,8 +81,8 @@ import Layout from '../layouts/Layout.astro';
                                     <i data-feather="check" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-gray-800">100% Online Process</h4>
-                                    <p class="text-gray-600 text-sm">Complete your application digitally without paperwork</p>
+                                    <h4 class="font-bold text-gray-800">Proses 100% Online</h4>
+                                    <p class="text-gray-600 text-sm">Selesaikan aplikasi Anda secara digital tanpa dokumen fisik</p>
                                 </div>
                             </div>
                             
@@ -91,8 +91,8 @@ import Layout from '../layouts/Layout.astro';
                                     <i data-feather="check" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-gray-800">No Collateral Needed</h4>
-                                    <p class="text-gray-600 text-sm">For loans up to Rp 50,000,000 with good credit</p>
+                                    <h4 class="font-bold text-gray-800">Tanpa Agunan</h4>
+                                    <p class="text-gray-600 text-sm">Untuk pinjaman hingga Rp 50.000.000 dengan kredit yang baik</p>
                                 </div>
                             </div>
                             
@@ -101,8 +101,8 @@ import Layout from '../layouts/Layout.astro';
                                     <i data-feather="check" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-gray-800">Low Interest Rates</h4>
-                                    <p class="text-gray-600 text-sm">Starting from 0.8% per month (9.6% per year)</p>
+                                    <h4 class="font-bold text-gray-800">Suku Bunga Rendah</h4>
+                                    <p class="text-gray-600 text-sm">Mulai dari 0,8% per bulan (9,6% per tahun)</p>
                                 </div>
                             </div>
                             
@@ -111,8 +111,8 @@ import Layout from '../layouts/Layout.astro';
                                     <i data-feather="check" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-gray-800">Instant Disbursement</h4>
-                                    <p class="text-gray-600 text-sm">Funds transferred to your DreamJourney Wallet within 24 hours</p>
+                                    <h4 class="font-bold text-gray-800">Pencairan Instan</h4>
+                                    <p class="text-gray-600 text-sm">Dana ditransfer ke Dompet DreamJourney Anda dalam waktu 24 jam</p>
                                 </div>
                             </div>
                         </div>
@@ -125,7 +125,7 @@ import Layout from '../layouts/Layout.astro';
                                         <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1887&auto=format&fit=crop" alt="User" class="w-12 h-12 rounded-full object-cover shadow-sm">
                                     </div>
                                     <div>
-                                        <p class="italic text-sm text-gray-700">"Borrowed 10 million, approved the next day! Booked my Japan trip immediately."</p>
+                                        <p class="italic text-sm text-gray-700">"Pinjam 10 juta, disetujui keesokan harinya! Langsung pesan tiket perjalanan ke Jepang."</p>
                                         <p class="font-bold mt-2 text-xs text-gray-800">- Rina, 29</p>
                                     </div>
                                 </div>
@@ -209,7 +209,7 @@ import Layout from '../layouts/Layout.astro';
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
                 const amountFormatted = amountDisplay ? amountDisplay.textContent : '';
-                alert(`Loan application of ${amountFormatted} for ${selectedTenor} months has been submitted! Sign in or register to complete verification.`);
+                alert(`Aplikasi pinjaman sebesar ${amountFormatted} untuk ${selectedTenor} bulan telah diajukan! Silakan masuk atau daftar untuk menyelesaikan verifikasi.`);
             });
         }
     });

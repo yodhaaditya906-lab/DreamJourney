@@ -1,0 +1,152 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../lib/supabase';
+
+const { id } = Astro.params;
+const { userId } = Astro.locals.auth();
+
+if (!userId) {
+    return Astro.redirect('/');
+}
+
+// Fetch Goal
+const { data: goal, error } = await supabase.from('goals').select('*').eq('id', id).single();
+
+if (error || !goal || goal.user_id !== userId) {
+    return Astro.redirect('/dashboard');
+}
+
+// Parse details
+let tripDetails = null;
+
+if (goal.payment_detail && goal.payment_detail.includes('|||')) {
+    try {
+        const parts = goal.payment_detail.split('|||');
+        tripDetails = JSON.parse(parts[1]);
+    } catch(e) {
+        console.error('Failed to parse trip details:', e, 'Raw parts:', parts);
+    }
+}
+
+const formatRp = (num: number) => `Rp ${num.toLocaleString('id-ID')}`;
+
+let grandTotal = 0;
+if (tripDetails) {
+    [...(tripDetails.accommodations||[]), ...(tripDetails.transports||[]), ...(tripDetails.activities||[]), ...(tripDetails.others||[])].forEach((item: any) => {
+        grandTotal += item.price;
+    });
+    grandTotal += (tripDetails.buffer || 0);
+}
+
+---
+<Layout title={`Rincian Biaya: ${goal.title} - DreamJourney`}>
+    <main class="pt-24 pb-16 min-h-screen bg-gray-50">
+        <div class="container mx-auto px-4 max-w-3xl">
+            <a href="/dashboard" class="inline-flex items-center text-gray-600 hover:text-primary mb-6 transition font-medium">
+                <i data-feather="arrow-left" class="w-5 h-5 mr-2"></i>
+                Kembali ke Dashboard
+            </a>
+
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
+                    <h1 class="text-3xl font-black mb-2">Struk Perjalanan</h1>
+                    <p class="opacity-90 text-lg">{goal.title}</p>
+                </div>
+
+                <div class="p-8">
+                    {!tripDetails ? (
+                        <div class="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <i data-feather="file-minus" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                            <h3 class="text-xl font-bold text-gray-700 mb-2">Rincian Tidak Tersedia</h3>
+                            <p>Target ini tidak memiliki rincian biaya yang tersimpan.</p>
+                        </div>
+                    ) : (
+                        <div class="space-y-8">
+
+                            {/* Section: Akomodasi */}
+                            {tripDetails.accommodations && tripDetails.accommodations.length > 0 && (
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Akomodasi Penginapan</h4>
+                                    <div class="space-y-3">
+                                        {tripDetails.accommodations.map((item: any) => (
+                                            <div class="flex justify-between items-start text-gray-800">
+                                                <span class="flex-1 font-medium">{item.name}</span>
+                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section: Transportasi */}
+                            {tripDetails.transports && tripDetails.transports.length > 0 && (
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Transportasi</h4>
+                                    <div class="space-y-3">
+                                        {tripDetails.transports.map((item: any) => (
+                                            <div class="flex justify-between items-start text-gray-800">
+                                                <span class="flex-1 font-medium">{item.name}</span>
+                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section: Wahana */}
+                            {tripDetails.activities && tripDetails.activities.length > 0 && (
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Aktivitas & Wahana</h4>
+                                    <div class="space-y-3">
+                                        {tripDetails.activities.map((item: any) => (
+                                            <div class="flex justify-between items-start text-gray-800">
+                                                <span class="flex-1 font-medium">{item.name}</span>
+                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section: Lainnya */}
+                            {tripDetails.others && tripDetails.others.length > 0 && (
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Pengeluaran Lain-lain</h4>
+                                    <div class="space-y-3">
+                                        {tripDetails.others.map((item: any) => (
+                                            <div class="flex justify-between items-start text-gray-800">
+                                                <span class="flex-1 font-medium">{item.name}</span>
+                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section: Buffer */}
+                            {tripDetails.buffer > 0 && (
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Tabungan Darurat</h4>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-start text-gray-800">
+                                            <span class="flex-1 font-medium">Uang Jaga-jaga (Buffer)</span>
+                                            <span class="font-bold">{formatRp(tripDetails.buffer)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* GRAND TOTAL */}
+                            <div class="mt-8 pt-6 border-t border-dashed border-gray-300">
+                                <div class="flex justify-between items-center bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                    <span class="text-gray-700 font-bold text-xl tracking-wide">GRAND TOTAL</span>
+                                    <span class="text-3xl font-black text-primary">{formatRp(grandTotal)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    </main>
+</Layout>

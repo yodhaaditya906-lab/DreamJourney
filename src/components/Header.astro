@@ -1,4 +1,5 @@
 ---
+import { Show, UserButton, SignInButton, SignUpButton } from '@clerk/astro/components';
 const currentPath = Astro.url.pathname;
 ---
 <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
@@ -9,15 +10,31 @@ const currentPath = Astro.url.pathname;
         </a>
         
         <nav class="hidden lg:flex items-center gap-8">
-            <a href="/" class={`font-medium transition ${currentPath === '/' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Home</a>
-            <a href="/packages" class={`font-medium transition ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Packages</a>
-            <a href="/planner" class={`font-medium transition ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Planner</a>
-            <a href="/community" class={`font-medium transition ${currentPath === '/community' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Community</a>
+            <a href="/" class={`font-medium transition ${currentPath === '/' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Beranda</a>
+            <a href="/packages" class={`font-medium transition ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Paket Liburan</a>
+            <a href="/planner" class={`font-medium transition ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Rencana Perjalanan</a>
+            <a href="/community" class={`font-medium transition ${currentPath === '/community' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Komunitas</a>
         </nav>
 
         <div class="hidden lg:flex items-center gap-4">
-            <a href="#" class="text-gray-600 hover:text-primary font-medium transition">Login</a>
-            <a href="#" class="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition">Register</a>
+            <Show when="signed-out">
+                <SignInButton mode="modal" class="text-gray-600 hover:text-primary font-medium transition cursor-pointer">
+                    Masuk
+                </SignInButton>
+                <SignUpButton mode="modal" fallbackRedirectUrl="/" class="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition cursor-pointer shadow-sm hover:shadow">
+                    Daftar
+                </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+                <div class="flex items-center gap-5">
+                    <a href="/dashboard" class={`flex items-center gap-2 font-medium transition ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`} title="Savings Tracker Dashboard">
+                        <i data-feather="pie-chart" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <div class="h-6 w-px bg-gray-200"></div>
+                    <UserButton userProfileMode="navigation" userProfileUrl="/profile" />
+                </div>
+            </Show>
         </div>
 
         <!-- Toggle Button for Mobile Menu (Hamburger) -->
@@ -29,14 +46,25 @@ const currentPath = Astro.url.pathname;
     <!-- Mobile Drawer Navigation -->
     <div class="hidden lg:hidden bg-white border-t border-gray-100 shadow-inner px-4 py-6" id="mobile-menu-drawer">
         <nav class="flex flex-col gap-4">
-            <a href="/" class={`font-medium transition py-2 ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>Home</a>
-            <a href="/packages" class={`font-medium transition py-2 ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>Packages</a>
-            <a href="/planner" class={`font-medium transition py-2 ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600'}`}>Planner</a>
-            <a href="/community" class={`font-medium transition py-2 ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>Community</a>
+            <a href="/" class={`font-medium transition py-2 ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>Beranda</a>
+            <a href="/packages" class={`font-medium transition py-2 ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>Paket Liburan</a>
+            <a href="/planner" class={`font-medium transition py-2 ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600'}`}>Rencana Perjalanan</a>
+            <a href="/community" class={`font-medium transition py-2 ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>Komunitas</a>
             <hr class="border-gray-100 my-2">
             <div class="flex flex-col gap-3">
-                <a href="#" class="text-gray-600 font-medium py-2 text-center">Login</a>
-                <a href="#" class="bg-primary hover:bg-primary-dark text-white py-2.5 rounded-full font-semibold text-center transition">Register</a>
+                <Show when="signed-out">
+                    <SignInButton mode="modal" class="text-gray-600 font-medium py-2 text-center w-full cursor-pointer hover:bg-gray-50 rounded-lg">
+                        Masuk
+                    </SignInButton>
+                    <SignUpButton mode="modal" fallbackRedirectUrl="/" class="bg-primary hover:bg-primary-dark text-white py-2.5 rounded-full font-semibold text-center w-full transition cursor-pointer shadow-sm">
+                        Daftar
+                    </SignUpButton>
+                </Show>
+                <Show when="signed-in">
+                    <div class="flex justify-center py-2">
+                        <UserButton userProfileMode="navigation" userProfileUrl="/profile" />
+                    </div>
+                </Show>
             </div>
         </nav>
     </div>

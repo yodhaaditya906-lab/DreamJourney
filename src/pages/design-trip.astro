@@ -2,104 +2,327 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Design Your Journey - DreamJourney">
-    <main class="pt-24 pb-16">
-        <div class="container mx-auto px-4 max-w-2xl">
-            <h2 class="text-3xl font-bold mb-8 text-center text-primary">Design Your Journey</h2>
+<Layout title="Rancang Perjalanan Anda - DreamJourney">
+    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden">
+        <!-- Elemen Latar Belakang (Travel Theme) -->
+        <div class="absolute top-20 -left-10 text-blue-100/60 transform -rotate-12 pointer-events-none">
+            <i data-feather="compass" class="w-64 h-64 md:w-96 md:h-96"></i>
+        </div>
+        <div class="absolute bottom-20 -right-10 text-blue-100/60 transform rotate-12 pointer-events-none">
+            <i data-feather="map" class="w-64 h-64 md:w-96 md:h-96"></i>
+        </div>
+        <div class="absolute top-1/3 right-10 text-blue-100/40 transform rotate-45 pointer-events-none">
+            <i data-feather="send" class="w-32 h-32 md:w-48 md:h-48"></i>
+        </div>
+        <div class="absolute bottom-1/3 left-10 text-blue-100/40 pointer-events-none">
+            <i data-feather="sun" class="w-32 h-32 md:w-48 md:h-48"></i>
+        </div>
+
+        <div class="container mx-auto px-4 w-11/12 lg:w-3/4 max-w-5xl relative z-10">
+            <div class="text-center mb-10">
+                <span class="inline-block px-5 py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-4 text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>
+                <h2 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-5 tracking-tight">Rancang Trip & Kalkulasi Biaya</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto text-lg">Catat seluruh kebutuhan akomodasi, transportasi, dan wahana Anda. Sistem akan otomatis menghitung total biaya dan merekomendasikan skema tabungan.</p>
+            </div>
             
-            <form id="design-trip-form" class="bg-white p-8 rounded-xl shadow-lg space-y-10 mb-12">
-                <!-- Step 1: Choose Destination -->
-                <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
-                        <h3 class="text-xl font-bold">Choose Destination</h3>
+            <form id="design-trip-form" class="bg-white p-6 md:p-10 rounded-2xl shadow-xl space-y-12 mb-12 border border-gray-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-full h-2 bg-gradient-to-r from-primary via-blue-400 to-secondary"></div>
+                
+                <div class="relative z-10 space-y-12 mt-4">
+                
+                <!-- STEP 1: INFORMASI DASAR PERJALANAN -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">1</span>
+                        <h3 class="text-2xl font-bold text-gray-800">Informasi Dasar</h3>
                     </div>
-                    <input type="text" placeholder="Where do you want to go? (e.g., Paris, Tokyo)" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary outline-none text-sm transition-all duration-200">
-                </div>
-
-                <!-- Step 2: Set Budget -->
-                <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
-                        <h3 class="text-xl font-bold">Set Budget</h3>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <label class="block text-gray-600 text-sm">Adjust your total trip budget</label>
-                        <span id="budget-display-value" class="text-primary font-bold text-lg">Rp 10.000.000</span>
-                    </div>
-                    <input type="range" id="budget-range-slider" min="1000000" max="100000000" step="1000000" value="10000000" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
-                    <div class="flex justify-between text-xs text-gray-500">
-                        <span>Rp 1.000.000</span>
-                        <span>Rp 100.000.000</span>
-                    </div>
-                </div>
-
-                <!-- Step 3: Select Dates -->
-                <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
-                        <h3 class="text-xl font-bold">Select Dates</h3>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 font-medium mb-2">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
+                            <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Paris" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                        </div>
+                        
                         <div>
-                            <label class="block text-gray-600 text-sm mb-1">Departure Date</label>
-                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                            <label class="block text-gray-700 font-medium mb-2">Tipe Perjalanan <span class="text-red-500">*</span></label>
+                            <select id="trip-type" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                                <option value="Solo">Solo Trip (Sendiri)</option>
+                                <option value="Couple">Couple (2 Orang)</option>
+                                <option value="Family">Keluarga</option>
+                                <option value="Group">Grup Teman</option>
+                            </select>
                         </div>
+                        
+                        <div id="participant-container" class="hidden">
+                            <label class="block text-gray-700 font-medium mb-2">Jumlah Peserta</label>
+                            <input type="number" id="participant-count" min="1" max="50" placeholder="Berapa orang?" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white">
+                        </div>
+
                         <div>
-                            <label class="block text-gray-600 text-sm mb-1">Return Date</label>
-                            <input type="date" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm">
+                            <label class="block text-gray-700 font-medium mb-2">Target Bulan Keberangkatan <span class="text-red-500">*</span></label>
+                            <input type="month" id="departure-month" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
                         </div>
                     </div>
                 </div>
 
-                <!-- Step 4: Payment Options -->
+                <!-- STEP 2: AKOMODASI PENGINAPAN -->
                 <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">4</span>
-                        <h3 class="text-xl font-bold">Payment Options</h3>
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
+                        <div class="flex items-center gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">2</span>
+                            <h3 class="text-2xl font-bold text-gray-800">Akomodasi Penginapan</h3>
+                        </div>
+                        <button type="button" id="btn-add-hotel" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
                     </div>
-                    <div class="space-y-6">
-                        <div class="flex gap-6">
-                            <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                <input type="radio" name="payment-method" value="cash" class="w-4 h-4 text-primary" checked>
-                                <span class="font-medium text-gray-700">Cash (Lentera)</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                <input type="radio" name="payment-method" value="cashless" class="w-4 h-4 text-primary">
-                                <span class="font-medium text-gray-700">Cashless</span>
-                            </label>
+                    
+                    <div id="hotel-list" class="space-y-3">
+                        <!-- Hotel Row Template -->
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Nama Hotel / Link Airbnb" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Cash Fields -->
-                        <div id="cash-details" class="space-y-3 p-4 bg-gray-50 rounded-lg">
-                            <label class="block text-gray-700 text-sm font-medium">ID Lentera</label>
-                            <input type="text" placeholder="Masukkan ID Lentera Anda" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                <!-- STEP 3: TRANSPORTASI -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
+                        <div class="flex items-center gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">3</span>
+                            <h3 class="text-2xl font-bold text-gray-800">Transportasi</h3>
                         </div>
+                        <button type="button" id="btn-add-transport" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">Catat semua tiket pesawat, kereta api, sewa mobil, hingga ongkos travel.</p>
+                    
+                    <div id="transport-list" class="space-y-3">
+                        <!-- Transport Row Template -->
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Tiket Pesawat / Sewa Mobil / Link Traveloka" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                        <!-- Cashless Fields -->
-                        <div id="cashless-details" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg">
+                <!-- STEP 4: AKTIVITAS & WAHANA -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
+                        <div class="flex items-center gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">4</span>
+                            <h3 class="text-2xl font-bold text-gray-800">Aktivitas & Wahana</h3>
+                        </div>
+                        <button type="button" id="btn-add-activity" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    
+                    <div id="activity-list" class="space-y-3">
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Tiket Masuk / Paket Tour / Wahana" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: PENGELUARAN LAIN-LAIN -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
+                        <div class="flex items-center gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">5</span>
+                            <h3 class="text-2xl font-bold text-gray-800">Pengeluaran Lain-lain</h3>
+                        </div>
+                        <button type="button" id="btn-add-other" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">Contoh: Visa, Asuransi Perjalanan, Anggaran Belanja Oleh-oleh, Uang Makan Harian.</p>
+                    
+                    <div id="other-list" class="space-y-3">
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Keterangan Pengeluaran" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 6: ESTIMASI & SKEMA TABUNGAN -->
+                <div class="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50/30 -mx-6 md:-mx-10 px-6 md:px-10 py-10 border-y border-blue-100 shadow-inner">
+                    <div class="flex items-center gap-4 pb-2">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">6</span>
+                        <h3 class="text-2xl font-bold text-gray-800">Skema Tabungan Impian</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                        <!-- Left: Breakdown and Savings -->
+                        <div class="md:col-span-7 space-y-6">
+                            <!-- Summary Box -->
+                            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-600 font-medium">Total Estimasi Trip</span>
+                                    <span id="text-subtotal" class="font-bold text-gray-900 text-lg">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+                                    <div class="flex flex-col">
+                                        <span class="text-gray-600 font-medium text-sm">Tambahan Tabungan Ekstra</span>
+                                        <span class="text-xs text-gray-400">Untuk uang jaga-jaga darurat</span>
+                                    </div>
+                                    <div class="w-1/3 relative">
+                                        <span class="absolute left-3 top-2 text-gray-500 text-xs font-bold">Rp</span>
+                                        <input type="text" id="buffer-input" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold text-right">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-900 font-bold text-lg">GRAND TOTAL</span>
+                                    <span id="text-grandtotal" class="font-extrabold text-primary text-2xl">Rp 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Frequency Selection -->
                             <div>
-                                <label class="block text-gray-700 text-sm font-medium mb-1">Pilih Bank / E-Wallet</label>
-                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                                <label class="block text-gray-700 font-bold mb-3">Pilih Frekuensi Menabung Anda:</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="1" class="hidden peer" checked>
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Harian</span>
+                                        <span class="text-xs text-gray-400">Setiap Hari</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="7" class="hidden peer">
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Mingguan</span>
+                                        <span class="text-xs text-gray-400">Tiap Akhir Pekan</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="30" class="hidden peer">
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Bulanan</span>
+                                        <span class="text-xs text-gray-400">Sesuai Gajian</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Calculator Result Focus -->
+                        <div class="md:col-span-5">
+                            <div class="bg-primary text-white p-6 rounded-2xl shadow-xl flex flex-col justify-center text-center relative overflow-hidden h-full">
+                                <!-- Abstract circles -->
+                                <div class="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white opacity-10"></div>
+                                <div class="absolute -left-10 -bottom-10 w-24 h-24 rounded-full bg-white opacity-10"></div>
+                                
+                                <div class="relative z-10">
+                                    <span class="text-sm font-bold text-blue-100 uppercase tracking-wider mb-2 block">Target Nabung Rutin</span>
+                                    <div id="saving-simulation-result" class="text-4xl lg:text-4xl font-extrabold text-white mb-2 drop-shadow-md py-4">Rp 0</div>
+                                    <div class="bg-black/20 rounded-lg py-2 px-4 inline-block mt-2">
+                                        <span id="saving-simulation-label" class="text-blue-50 font-medium text-sm">per hari selama -- bulan</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 7: METODE PEMBAYARAN -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">7</span>
+                        <h3 class="text-2xl font-bold text-gray-800">Metode Tabungan</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-blue-50 transition group relative bg-white">
+                            <input type="radio" name="payment-method" value="cashless" class="w-5 h-5 text-primary accent-primary mt-0.5 peer" checked>
+                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                            <div class="relative z-10">
+                                <span class="font-bold text-gray-800 block mb-1">Auto-Debit (Otomatis)</span>
+                                <span class="text-xs text-gray-500 leading-relaxed">Dana tabungan ditarik otomatis dari Rekening/E-Wallet Anda sesuai frekuensi yang dipilih. Praktis tanpa ribet!</span>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-orange-50 transition group relative bg-white">
+                            <input type="radio" name="payment-method" value="cash" class="w-5 h-5 text-primary accent-primary mt-0.5 peer">
+                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-orange-400 rounded-xl pointer-events-none transition-all"></div>
+                            <div class="relative z-10">
+                                <span class="font-bold text-gray-800 block mb-1">Transfer Manual (Via Lentera)</span>
+                                <span class="text-xs text-gray-500 leading-relaxed">Setor mandiri dan dipandu oleh agen pendamping Lentera pilihan Anda. Cocok buat yang butuh pengingat rutin.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Cashless Fields -->
+                    <div id="cashless-details" class="space-y-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Pilih Bank / E-Wallet</label>
+                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
                                     <option>BCA</option>
-                                    <option>Mandiri</option>
-                                    <option>GOPAY</option>
+                                    <option>Bank Mandiri</option>
+                                    <option>BNI</option>
+                                    <option>GoPay</option>
                                     <option>OVO</option>
                                     <option>DANA</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-gray-700 text-sm font-medium mb-1">Nomor Rekening / Nomor E-Wallet</label>
-                                <input type="text" placeholder="Masukkan nomor akun" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">Nomor Rekening / E-Wallet</label>
+                                <input type="text" placeholder="Masukkan nomor akun..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Cash Fields -->
+                    <div id="cash-details" class="hidden space-y-4 p-5 bg-orange-50/50 rounded-xl border border-orange-100">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">ID Lentera Pendamping (Opsional)</label>
+                            <input type="text" placeholder="Misal: 001131JK (Kosongkan jika belum ada)" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-300 outline-none text-sm bg-white">
+                            <p class="text-xs text-orange-600 mt-2">Agen Lentera akan menghubungi Anda untuk membantu mengatur jadwal setoran tabungan manual secara aman.</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-6 border-t border-gray-100 text-center">
-                    <button type="submit" class="w-full bg-accent hover:bg-accent-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg transition cursor-pointer">
-                        Confirm Journey Design
+                <div class="pt-8 border-t border-gray-200">
+                    <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                        <i data-feather="check-circle" class="w-6 h-6"></i>
+                        Simpan Rencana & Mulai Menabung
                     </button>
+                    <p class="text-center text-xs text-gray-500 mt-4">Sistem akan menyimpan rincian biaya Anda untuk dilacak melalui Dashboard.</p>
+                </div>
+                
                 </div>
             </form>
         </div>
@@ -108,11 +331,23 @@ import Layout from '../layouts/Layout.astro';
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Payment method toggle logic
+        // --- FORM TOGGLES ---
+        const tripTypeSelect = document.getElementById('trip-type') as HTMLSelectElement;
+        const participantContainer = document.getElementById('participant-container');
+        if (tripTypeSelect && participantContainer) {
+            tripTypeSelect.addEventListener('change', (e) => {
+                const val = (e.target as HTMLSelectElement).value;
+                if (val === 'Family' || val === 'Group') {
+                    participantContainer.classList.remove('hidden');
+                } else {
+                    participantContainer.classList.add('hidden');
+                }
+            });
+        }
+
         const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
         const cashDetails = document.getElementById('cash-details');
         const cashlessDetails = document.getElementById('cashless-details');
-
         if (paymentRadios.length > 0 && cashDetails && cashlessDetails) {
             paymentRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
@@ -128,26 +363,275 @@ import Layout from '../layouts/Layout.astro';
             });
         }
 
-        // Budget range slider formatter logic
-        const slider = document.getElementById('budget-range-slider') as HTMLInputElement;
-        const displayVal = document.getElementById('budget-display-value');
+        // --- DYNAMIC CALCULATOR LOGIC ---
+        const monthInput = document.getElementById('departure-month') as HTMLInputElement;
+        const savingFreqRadios = document.querySelectorAll('input[name="saving-freq"]');
+        const subtotalText = document.getElementById('text-subtotal');
+        const grandtotalText = document.getElementById('text-grandtotal');
+        const resultVal = document.getElementById('saving-simulation-result');
+        const resultLabel = document.getElementById('saving-simulation-label');
 
-        if (slider && displayVal) {
-            const formatCurrency = (amount: string) => {
-                return 'Rp ' + parseInt(amount).toLocaleString('id-ID');
-            };
-
-            slider.addEventListener('input', () => {
-                displayVal.textContent = formatCurrency(slider.value);
-            });
+        // Set min month
+        if (monthInput) {
+            const today = new Date();
+            today.setMonth(today.getMonth() + 1);
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            monthInput.min = `${yyyy}-${mm}`;
+            monthInput.value = `${yyyy}-${mm}`;
         }
-        
-        // Handle Form Submit Simulation
+
+        // Format Currency Helper
+        const formatCurrency = (amount: number) => {
+            return 'Rp ' + amount.toLocaleString('id-ID');
+        };
+
+        // Parse Currency string to number
+        const parseCurrency = (str: string) => {
+            if (!str) return 0;
+            const numeric = parseInt(str.replace(/[^\d]/g, ''));
+            return isNaN(numeric) ? 0 : numeric;
+        };
+
+        // Format input while typing
+        const attachCurrencyFormatter = (input: HTMLInputElement) => {
+            input.addEventListener('input', function(e) {
+                // Get unformatted number
+                let value = parseCurrency(this.value);
+                // Set formatted string back
+                if (value === 0 && this.value.replace(/[^\d]/g, '') === '') {
+                    this.value = '';
+                } else {
+                    this.value = value.toLocaleString('id-ID');
+                }
+                calculateGrandTotal();
+            });
+        };
+
+        // Attach formatter to all existing cost inputs
+        document.querySelectorAll('.cost-input').forEach(input => {
+            attachCurrencyFormatter(input as HTMLInputElement);
+        });
+
+        // Add Row Template Logic
+        const createRowTemplate = (placeholderText: string) => {
+            const div = document.createElement('div');
+            div.className = 'flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200 mb-3';
+            div.innerHTML = `
+                <div class="flex-grow w-full md:w-auto">
+                    <input type="text" placeholder="${placeholderText}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                </div>
+                <div class="w-full md:w-1/3 relative">
+                    <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                    <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                </div>
+                <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                    <i data-feather="trash-2" class="w-5 h-5"></i>
+                </button>
+            `;
+            
+            // Attach events
+            const newCostInput = div.querySelector('.cost-input') as HTMLInputElement;
+            attachCurrencyFormatter(newCostInput);
+            
+            const removeBtn = div.querySelector('.btn-remove-row');
+            removeBtn?.addEventListener('click', () => {
+                div.remove();
+                calculateGrandTotal();
+            });
+            
+            return div;
+        };
+
+        // Attach Remove handlers to initial static rows
+        document.querySelectorAll('.btn-remove-row').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('div.flex.gap-3, div.flex-col');
+                if (row) {
+                    row.remove();
+                    calculateGrandTotal();
+                }
+            });
+        });
+
+        // Add Buttons mapping
+        const addConfig = [
+            { btnId: 'btn-add-hotel', containerId: 'hotel-list', placeholder: 'Nama Hotel / Link Airbnb' },
+            { btnId: 'btn-add-transport', containerId: 'transport-list', placeholder: 'Tiket Pesawat / Sewa Mobil' },
+            { btnId: 'btn-add-activity', containerId: 'activity-list', placeholder: 'Tiket Masuk / Paket Tour / Wahana' },
+            { btnId: 'btn-add-other', containerId: 'other-list', placeholder: 'Keterangan Pengeluaran (Visa/Asuransi)' }
+        ];
+
+        addConfig.forEach(config => {
+            const btn = document.getElementById(config.btnId);
+            const container = document.getElementById(config.containerId);
+            if (btn && container) {
+                btn.addEventListener('click', () => {
+                    const newRow = createRowTemplate(config.placeholder);
+                    container.appendChild(newRow);
+                    // Re-init feather icons for the new trash bin
+                    if (window.feather) window.feather.replace();
+                });
+            }
+        });
+
+        // Main Calculation Engine
+        function calculateGrandTotal() {
+            let sumSubtotal = 0;
+            let sumBuffer = 0;
+
+            // Iterate all cost inputs
+            document.querySelectorAll('.cost-input').forEach(input => {
+                const el = input as HTMLInputElement;
+                const val = parseCurrency(el.value);
+                
+                // if it's the buffer input, separate it
+                if (el.id === 'buffer-input') {
+                    sumBuffer = val;
+                } else {
+                    sumSubtotal += val;
+                }
+            });
+
+            const grandTotal = sumSubtotal + sumBuffer;
+
+            // Update UI
+            if (subtotalText) subtotalText.textContent = formatCurrency(sumSubtotal);
+            if (grandtotalText) grandtotalText.textContent = formatCurrency(grandTotal);
+
+            // Calculate Installments
+            calculateSavingInstallments(grandTotal);
+        }
+
+        function calculateSavingInstallments(grandTotal: number) {
+            if (!resultVal || !resultLabel || !monthInput) return;
+
+            if (grandTotal === 0) {
+                resultVal.textContent = "Rp 0";
+                resultLabel.textContent = "Masukkan biaya untuk simulasi";
+                return;
+            }
+
+            const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+            const freqDays = parseInt(freqEl?.value || "1");
+            let freqText = freqDays === 1 ? 'hari' : (freqDays === 7 ? 'minggu' : 'bulan');
+
+            let monthsDiff = 6;
+            if (monthInput.value) {
+                const targetDate = new Date(monthInput.value + '-01');
+                const today = new Date();
+                monthsDiff = (targetDate.getFullYear() - today.getFullYear()) * 12 + (targetDate.getMonth() - today.getMonth());
+                if (monthsDiff <= 0) monthsDiff = 1;
+            }
+
+            const totalDays = monthsDiff * 30;
+            const periods = Math.max(1, Math.floor(totalDays / freqDays));
+            const savingPerPeriod = grandTotal / periods;
+
+            resultVal.textContent = formatCurrency(Math.ceil(savingPerPeriod));
+            resultLabel.textContent = `per ${freqText} selama ${monthsDiff} bulan`;
+        }
+
+        // Listeners for triggers
+        if (monthInput) monthInput.addEventListener('change', calculateGrandTotal);
+        savingFreqRadios.forEach(radio => radio.addEventListener('change', calculateGrandTotal));
+
+        // Initial Calc
+        calculateGrandTotal();
+
+        // Handle Submit
         const form = document.getElementById('design-trip-form');
         if (form) {
-            form.addEventListener('submit', (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                alert('Your custom trip design has been confirmed! Sign up or login to save this to your profile.');
+                
+                // Recalculate safely
+                calculateGrandTotal();
+                
+                const title = (document.getElementById('dest-input') as HTMLInputElement)?.value || "Custom Trip";
+                const tripType = (document.getElementById('trip-type') as HTMLSelectElement)?.value || "Solo";
+                const grandTotal = parseInt(grandtotalText?.textContent?.replace(/[^\d]/g, '') || "0");
+                const savingAmount = parseInt(resultVal?.textContent?.replace(/[^\d]/g, '') || "0");
+                const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+                const freqDays = parseInt(freqEl?.value || "1");
+                
+                const paymentRadio = document.querySelector('input[name="payment-method"]:checked') as HTMLInputElement;
+                const paymentMethod = paymentRadio?.value || 'cashless';
+                
+                let paymentDetail = '';
+                if (paymentMethod === 'cashless') {
+                    const detailInput = document.querySelector('#cashless-details input[type="text"]') as HTMLInputElement;
+                    if (!detailInput.value.trim()) {
+                        alert("Mohon masukkan Nomor Rekening / E-Wallet Anda untuk opsi Auto-Debit.");
+                        return; // Stop submission
+                    }
+                    paymentDetail = (document.querySelector('#cashless-details select') as HTMLSelectElement)?.value + ' - ' + detailInput.value;
+                } else {
+                    paymentDetail = 'Lentera: ' + (document.querySelector('#cash-details input') as HTMLInputElement)?.value;
+                }
+
+                // --- GATHER DETAILED LINE ITEMS ---
+                const gatherItems = (containerId: string) => {
+                    const items: any[] = [];
+                    document.querySelectorAll(`#${containerId} > div`).forEach(row => {
+                        const textInput = row.querySelector('input[type="text"]:not(.cost-input)') as HTMLInputElement;
+                        const costInput = row.querySelector('.cost-input') as HTMLInputElement;
+                        if (textInput && costInput && textInput.value.trim() !== '') {
+                            items.push({
+                                name: textInput.value.trim(),
+                                price: parseCurrency(costInput.value)
+                            });
+                        }
+                    });
+                    return items;
+                };
+
+                const tripDetails = {
+                    accommodations: gatherItems('hotel-list'),
+                    transports: gatherItems('transport-list'),
+                    activities: gatherItems('activity-list'),
+                    others: gatherItems('other-list'),
+                    buffer: parseCurrency((document.getElementById('buffer-input') as HTMLInputElement)?.value || '0')
+                };
+
+                const tripDetailsJSON = JSON.stringify(tripDetails);
+                // Append serialized JSON to paymentDetail using separator
+                paymentDetail = paymentDetail + '|||' + tripDetailsJSON;
+
+                try {
+                    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i data-feather="loader" class="w-6 h-6 animate-spin"></i> Menyimpan...';
+                    submitBtn.disabled = true;
+                    if (window.feather) window.feather.replace();
+
+                    const res = await fetch('/api/goals', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title,
+                            trip_type: tripType,
+                            target_amount: grandTotal,
+                            auto_debit_amount: savingAmount,
+                            frequency: freqDays,
+                            payment_method: paymentMethod,
+                            payment_detail: paymentDetail
+                        })
+                    });
+
+                    if (res.ok) {
+                        alert(`Rencana perjalanan Anda ke ${title} telah disimpan!\nSistem akan otomatis mengarahkan ke Dashboard Anda.`);
+                        window.location.href = '/dashboard';
+                    } else {
+                        const err = await res.json();
+                        alert("Gagal menyimpan rencana: " + (err.error || 'Unknown Error'));
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        if (window.feather) window.feather.replace();
+                    }
+                } catch (error) {
+                    alert("Terjadi kesalahan jaringan.");
+                }
             });
         }
     });
