@@ -59,8 +59,13 @@ import Layout from '../layouts/Layout.astro';
                         </div>
 
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Target Bulan Keberangkatan <span class="text-red-500">*</span></label>
-                            <input type="month" id="departure-month" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                            <label class="block text-gray-700 font-medium mb-2">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
+                            <input type="date" id="departure-date" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Target Selesai Menabung <span class="text-red-500">*</span></label>
+                            <input type="date" id="saving-end-date" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
                         </div>
                     </div>
                 </div>
@@ -364,7 +369,8 @@ import Layout from '../layouts/Layout.astro';
         }
 
         // --- DYNAMIC CALCULATOR LOGIC ---
-        const monthInput = document.getElementById('departure-month') as HTMLInputElement;
+        const departureInput = document.getElementById('departure-date') as HTMLInputElement;
+        const savingEndInput = document.getElementById('saving-end-date') as HTMLInputElement;
         const savingFreqRadios = document.querySelectorAll('input[name="saving-freq"]');
         const subtotalText = document.getElementById('text-subtotal');
         const grandtotalText = document.getElementById('text-grandtotal');
@@ -504,7 +510,7 @@ import Layout from '../layouts/Layout.astro';
         }
 
         function calculateSavingInstallments(grandTotal: number) {
-            if (!resultVal || !resultLabel || !monthInput) return;
+            if (!resultVal || !resultLabel || !savingEndInput) return;
 
             if (grandTotal === 0) {
                 resultVal.textContent = "Rp 0";
@@ -516,15 +522,21 @@ import Layout from '../layouts/Layout.astro';
             const freqDays = parseInt(freqEl?.value || "1");
             let freqText = freqDays === 1 ? 'hari' : (freqDays === 7 ? 'minggu' : 'bulan');
 
+            let totalDays = 180; // Default 6 months
             let monthsDiff = 6;
-            if (monthInput.value) {
-                const targetDate = new Date(monthInput.value + '-01');
+            
+            if (savingEndInput.value) {
+                const targetDate = new Date(savingEndInput.value);
                 const today = new Date();
-                monthsDiff = (targetDate.getFullYear() - today.getFullYear()) * 12 + (targetDate.getMonth() - today.getMonth());
-                if (monthsDiff <= 0) monthsDiff = 1;
+                today.setHours(0,0,0,0);
+                
+                const diffTime = targetDate.getTime() - today.getTime();
+                totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (totalDays <= 0) totalDays = 1;
+                monthsDiff = Math.max(1, Math.round(totalDays / 30));
             }
 
-            const totalDays = monthsDiff * 30;
             const periods = Math.max(1, Math.floor(totalDays / freqDays));
             const savingPerPeriod = grandTotal / periods;
 
@@ -533,7 +545,7 @@ import Layout from '../layouts/Layout.astro';
         }
 
         // Listeners for triggers
-        if (monthInput) monthInput.addEventListener('change', calculateGrandTotal);
+        if (savingEndInput) savingEndInput.addEventListener('change', calculateGrandTotal);
         savingFreqRadios.forEach(radio => radio.addEventListener('change', calculateGrandTotal));
 
         // Initial Calc
