@@ -4,9 +4,9 @@ const currentPath = Astro.url.pathname;
 ---
 <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
     <div class="container mx-auto px-4 h-20 flex justify-between items-center">
-        <a href="/" class="flex items-center gap-2 text-2xl font-bold text-primary">
-            <i data-feather="briefcase"></i>
-            <span>DreamJourney</span>
+        <a href="/" class="flex items-center gap-2">
+            <img src="/images/logo.png" alt="DreamJourney Logo" class="h-10 w-auto object-contain" />
+            <span class="text-2xl font-bold text-primary hidden sm:block">DreamJourney</span>
         </a>
         
         <nav class="hidden lg:flex items-center gap-8">
