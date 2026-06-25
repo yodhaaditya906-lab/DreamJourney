@@ -371,6 +371,16 @@ import Layout from '../layouts/Layout.astro';
         // --- DYNAMIC CALCULATOR LOGIC ---
         const departureInput = document.getElementById('departure-date') as HTMLInputElement;
         const savingEndInput = document.getElementById('saving-end-date') as HTMLInputElement;
+        
+        // Set min date to tomorrow
+        if (departureInput && savingEndInput) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowString = tomorrow.toISOString().split('T')[0];
+            departureInput.min = tomorrowString;
+            savingEndInput.min = tomorrowString;
+        }
+
         const savingFreqRadios = document.querySelectorAll('input[name="saving-freq"]');
         const subtotalText = document.getElementById('text-subtotal');
         const grandtotalText = document.getElementById('text-grandtotal');
