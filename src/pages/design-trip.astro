@@ -387,16 +387,6 @@ import Layout from '../layouts/Layout.astro';
         const resultVal = document.getElementById('saving-simulation-result');
         const resultLabel = document.getElementById('saving-simulation-label');
 
-        // Set min month
-        if (monthInput) {
-            const today = new Date();
-            today.setMonth(today.getMonth() + 1);
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            monthInput.min = `${yyyy}-${mm}`;
-            monthInput.value = `${yyyy}-${mm}`;
-        }
-
         // Format Currency Helper
         const formatCurrency = (amount: number) => {
             return 'Rp ' + amount.toLocaleString('id-ID');
