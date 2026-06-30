@@ -7,6 +7,19 @@ if (!userId) {
     return Astro.redirect('/');
 }
 
+const clerkUser = await Astro.locals.currentUser();
+if (clerkUser) {
+    const hasDomisili = clerkUser.unsafeMetadata?.domisili;
+    const hasDob = clerkUser.unsafeMetadata?.dob;
+    const hasUsername = clerkUser.username;
+    
+    if (!hasDomisili || !hasDob || !hasUsername) {
+        // preserve query string if any
+        const currentUrl = Astro.url.pathname + Astro.url.search;
+        return Astro.redirect('/onboarding?redirect_url=' + encodeURIComponent(currentUrl));
+    }
+}
+
 const title = Astro.url.searchParams.get('title') || 'Liburan Impian';
 const priceStr = Astro.url.searchParams.get('price') || '0';
 const dailyPriceStr = Astro.url.searchParams.get('dailyPrice') || '0';
@@ -52,8 +65,8 @@ try {
 }
 ---
 
-<Layout title={`Setup Saving - ${title}`}>
-    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden">
+<Layout title="Setup Tabungan - DreamJourney">
+    <main class="pt-24 pb-16 bg-blue-50/30 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
         <!-- Elemen Latar Belakang -->
         <div class="absolute top-10 -right-10 text-blue-200/40 transform rotate-12 pointer-events-none">
             <i data-feather="briefcase" class="w-64 h-64 md:w-80 md:h-80"></i>
@@ -138,10 +151,8 @@ try {
                             <div id="container-bank" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Pilih Rekening Bank / e-Wallet</label>
                                 <select id="input-bank" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 outline-none focus:border-primary">
-                                    <option value="BCA">BCA (Auto Debit)</option>
-                                    <option value="Mandiri">Mandiri (Auto Debit)</option>
-                                    <option value="Gopay">Gopay</option>
-                                    <option value="OVO">OVO</option>
+                                    <option value="QRIS">QRIS</option>
+                                    <option value="Auto-debit">Auto-debit</option>
                                 </select>
                             </div>
                         </div>
@@ -237,6 +248,29 @@ try {
                     </form>
                 </div>
             </div>
+
+            <!-- Custom Warning Modal (User Not Found) -->
+            <div id="user-not-found-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                
+                <!-- Modal Content -->
+                <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 relative z-10 transform scale-100 transition-transform">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
+                        </div>
+                        <h3 id="warning-modal-title" class="text-xl font-bold text-gray-900 mb-2">Peringatan</h3>
+                        <p id="user-not-found-msg" class="text-gray-600 mb-6 leading-relaxed text-sm">
+                            Pesan peringatan akan muncul di sini.
+                        </p>
+                        <button type="button" id="btn-close-warning" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition">
+                            Mengerti
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 </Layout>
@@ -351,13 +385,69 @@ try {
             }
         }
 
-        btnAddFriend?.addEventListener('click', () => {
+        btnAddFriend?.addEventListener('click', async () => {
             const val = inputFriend.value.trim();
-            if (val && !groupMembers.includes(val)) {
-                groupMembers.push(val);
+            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+
+            if (!val || groupMembers.includes(val)) return;
+
+            if (val.toLowerCase() === currentUsername) {
+                const modal = document.getElementById('user-not-found-modal');
+                const msg = document.getElementById('user-not-found-msg');
+                const title = document.getElementById('warning-modal-title');
+                if (modal && msg && title) {
+                    title.innerText = "Tindakan Ditolak";
+                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
+                    modal.classList.remove('hidden');
+                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                        modal.classList.add('hidden');
+                    }, { once: true });
+                } else {
+                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+                }
                 inputFriend.value = '';
-                renderFriends();
-                inputFriend.focus();
+                return;
+            }
+
+            const originalText = btnAddFriend.innerHTML;
+            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-4 h-4 mr-1 animate-spin"></i> Cek...';
+            (btnAddFriend as HTMLButtonElement).disabled = true;
+
+            try {
+                const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
+                const data = await res.json();
+
+                // isAvailable = true artinya username BELUM DIPAKAI (belum terdaftar)
+                if (res.ok && data.isAvailable) {
+                    const modal = document.getElementById('user-not-found-modal');
+                    const msg = document.getElementById('user-not-found-msg');
+                    const title = document.getElementById('warning-modal-title');
+                    if (modal && msg && title) {
+                        title.innerText = "Pengguna Tidak Ditemukan";
+                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
+                        modal.classList.remove('hidden');
+                        
+                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                            modal.classList.add('hidden');
+                        }, { once: true });
+                    } else {
+                        alert(`Teman dengan username/email "${val}" tidak ditemukan di database kami.`);
+                    }
+                } else if (res.ok && !data.isAvailable) {
+                    groupMembers.push(val);
+                    inputFriend.value = '';
+                    renderFriends();
+                } else {
+                    alert("Gagal memvalidasi pengguna.");
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan jaringan saat mengecek pengguna.");
+            } finally {
+                btnAddFriend.innerHTML = originalText;
+                (btnAddFriend as HTMLButtonElement).disabled = false;
+                if ((window as any).feather) {
+                    (window as any).feather.replace();
+                }
             }
         });
 
@@ -482,7 +572,13 @@ try {
                 });
 
                 if (res.ok) {
-                    window.location.href = '/dashboard';
+                    const data = await res.json();
+                    if (paymentMethod === 'Cashless' && paymentDetail.startsWith('QRIS')) {
+                        const goalId = data.id || `TRIP-${Date.now()}`;
+                        window.location.href = `/payment?amount=${autoDebitAmount}&title=${encodeURIComponent('Tabungan ' + title)}&ref=${goalId}`;
+                    } else {
+                        window.location.href = '/dashboard';
+                    }
                 } else {
                     alert('Terjadi kesalahan saat menyimpan pengaturan.');
                     window.location.reload();

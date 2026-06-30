@@ -32,7 +32,15 @@ const currentPath = Astro.url.pathname;
                         <span>Dashboard</span>
                     </a>
                     <div class="h-6 w-px bg-gray-200"></div>
-                    <UserButton userProfileMode="navigation" userProfileUrl="/profile" />
+                    <UserButton 
+                        userProfileMode="navigation" 
+                        userProfileUrl="/profile" 
+                        appearance={{
+                            elements: {
+                                userPreviewSecondaryIdentifier: "capitalize"
+                            }
+                        }}
+                    />
                 </div>
             </Show>
         </div>
@@ -62,7 +70,16 @@ const currentPath = Astro.url.pathname;
                 </Show>
                 <Show when="signed-in">
                     <div class="flex justify-center py-2">
-                        <UserButton userProfileMode="navigation" userProfileUrl="/profile" />
+                        <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
+                        <UserButton 
+                            userProfileMode="navigation" 
+                            userProfileUrl="/profile" 
+                            appearance={{
+                                elements: {
+                                    userPreviewSecondaryIdentifier: "capitalize"
+                                }
+                            }}
+                        />
                     </div>
                 </Show>
             </div>

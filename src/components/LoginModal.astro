@@ -1,0 +1,62 @@
+---
+---
+
+<div id="custom-login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="document.getElementById('custom-login-modal').classList.add('hidden')"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row transform transition-all animate-fadeInUp">
+        <!-- Close Button -->
+        <button onclick="document.getElementById('custom-login-modal').classList.add('hidden')" class="absolute top-4 right-4 z-20 text-gray-300 hover:text-white md:hover:text-gray-800 bg-black/40 md:bg-white/50 hover:bg-black/60 md:hover:bg-gray-100 rounded-full p-2 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        <!-- Left Column: Text & CTA -->
+        <div class="w-full md:w-1/2 bg-[#e8fccf] p-10 md:p-14 flex flex-col justify-center items-center text-center relative">
+            <h3 class="text-3xl font-black text-gray-900 mb-2 leading-tight tracking-tight">Mulai Rencanamu ✈️</h3>
+            
+            <p class="text-gray-700 font-medium mb-8 leading-relaxed max-w-xs mx-auto">
+                Masuk ke akun Anda untuk menyimpan rencana perjalanan, melihat estimasi biaya, dan menabung dengan QRIS / Auto-Debit.
+            </p>
+            
+            <div class="w-full space-y-4 relative z-10">
+                <button onclick="window.Clerk ? window.Clerk.redirectToSignIn() : window.location.reload()" class="w-full bg-[#522c9a] hover:bg-[#43237e] text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer">
+                    LOGIN SEKARANG
+                </button>
+                
+                <button onclick="window.Clerk ? window.Clerk.redirectToSignUp({ fallbackRedirectUrl: '/onboarding' }) : window.location.reload()" class="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-800 font-bold py-4 px-6 rounded-lg transition shadow-sm cursor-pointer">
+                    DAFTAR AKUN BARU
+                </button>
+            </div>
+            
+            <p class="text-[10px] text-gray-500 mt-8 max-w-[250px] mx-auto leading-relaxed">
+                Dengan melanjutkan, Anda menyetujui Syarat & Ketentuan serta Kebijakan Privasi dari DreamJourney.
+            </p>
+        </div>
+
+        <!-- Right Column: Image -->
+        <div class="w-full md:w-1/2 h-64 md:h-[500px] relative">
+            <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000&auto=format&fit=crop" alt="Travel Destination" class="absolute inset-0 w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#522c9a]/80 via-transparent to-transparent"></div>
+            
+
+            <div class="absolute bottom-8 left-8 right-8 text-white">
+                <h4 class="text-3xl font-black mb-1 drop-shadow-md">Eksplorasi Dunia</h4>
+                <p class="text-white/90 text-sm font-medium drop-shadow">Liburan mudah dan murah lewat DreamJourney</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-fadeInUp {
+        animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>

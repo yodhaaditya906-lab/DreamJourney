@@ -1,9 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+const clerkUser = await Astro.locals.currentUser();
+if (clerkUser) {
+    const hasDomisili = clerkUser.unsafeMetadata?.domisili;
+    const hasDob = clerkUser.unsafeMetadata?.dob;
+    const hasUsername = clerkUser.username;
+    
+    if (!hasDomisili || !hasDob || !hasUsername) {
+        return Astro.redirect('/onboarding?redirect_url=/design-trip');
+    }
+}
 ---
 
 <Layout title="Rancang Perjalanan Anda - DreamJourney">
-    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden">
+    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
         <!-- Elemen Latar Belakang (Travel Theme) -->
         <div class="absolute top-20 -left-10 text-blue-100/60 transform -rotate-12 pointer-events-none">
             <i data-feather="compass" class="w-64 h-64 md:w-96 md:h-96"></i>
@@ -53,9 +64,38 @@ import Layout from '../layouts/Layout.astro';
                             </select>
                         </div>
                         
-                        <div id="participant-container" class="hidden">
-                            <label class="block text-gray-700 font-medium mb-2">Jumlah Peserta</label>
-                            <input type="number" id="participant-count" min="1" max="50" placeholder="Berapa orang?" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white">
+
+
+                        <!-- Split Bill Toggle -->
+                        <div id="split-bill-toggle-container" class="hidden md:col-span-2 bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" id="checkbox-split-bill" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                                <div>
+                                    <span class="text-sm font-bold text-indigo-900 block">Bagi tagihan dengan anggota grup? (Nabung Bersama)</span>
+                                    <span class="text-xs text-indigo-700 block mt-0.5">Jika dicentang, target tabungan akan dibagi rata ke akun masing-masing.</span>
+                                </div>
+                            </label>
+                            
+                            <!-- Dynamic Group Detail (for Split Bill) -->
+                            <div id="container-group" class="hidden mt-4 bg-white p-4 rounded-xl border border-indigo-200">
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="block text-sm font-bold text-indigo-800"><i data-feather="users" class="w-4 h-4 inline-block mr-1"></i> Anggota Grup</label>
+                                    <span class="text-xs font-bold text-indigo-800 bg-indigo-100 px-2 py-1 rounded-full" id="group-counter">0 Teman Ditambahkan</span>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-2 focus-within:ring-2 ring-indigo-300 transition">
+                                    <!-- Chips Container -->
+                                    <div id="friend-chips-container" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+                                    
+                                    <div class="flex gap-2">
+                                        <input type="text" id="input-friend" placeholder="Ketik username teman disini..." class="flex-1 bg-transparent border-none outline-none text-sm px-1 placeholder-gray-500">
+                                        <button type="button" id="btn-add-friend" class="bg-indigo-500 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-indigo-600 transition flex items-center">
+                                            <i data-feather="plus" class="w-4 h-4 mr-1"></i> Tambah
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-indigo-600 leading-relaxed"><i data-feather="info" class="w-3 h-3 inline-block"></i> Pastikan username teman terdaftar di sistem. Tagihan akan terbagi otomatis.</p>
+                            </div>
                         </div>
 
                         <div>
@@ -216,6 +256,13 @@ import Layout from '../layouts/Layout.astro';
                                     <span class="text-gray-900 font-bold text-lg">GRAND TOTAL</span>
                                     <span id="text-grandtotal" class="font-extrabold text-primary text-2xl">Rp 0</span>
                                 </div>
+                                <div id="split-bill-result" class="hidden flex justify-between items-center mt-3 pt-3 border-t border-indigo-100 bg-indigo-50 -mx-5 px-5 pb-5 -mb-5 rounded-b-2xl">
+                                    <div class="flex flex-col pt-2">
+                                        <span class="text-indigo-900 font-bold text-lg">TARGET ANDA (Split Bill)</span>
+                                        <span class="text-xs text-indigo-600">Dibagi rata: Anda + <span id="split-friend-count">0</span> teman</span>
+                                    </div>
+                                    <span id="text-personaltotal" class="font-extrabold text-indigo-600 text-2xl pt-2">Rp 0</span>
+                                </div>
                             </div>
 
                             <!-- Frequency Selection -->
@@ -263,20 +310,46 @@ import Layout from '../layouts/Layout.astro';
                     </div>
                 </div>
 
-                <!-- STEP 7: METODE PEMBAYARAN -->
+                <!-- STEP 7: PENGATURAN TABUNGAN -->
                 <div class="space-y-6">
                     <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
                         <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">7</span>
-                        <h3 class="text-2xl font-bold text-gray-800">Metode Tabungan</h3>
+                        <h3 class="text-2xl font-bold text-gray-800">Pengaturan Tabungan</h3>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Tipe Tabungan -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-3">Tipe Tabungan</label>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="saving_type" value="Konvensional" class="peer sr-only" checked required>
+                                <div class="text-center p-4 rounded-xl border-2 border-gray-200 peer-checked:border-primary peer-checked:bg-blue-50 transition font-semibold text-gray-600 peer-checked:text-primary flex flex-col items-center justify-center h-full">
+                                    <i data-feather="box" class="w-6 h-6 mb-2"></i>
+                                    <span>Konvensional</span>
+                                    <span class="text-xs font-normal mt-2 opacity-80">Estimasi hasil:<br><strong class="text-sm" id="hasil-konvensional">Rp 0</strong></span>
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer flex flex-col relative overflow-hidden group">
+                                <input type="radio" name="saving_type" value="Investasi" class="peer sr-only" required>
+                                <div class="text-center p-4 rounded-xl border-2 border-gray-200 peer-checked:border-green-500 peer-checked:bg-green-50 transition font-semibold text-gray-600 peer-checked:text-green-600 flex-1 flex flex-col items-center justify-center h-full">
+                                    <i data-feather="trending-up" class="w-6 h-6 mb-2"></i>
+                                    <span>Investasi Reksadana</span>
+                                    <span class="text-xs font-normal mt-2 opacity-80">Estimasi hasil:<br><strong class="text-sm" id="hasil-investasi">Rp 0</strong></span>
+                                </div>
+                                <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">PROMO</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <label class="block text-gray-700 text-sm font-bold">Metode Pembayaran</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-blue-50 transition group relative bg-white">
                             <input type="radio" name="payment-method" value="cashless" class="w-5 h-5 text-primary accent-primary mt-0.5 peer" checked>
                             <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
                             <div class="relative z-10">
-                                <span class="font-bold text-gray-800 block mb-1">Auto-Debit (Otomatis)</span>
-                                <span class="text-xs text-gray-500 leading-relaxed">Dana tabungan ditarik otomatis dari Rekening/E-Wallet Anda sesuai frekuensi yang dipilih. Praktis tanpa ribet!</span>
+                                <span class="font-bold text-gray-800 block mb-1">QRIS / E-Wallet</span>
+                                <span class="text-xs text-gray-500 leading-relaxed">Bayar praktis menggunakan kode QRIS. Didukung oleh semua M-Banking dan E-Wallet.</span>
                             </div>
                         </label>
                         <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-orange-50 transition group relative bg-white">
@@ -287,27 +360,12 @@ import Layout from '../layouts/Layout.astro';
                                 <span class="text-xs text-gray-500 leading-relaxed">Setor mandiri dan dipandu oleh agen pendamping Lentera pilihan Anda. Cocok buat yang butuh pengingat rutin.</span>
                             </div>
                         </label>
+                        </div>
                     </div>
 
-                    <!-- Cashless Fields -->
-                    <div id="cashless-details" class="space-y-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 text-sm font-bold mb-2">Pilih Bank / E-Wallet</label>
-                                <select class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
-                                    <option>BCA</option>
-                                    <option>Bank Mandiri</option>
-                                    <option>BNI</option>
-                                    <option>GoPay</option>
-                                    <option>OVO</option>
-                                    <option>DANA</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 text-sm font-bold mb-2">Nomor Rekening / E-Wallet</label>
-                                <input type="text" placeholder="Masukkan nomor akun..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
-                            </div>
-                        </div>
+                    <!-- Cashless Fields (Removed for QRIS) -->
+                    <div id="cashless-details" class="hidden">
+                        <input type="hidden" value="QRIS" />
                     </div>
 
                     <!-- Cash Fields -->
@@ -319,6 +377,26 @@ import Layout from '../layouts/Layout.astro';
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Custom Warning Modal -->
+            <div id="user-not-found-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 relative z-10 transform scale-100 transition-transform">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
+                        </div>
+                        <h3 id="warning-modal-title" class="text-xl font-bold text-gray-900 mb-2">Peringatan</h3>
+                        <p id="user-not-found-msg" class="text-gray-600 mb-6 leading-relaxed text-sm">
+                            Pesan peringatan akan muncul di sini.
+                        </p>
+                        <button type="button" id="btn-close-warning" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition">
+                            Mengerti
+                        </button>
+                    </div>
+                </div>
+            </div>
 
                 <div class="pt-8 border-t border-gray-200">
                     <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
@@ -338,17 +416,142 @@ import Layout from '../layouts/Layout.astro';
     document.addEventListener('DOMContentLoaded', () => {
         // --- FORM TOGGLES ---
         const tripTypeSelect = document.getElementById('trip-type') as HTMLSelectElement;
-        const participantContainer = document.getElementById('participant-container');
-        if (tripTypeSelect && participantContainer) {
+        const splitBillToggleContainer = document.getElementById('split-bill-toggle-container');
+        const splitBillResult = document.getElementById('split-bill-result');
+        const splitFriendCountText = document.getElementById('split-friend-count');
+        const personalTotalText = document.getElementById('text-personaltotal');
+        
+        let splitBillMembers: string[] = [];
+        
+        if (tripTypeSelect && splitBillToggleContainer) {
             tripTypeSelect.addEventListener('change', (e) => {
                 const val = (e.target as HTMLSelectElement).value;
-                if (val === 'Family' || val === 'Group') {
-                    participantContainer.classList.remove('hidden');
+                if (val !== 'Solo') {
+                    splitBillToggleContainer.classList.remove('hidden');
                 } else {
-                    participantContainer.classList.add('hidden');
+                    splitBillToggleContainer.classList.add('hidden');
+                    // Reset if switched to Solo
+                    (document.getElementById('checkbox-split-bill') as HTMLInputElement).checked = false;
+                    splitBillMembers = [];
+                    renderSplitFriends();
+                    calculateGrandTotal();
                 }
             });
         }
+        
+        // Split Bill Checkbox Toggle
+        const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
+        const containerGroup = document.getElementById('container-group');
+        if (checkboxSplitBill && containerGroup) {
+            checkboxSplitBill.addEventListener('change', () => {
+                if (checkboxSplitBill.checked) {
+                    containerGroup.classList.remove('hidden');
+                } else {
+                    containerGroup.classList.add('hidden');
+                }
+                calculateGrandTotal();
+            });
+        }
+
+        // Friend List Logic
+        const btnAddFriend = document.getElementById('btn-add-friend');
+        const inputFriend = document.getElementById('input-friend') as HTMLInputElement;
+        const friendListEl = document.getElementById('friend-chips-container');
+        
+        function renderSplitFriends() {
+            if (!friendListEl) return;
+            friendListEl.innerHTML = '';
+            splitBillMembers.forEach((friend, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center bg-indigo-100 text-indigo-800 text-sm px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm';
+                chip.innerHTML = `
+                    <span class="font-medium mr-2">${friend}</span>
+                    <button type="button" class="text-indigo-600 hover:text-red-500 transition btn-remove-friend" data-idx="${idx}">
+                        <i data-feather="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                friendListEl.appendChild(chip);
+            });
+            if (window.feather) window.feather.replace();
+            
+            const counter = document.getElementById('group-counter');
+            if (counter) counter.innerText = `${splitBillMembers.length} Teman Ditambahkan`;
+            
+            // Trigger calculation
+            calculateGrandTotal();
+        }
+
+        if (friendListEl) {
+            friendListEl.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const btn = target.closest('.btn-remove-friend');
+                if (btn) {
+                    const idxStr = btn.getAttribute('data-idx');
+                    if (idxStr !== null) {
+                        splitBillMembers.splice(parseInt(idxStr, 10), 1);
+                        renderSplitFriends();
+                    }
+                }
+            });
+        }
+
+        btnAddFriend?.addEventListener('click', async () => {
+            const val = inputFriend.value.trim();
+            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+            
+            if (!val || splitBillMembers.includes(val)) return;
+            
+            if (val.toLowerCase() === currentUsername) {
+                const modal = document.getElementById('user-not-found-modal');
+                const msg = document.getElementById('user-not-found-msg');
+                const title = document.getElementById('warning-modal-title');
+                if (modal && msg && title) {
+                    title.innerText = "Tindakan Ditolak";
+                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
+                    modal.classList.remove('hidden');
+                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                        modal.classList.add('hidden');
+                    }, { once: true });
+                } else {
+                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+                }
+                inputFriend.value = '';
+                return;
+            }
+
+            const originalText = btnAddFriend.innerHTML;
+            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-4 h-4 mr-1 animate-spin"></i> Cek...';
+            (btnAddFriend as HTMLButtonElement).disabled = true;
+
+            try {
+                const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
+                const data = await res.json();
+
+                if (res.ok && data.isAvailable) {
+                    const modal = document.getElementById('user-not-found-modal');
+                    const msg = document.getElementById('user-not-found-msg');
+                    const title = document.getElementById('warning-modal-title');
+                    if (modal && msg && title) {
+                        title.innerText = "Pengguna Tidak Ditemukan";
+                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
+                        modal.classList.remove('hidden');
+                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                            modal.classList.add('hidden');
+                        }, { once: true });
+                    }
+                } else if (res.ok && !data.isAvailable) {
+                    splitBillMembers.push(val);
+                    inputFriend.value = '';
+                    renderSplitFriends();
+                }
+            } catch (err) {
+                alert("Kesalahan jaringan saat mengecek pengguna.");
+            } finally {
+                btnAddFriend.innerHTML = originalText;
+                (btnAddFriend as HTMLButtonElement).disabled = false;
+                if (window.feather) window.feather.replace();
+            }
+        });
 
         const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
         const cashDetails = document.getElementById('cash-details');
@@ -481,17 +684,13 @@ import Layout from '../layouts/Layout.astro';
             }
         });
 
-        // Main Calculation Engine
         function calculateGrandTotal() {
             let sumSubtotal = 0;
             let sumBuffer = 0;
 
-            // Iterate all cost inputs
             document.querySelectorAll('.cost-input').forEach(input => {
                 const el = input as HTMLInputElement;
                 const val = parseCurrency(el.value);
-                
-                // if it's the buffer input, separate it
                 if (el.id === 'buffer-input') {
                     sumBuffer = val;
                 } else {
@@ -500,19 +699,41 @@ import Layout from '../layouts/Layout.astro';
             });
 
             const grandTotal = sumSubtotal + sumBuffer;
+            
+            // Split Bill Logic
+            let personalTarget = grandTotal;
+            if (checkboxSplitBill && checkboxSplitBill.checked && splitBillResult && splitFriendCountText && personalTotalText) {
+                splitBillResult.classList.remove('hidden');
+                splitBillResult.classList.add('flex');
+                
+                const divider = 1 + splitBillMembers.length;
+                personalTarget = Math.ceil(grandTotal / divider);
+                
+                splitFriendCountText.innerText = splitBillMembers.length.toString();
+                personalTotalText.textContent = formatCurrency(personalTarget);
+            } else if (splitBillResult) {
+                splitBillResult.classList.add('hidden');
+                splitBillResult.classList.remove('flex');
+            }
 
             // Update UI
             if (subtotalText) subtotalText.textContent = formatCurrency(sumSubtotal);
             if (grandtotalText) grandtotalText.textContent = formatCurrency(grandTotal);
 
-            // Calculate Installments
-            calculateSavingInstallments(grandTotal);
+            const hasilKonvensional = document.getElementById('hasil-konvensional');
+            if (hasilKonvensional) hasilKonvensional.textContent = formatCurrency(personalTarget);
+            
+            const hasilInvestasi = document.getElementById('hasil-investasi');
+            if (hasilInvestasi) hasilInvestasi.textContent = formatCurrency(Math.round(personalTarget * 1.06));
+
+            // Calculate Installments using personalTarget
+            calculateSavingInstallments(personalTarget);
         }
 
-        function calculateSavingInstallments(grandTotal: number) {
+        function calculateSavingInstallments(targetAmount: number) {
             if (!resultVal || !resultLabel || !savingEndInput) return;
 
-            if (grandTotal === 0) {
+            if (targetAmount === 0) {
                 resultVal.textContent = "Rp 0";
                 resultLabel.textContent = "Masukkan biaya untuk simulasi";
                 return;
@@ -538,7 +759,7 @@ import Layout from '../layouts/Layout.astro';
             }
 
             const periods = Math.max(1, Math.floor(totalDays / freqDays));
-            const savingPerPeriod = grandTotal / periods;
+            const savingPerPeriod = targetAmount / periods;
 
             resultVal.textContent = formatCurrency(Math.ceil(savingPerPeriod));
             resultLabel.textContent = `per ${freqText} selama ${monthsDiff} bulan`;
@@ -562,22 +783,30 @@ import Layout from '../layouts/Layout.astro';
                 
                 const title = (document.getElementById('dest-input') as HTMLInputElement)?.value || "Custom Trip";
                 const tripType = (document.getElementById('trip-type') as HTMLSelectElement)?.value || "Solo";
-                const grandTotal = parseInt(grandtotalText?.textContent?.replace(/[^\d]/g, '') || "0");
+                
+                // Fetch the calculated Personal Target (not Grand Total)
+                let personalTarget = parseInt(grandtotalText?.textContent?.replace(/[^\d]/g, '') || "0");
+                const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
+                if (checkboxSplitBill && checkboxSplitBill.checked && splitBillMembers.length > 0) {
+                    const personalTotalText = document.getElementById('text-personaltotal');
+                    if (personalTotalText) {
+                        personalTarget = parseInt(personalTotalText.textContent?.replace(/[^\d]/g, '') || "0");
+                    }
+                }
+                
                 const savingAmount = parseInt(resultVal?.textContent?.replace(/[^\d]/g, '') || "0");
                 const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
                 const freqDays = parseInt(freqEl?.value || "1");
+                
+                const savingTypeEl = document.querySelector('input[name="saving_type"]:checked') as HTMLInputElement;
+                const savingType = savingTypeEl?.value || 'Konvensional';
                 
                 const paymentRadio = document.querySelector('input[name="payment-method"]:checked') as HTMLInputElement;
                 const paymentMethod = paymentRadio?.value || 'cashless';
                 
                 let paymentDetail = '';
                 if (paymentMethod === 'cashless') {
-                    const detailInput = document.querySelector('#cashless-details input[type="text"]') as HTMLInputElement;
-                    if (!detailInput.value.trim()) {
-                        alert("Mohon masukkan Nomor Rekening / E-Wallet Anda untuk opsi Auto-Debit.");
-                        return; // Stop submission
-                    }
-                    paymentDetail = (document.querySelector('#cashless-details select') as HTMLSelectElement)?.value + ' - ' + detailInput.value;
+                    paymentDetail = 'QRIS Dynamic';
                 } else {
                     paymentDetail = 'Lentera: ' + (document.querySelector('#cash-details input') as HTMLInputElement)?.value;
                 }
@@ -623,17 +852,27 @@ import Layout from '../layouts/Layout.astro';
                         body: JSON.stringify({
                             title,
                             trip_type: tripType,
-                            target_amount: grandTotal,
+                            target_amount: personalTarget,
                             auto_debit_amount: savingAmount,
                             frequency: freqDays,
+                            saving_type: savingType,
                             payment_method: paymentMethod,
-                            payment_detail: paymentDetail
+                            payment_detail: paymentDetail,
+                            group_members: splitBillMembers
                         })
                     });
 
                     if (res.ok) {
-                        alert(`Rencana perjalanan Anda ke ${title} telah disimpan!\nSistem akan otomatis mengarahkan ke Dashboard Anda.`);
-                        window.location.href = '/dashboard';
+                        const data = await res.json();
+                        const goalId = data.id || `TRIP-${Date.now()}`;
+                        
+                        if (paymentMethod === 'cashless') {
+                            // Redirect to payment page for QRIS
+                            window.location.href = `/payment?amount=${savingAmount}&title=Tabungan ${encodeURIComponent(title)}&ref=${goalId}`;
+                        } else {
+                            alert(`Rencana perjalanan Anda ke ${title} telah disimpan!\nSistem akan otomatis mengarahkan ke Dashboard Anda.`);
+                            window.location.href = '/dashboard';
+                        }
                     } else {
                         const err = await res.json();
                         alert("Gagal menyimpan rencana: " + (err.error || 'Unknown Error'));

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { Show, SignInButton } from '@clerk/astro/components';
 
 const { slug } = Astro.params;
 
@@ -141,6 +142,19 @@ if (hasCustomBreakdown) {
         { label: "Biaya Layanan & Asuransi", price: pkg.price * 0.10 }
     ];
 }
+
+const queryParams = new URLSearchParams({
+    title: pkg.title, 
+    price: pkg.price.toString(), 
+    dailyPrice: pkg.parsedDailyPrice.toString(), 
+    time: pkg.time, 
+    image: pkg.gallery[0] || '',
+    akomodasi: (hasCustomBreakdown ? pkg.priceAkomodasi : pkg.price * 0.45).toString(),
+    transport: (hasCustomBreakdown ? pkg.priceTransport : 0).toString(),
+    wahana: (hasCustomBreakdown ? pkg.priceWahana : pkg.price * 0.30).toString(),
+    lainnya: (hasCustomBreakdown ? pkg.priceLainnya : pkg.price * 0.25).toString()
+}).toString();
+const redirectUrl = `/setup-saving?${queryParams}`;
 ---
 
 <Layout title={`${pkg.title} - DreamJourney`}>
@@ -205,9 +219,6 @@ if (hasCustomBreakdown) {
                             <!-- Fasilitas & Wahana -->
                             <div class="mb-10">
                                 <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
                                     Fasilitas & Wahana yang Didapat
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -225,9 +236,6 @@ if (hasCustomBreakdown) {
                             <!-- Akomodasi & Transportasi -->
                             <div class="mb-10 bg-gray-50 p-8 rounded-2xl border border-gray-200">
                                 <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
                                     Akomodasi & Transportasi
                                 </h3>
                                 <div class="space-y-6">
@@ -287,12 +295,22 @@ if (hasCustomBreakdown) {
                                     </div>
                                 </div>
 
-                                <button id="start-saving-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-4 rounded-xl font-bold text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex justify-center items-center gap-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Mulai Menabung
-                                </button>
+                                <Show when="signed-in">
+                                    <a href={redirectUrl} class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-4 rounded-xl font-bold text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex justify-center items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Mulai Menabung
+                                    </a>
+                                </Show>
+                                <Show when="signed-out">
+                                    <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-4 rounded-xl font-bold text-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex justify-center items-center gap-3 cursor-pointer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Mulai Menabung
+                                    </button>
+                                </Show>
                                 
                                 <div class="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -373,26 +391,8 @@ if (hasCustomBreakdown) {
     </main>
 </Layout>
 
-<script define:vars={{ pkg, hasCustomBreakdown }}>
+<script define:vars={{ pkg }}>
     document.addEventListener("DOMContentLoaded", function () {
-        const startSavingBtn = document.getElementById('start-saving-btn');
-        if (startSavingBtn && pkg) {
-            startSavingBtn.addEventListener('click', () => {
-                const query = new URLSearchParams({
-                    title: pkg.title, 
-                    price: pkg.price, 
-                    dailyPrice: pkg.parsedDailyPrice, 
-                    time: pkg.time, 
-                    image: pkg.gallery[0] || '',
-                    akomodasi: hasCustomBreakdown ? pkg.priceAkomodasi : pkg.price * 0.45,
-                    transport: hasCustomBreakdown ? pkg.priceTransport : 0,
-                    wahana: hasCustomBreakdown ? pkg.priceWahana : pkg.price * 0.30,
-                    lainnya: hasCustomBreakdown ? pkg.priceLainnya : pkg.price * 0.25
-                }).toString();
-                window.location.href = `/setup-saving?${query}`;
-            });
-        }
-
         // Lightbox logic
         const lightbox = document.getElementById('image-lightbox');
         const lightboxImg = document.getElementById('lightbox-img');

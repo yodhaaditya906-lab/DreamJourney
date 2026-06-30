@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { Show, SignInButton } from '@clerk/astro/components';
 ---
 
 <Layout title="Trip Planner - DreamJourney">
@@ -44,9 +45,16 @@ import Layout from '../layouts/Layout.astro';
                             </div>
                         </div>
                         
-                        <a href="/design-trip" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md">
-                            Mulai Rancang Perjalanan Anda
-                        </a>
+                        <Show when="signed-in">
+                            <a href="/design-trip" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md">
+                                Mulai Rancang Perjalanan Anda
+                            </a>
+                        </Show>
+                        <Show when="signed-out">
+                            <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md w-fit cursor-pointer">
+                                Mulai Rancang Perjalanan Anda
+                            </button>
+                        </Show>
                     </div>
                     
                     <!-- Interactive Quick Simulator -->
@@ -91,9 +99,16 @@ import Layout from '../layouts/Layout.astro';
                                 <p class="text-xs text-blue-600 font-medium">Makin cepat mulai, makin ringan langkahmu! ✨</p>
                             </div>
                             
-                            <button onclick="window.location.href='/design-trip'" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center">
-                                <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
-                            </button>
+                            <Show when="signed-in">
+                                <button onclick="window.location.href='/design-trip'" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
+                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                </button>
+                            </Show>
+                            <Show when="signed-out">
+                                <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
+                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                </button>
+                            </Show>
                         </div>
                     </div>
                 </div>

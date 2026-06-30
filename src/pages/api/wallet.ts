@@ -27,6 +27,9 @@ export const POST: APIRoute = async (context) => {
              throw userError;
         }
 
+        const clerkUser = await context.locals.currentUser();
+        const inviterUsername = clerkUser?.username || 'Seseorang';
+
         if (action === 'ADD_GOAL_FULL') {
             const { data: goal, error: goalError } = await supabase.from('goals').insert({
                 user_id: userId,
@@ -51,6 +54,32 @@ export const POST: APIRoute = async (context) => {
                 amount: 0,
                 description: `Memulai setup tabungan untuk ${body.title}`
             });
+
+            // CREATE INVITATIONS FOR GROUP MEMBERS
+            if (body.groupMembers && body.groupMembers.length > 0) {
+                const invitations = body.groupMembers.map((member: string) => ({
+                    goal_id: goal.id,
+                    inviter_id: userId,
+                    inviter_username: inviterUsername,
+                    invitee_username: member.toLowerCase(),
+                    goal_title: body.title,
+                    target_amount: body.targetAmount,
+                    auto_debit_amount: body.autoDebitAmount || 50000,
+                    frequency: body.frequency || 1, // Store as number if it's days?
+                    saving_type: body.savingType || 'Konvensional',
+                    payment_method: body.paymentMethod || 'Cashless',
+                    payment_detail: body.paymentDetail || '',
+                    trip_type: body.tripType || 'Group'
+                }));
+                
+                // Frequency is currently string or number depending on UI.
+                // We'll just pass it directly. But wait, in ADD_GOAL_FULL body.frequency is expected.
+
+                const { error: invError } = await supabase.from('group_invitations').insert(invitations);
+                if (invError) {
+                    console.error("Failed to insert invitations:", invError);
+                }
+            }
         }
         else if (action === 'SIMULATE_DEBIT') {
             const goalId = body.goalId;
@@ -103,21 +132,62 @@ export const POST: APIRoute = async (context) => {
         else if (action === 'CANCEL_GOAL') {
             const { goalId, refundAmount, reason, complaint } = body;
 
-            // Delete goal and get its title
-            const { data: deletedGoal } = await supabase
-                .from('goals')
-                .delete()
-                .eq('id', goalId)
-                .select()
-                .single();
+            // Fetch all related goals to delete
+            let allGoalIdsToDelete = [goalId];
+            
+            const { data: invsAsInviter } = await supabase.from('group_invitations').select('invitee_goal_id').eq('goal_id', goalId);
+            const { data: invsAsInvitee } = await supabase.from('group_invitations').select('goal_id').eq('invitee_goal_id', goalId);
+            
+            if (invsAsInviter && invsAsInviter.length > 0) {
+                allGoalIdsToDelete.push(...invsAsInviter.map((i: any) => i.invitee_goal_id).filter(Boolean));
+            }
+            if (invsAsInvitee && invsAsInvitee.length > 0) {
+                const parentGoalId = invsAsInvitee[0].goal_id;
+                if (parentGoalId) {
+                    allGoalIdsToDelete.push(parentGoalId);
+                    const { data: siblings } = await supabase.from('group_invitations').select('invitee_goal_id').eq('goal_id', parentGoalId);
+                    if (siblings) {
+                        allGoalIdsToDelete.push(...siblings.map((i: any) => i.invitee_goal_id).filter(Boolean));
+                    }
+                }
+            }
+            
+            // Deduplicate
+            allGoalIdsToDelete = [...new Set(allGoalIdsToDelete)];
 
-            // Insert transaction record for the refund
-            await supabase.from('transactions').insert({
-                user_id: userId,
-                type: 'SYSTEM',
-                amount: refundAmount || 0,
-                description: `Refund batal ${deletedGoal?.title || 'perjalanan'} (${reason})`
-            });
+            // Fetch goals data before deleting to get title and saved_amount
+            const { data: goalsToDelete } = await supabase
+                .from('goals')
+                .select('*')
+                .in('id', allGoalIdsToDelete);
+
+            if (goalsToDelete && goalsToDelete.length > 0) {
+                // Delete them all
+                await supabase.from('goals').delete().in('id', allGoalIdsToDelete);
+
+                for (const dg of goalsToDelete) {
+                    const isCurrentUser = dg.id === goalId;
+                    const refundAmt = isCurrentUser ? (refundAmount || 0) : (dg.saved_amount || 0);
+
+                    // Insert transaction record for the refund
+                    await supabase.from('transactions').insert({
+                        user_id: dg.user_id,
+                        type: 'SYSTEM',
+                        amount: refundAmt,
+                        description: isCurrentUser ? 
+                            `Refund batal ${dg.title || 'perjalanan'} (${reason})` : 
+                            `Refund batal otomatis: Rencana ${dg.title || 'perjalanan'} dibatalkan oleh teman satu grup.`
+                    });
+
+                    // Update user balance with refund
+                    if (refundAmt > 0) {
+                        const { data: currUser } = await supabase.from('users').select('balance').eq('id', dg.user_id).single();
+                        if (currUser) {
+                            await supabase.from('users').update({ balance: (currUser.balance || 0) + refundAmt }).eq('id', dg.user_id);
+                        }
+                    }
+                }
+            }
 
             // Optional: log complaint if it exists
             if (complaint) {
@@ -127,14 +197,6 @@ export const POST: APIRoute = async (context) => {
                     amount: 0,
                     description: `Keluhan Batal: ${complaint}`
                 });
-            }
-
-            // Update user balance with refund
-            if (refundAmount > 0) {
-                const { data: currentUser } = await supabase.from('users').select('balance').eq('id', userId).single();
-                if (currentUser) {
-                    await supabase.from('users').update({ balance: (currentUser.balance || 0) + refundAmount }).eq('id', userId);
-                }
             }
         }
         else if (action === 'RESET_WALLET') {

@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+import QRCode from 'qrcode';
+
+// Extract query params
+const amount = Astro.url.searchParams.get('amount') || '0';
+const title = Astro.url.searchParams.get('title') || 'Pembayaran DreamJourney';
+const reference_id = Astro.url.searchParams.get('ref') || `ORDER-${Date.now()}`;
+
+const numericAmount = parseInt(amount, 10);
+const formattedAmount = `Rp ${numericAmount.toLocaleString('id-ID')}`;
+
+let qrDataUrl = '';
+let isMock = false;
+let errorMessage = '';
+
+if (numericAmount > 0) {
+    try {
+        // We will call our own API Route using an absolute URL because Astro SSR needs it
+        const apiUrl = new URL('/api/payment/qris', Astro.url);
+        
+        const res = await fetch(apiUrl.toString(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                amount: numericAmount,
+                reference_id: reference_id,
+                title: title
+            })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            isMock = data.is_mock;
+            // Generate QR Code Image from the qr_string
+            qrDataUrl = await QRCode.toDataURL(data.qr_string, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            });
+        } else {
+            errorMessage = 'Gagal memproses pembayaran ke server.';
+        }
+    } catch (e) {
+        console.error(e);
+        errorMessage = 'Terjadi kesalahan saat memuat QRIS.';
+    }
+} else {
+    errorMessage = 'Nominal pembayaran tidak valid.';
+}
+---
+
+<Layout title="Pembayaran QRIS - DreamJourney">
+    <main class="pt-24 pb-16 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div class="bg-white p-8 md:p-12 rounded-3xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 relative overflow-hidden">
+            <!-- Decorative Header -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+            
+            <div class="text-center mb-8">
+                <div class="bg-blue-50 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Pembayaran QRIS</h1>
+                <p class="text-gray-500 text-sm">Scan kode di bawah menggunakan aplikasi M-Banking atau e-Wallet Anda.</p>
+                {isMock && (
+                    <div class="mt-3 bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full inline-block border border-yellow-200">
+                        Sandbox / Mock Mode (Test Only)
+                    </div>
+                )}
+            </div>
+
+            {errorMessage ? (
+                <div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-100">
+                    <p class="font-bold">{errorMessage}</p>
+                    <a href="javascript:history.back()" class="text-sm underline mt-2 block">Kembali</a>
+                </div>
+            ) : (
+                <div class="space-y-6">
+                    <!-- QR Code Box -->
+                    <div class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300 flex justify-center items-center">
+                        <img src={qrDataUrl} alt="QRIS Code" class="w-64 h-64 shadow-sm rounded-xl bg-white p-2">
+                    </div>
+
+                    <!-- Payment Details -->
+                    <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
+                            <span class="text-gray-500 text-sm">Referensi</span>
+                            <span class="font-mono text-gray-900 font-bold text-sm">{reference_id}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
+                            <span class="text-gray-500 text-sm">Rincian</span>
+                            <span class="text-gray-900 font-bold text-sm text-right">{title}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 text-sm">Total Bayar</span>
+                            <span class="text-xl font-black text-primary">{formattedAmount}</span>
+                        </div>
+                    </div>
+
+                    <!-- Status Polling Container -->
+                    <div id="payment-status" class="text-center bg-blue-50/50 p-4 rounded-xl border border-blue-100" data-ref={reference_id}>
+                        <div class="flex items-center justify-center gap-2 text-blue-600 mb-2">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="font-bold text-sm">Menunggu Pembayaran...</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Halaman ini akan otomatis memuat ulang saat pembayaran berhasil.</p>
+                    </div>
+
+                    {isMock && (
+                        <button id="btn-simulate" class="w-full mt-4 bg-gray-800 text-white text-sm font-bold py-3 rounded-xl hover:bg-gray-900 transition flex items-center justify-center gap-2">
+                            Simulasi Pembayaran Berhasil (Test)
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const statusContainer = document.getElementById('payment-status');
+        const simulateBtn = document.getElementById('btn-simulate');
+        let pollingInterval: any = null;
+
+        if (statusContainer) {
+            const refId = statusContainer.getAttribute('data-ref');
+            
+            // Start Polling every 3 seconds
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/payment/qris?reference_id=${refId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.data && data.data.status === 'PAID') {
+                            clearInterval(pollingInterval);
+                            
+                            // Update UI to success
+                            statusContainer.className = "text-center bg-green-50 p-4 rounded-xl border border-green-200";
+                            statusContainer.innerHTML = `
+                                <div class="flex items-center justify-center gap-2 text-green-600 mb-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-bold text-sm">Pembayaran Berhasil!</span>
+                                </div>
+                                <p class="text-xs text-green-700 font-medium">Mengarahkan ke Dashboard...</p>
+                            `;
+                            
+                            if (simulateBtn) simulateBtn.remove();
+
+                            // Redirect after 2 seconds
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 2000);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Polling error:", err);
+                }
+            }, 3000);
+        }
+
+        // Mock simulation button for testing
+        if (simulateBtn && statusContainer) {
+            simulateBtn.addEventListener('click', async () => {
+                simulateBtn.innerHTML = 'Memproses...';
+                simulateBtn.disabled = true;
+                const refId = statusContainer.getAttribute('data-ref');
+                
+                // Fire webhook to our own endpoint to simulate Xendit callback
+                await fetch('/api/webhooks/xendit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event: "qr.payment",
+                        data: {
+                            reference_id: refId,
+                            status: "SUCCEEDED"
+                        }
+                    })
+                });
+            });
+        }
+    });
+</script>

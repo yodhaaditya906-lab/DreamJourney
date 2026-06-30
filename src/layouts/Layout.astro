@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import LoginModal from '../components/LoginModal.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -17,6 +18,7 @@ const currentPath = Astro.url.pathname;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" />
     <!-- Feather Icons CDN -->
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" is:inline></script>
     <script src="https://unpkg.com/feather-icons" is:inline></script>
@@ -28,31 +30,34 @@ const currentPath = Astro.url.pathname;
     <!-- Page Content Slot -->
     <slot />
 
+    <!-- Global Custom Login Modal -->
+    <LoginModal />
+
     <!-- Footer Component -->
     <Footer />
 
     <!-- Mobile Bottom Nav (hidden on desktop) -->
     <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-45">
-        <div class="flex justify-around py-3">
-            <a href="/" class={`flex flex-col items-center ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>
+        <div class="flex justify-between py-3">
+            <a href="/" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="home" class="w-6 h-6"></i>
                 <span class="text-xs mt-1">Beranda</span>
             </a>
-            <a href="/packages" class={`flex flex-col items-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>
+            <a href="/packages" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="search" class="w-6 h-6"></i>
                 <span class="text-xs mt-1">Cari</span>
             </a>
-            <a href="/planner" class="flex flex-col items-center">
-                <div class="bg-primary text-white rounded-full p-2 -mt-6 shadow-md hover:bg-primary-dark transition">
-                    <i data-feather="plus" class="w-6 h-6"></i>
+            <a href="/planner" class="flex-1 flex flex-col items-center justify-center relative">
+                <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-primary text-white rounded-full w-14 h-14 shadow-lg hover:bg-primary-dark transition flex items-center justify-center leading-none">
+                    <i data-feather="plus" class="w-7 h-7"></i>
                 </div>
-                <span class={`text-xs mt-1 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Buat</span>
+                <span class={`text-xs mt-7 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Buat</span>
             </a>
-            <a href="/dashboard" class={`flex flex-col items-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600'}`}>
+            <a href="/dashboard" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="credit-card" class="w-6 h-6"></i>
                 <span class="text-xs mt-1">Dompet</span>
             </a>
-            <a href="/community" class={`flex flex-col items-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>
+            <a href="/community" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>
                 <i data-feather="users" class="w-6 h-6"></i>
                 <span class="text-xs mt-1">Komunitas</span>
             </a>

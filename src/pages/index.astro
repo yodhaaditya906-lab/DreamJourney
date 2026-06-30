@@ -392,7 +392,8 @@ if (promos.length === 0) {
                 const mainEl = document.querySelector('main');
                 const isLoggedIn = mainEl?.getAttribute('data-is-logged-in') === 'true';
                 if (!isLoggedIn) {
-                    alert("Silakan login atau daftar terlebih dahulu untuk mulai menabung target liburan Anda!");
+                    const modal = document.getElementById('custom-login-modal');
+                    if (modal) modal.classList.remove('hidden');
                     return;
                 }
                 
