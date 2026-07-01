@@ -4,19 +4,38 @@ const currentPath = Astro.url.pathname;
 ---
 <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 z-50">
     <div class="container mx-auto px-4 h-16 lg:h-20 flex justify-between items-center">
-        <a href="/" class="flex items-center gap-2 tap-active">
+        
+        <!-- Toggle Button for Mobile Menu (Hamburger) - Left on Mobile -->
+        <button class="lg:hidden text-gray-600 cursor-pointer p-2 order-1 lg:order-none" id="mobile-menu-btn" aria-label="Toggle Menu">
+            <i data-feather="menu"></i>
+        </button>
+
+        <!-- Search Input - Center on Mobile -->
+        <div class="lg:hidden order-2 lg:order-none flex-1 mx-2 flex justify-center">
+            <form action="/packages" method="GET" class="relative w-full">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i data-feather="search" class="w-4 h-4 text-gray-400"></i>
+                </div>
+                <input type="text" name="q" placeholder="Cari destinasi wisata..." class="bg-gray-100 border border-gray-200 text-gray-800 text-[13px] rounded-full w-full pl-9 pr-4 py-2 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm">
+            </form>
+        </div>
+
+        <!-- Logo - Right on Mobile, Left on Desktop -->
+        <a href="/" class="flex items-center gap-2 tap-active order-3 lg:order-1">
             <img src="/images/logo.png" alt="DreamJourney Logo" class="h-8 lg:h-10 w-auto object-contain" />
             <span class="text-xl lg:text-2xl font-bold text-primary hidden sm:block tracking-tight">DreamJourney</span>
         </a>
         
-        <nav class="hidden lg:flex items-center gap-8">
+        <!-- Desktop Nav - Center on Desktop, Hidden on Mobile -->
+        <nav class="hidden lg:flex items-center gap-8 order-4 lg:order-2">
             <a href="/" class={`font-medium transition ${currentPath === '/' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Beranda</a>
             <a href="/packages" class={`font-medium transition ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Paket Liburan</a>
             <a href="/planner" class={`font-medium transition ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Rencana Perjalanan</a>
             <a href="/community" class={`font-medium transition ${currentPath === '/community' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Komunitas</a>
         </nav>
 
-        <div class="hidden lg:flex items-center gap-4">
+        <!-- Desktop Auth & Profile - Right on Desktop, Hidden on Mobile -->
+        <div class="hidden lg:flex items-center gap-4 order-5 lg:order-3">
             <Show when="signed-out">
                 <SignInButton mode="modal" class="text-gray-600 hover:text-primary font-medium transition cursor-pointer">
                     Masuk
@@ -44,11 +63,6 @@ const currentPath = Astro.url.pathname;
                 </div>
             </Show>
         </div>
-
-        <!-- Toggle Button for Mobile Menu (Hamburger) -->
-        <button class="lg:hidden text-gray-600 cursor-pointer p-2" id="mobile-menu-btn" aria-label="Toggle Menu">
-            <i data-feather="menu"></i>
-        </button>
     </div>
 
     <!-- Mobile Drawer Navigation -->
