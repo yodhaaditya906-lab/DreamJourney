@@ -1,6 +1,7 @@
 ---
 import { Show, UserButton, SignInButton, SignUpButton } from '@clerk/astro/components';
 const currentPath = Astro.url.pathname;
+const clerkUser = await Astro.locals.currentUser();
 ---
 <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 z-50">
     <div class="container mx-auto px-4 h-16 lg:h-20 flex justify-between items-center">
@@ -67,6 +68,24 @@ const currentPath = Astro.url.pathname;
 
     <!-- Mobile Drawer Navigation -->
     <div class="hidden lg:hidden bg-white border-t border-gray-100 shadow-inner px-4 py-6" id="mobile-menu-drawer">
+        <Show when="signed-in">
+            <div class="flex items-center gap-3 mb-5">
+                <UserButton 
+                    userProfileMode="navigation" 
+                    userProfileUrl="/profile" 
+                    appearance={{
+                        elements: {
+                            userPreviewSecondaryIdentifier: "capitalize"
+                        }
+                    }}
+                />
+                <div class="text-left">
+                    <p class="font-bold text-gray-800 text-sm">{clerkUser?.fullName || clerkUser?.firstName || 'Pengguna'}</p>
+                    <p class="text-xs text-gray-500">@{clerkUser?.username || 'username'}</p>
+                </div>
+            </div>
+            <hr class="border-gray-100 mb-5">
+        </Show>
         <nav class="flex flex-col gap-4">
             <a href="/" class={`font-medium transition py-2 ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>Beranda</a>
             <a href="/packages" class={`font-medium transition py-2 ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>Paket Liburan</a>
@@ -81,20 +100,6 @@ const currentPath = Astro.url.pathname;
                     <SignUpButton mode="modal" fallbackRedirectUrl="/" class="bg-primary hover:bg-primary-dark text-white py-2.5 rounded-full font-semibold text-center w-full transition cursor-pointer shadow-sm">
                         Daftar
                     </SignUpButton>
-                </Show>
-                <Show when="signed-in">
-                    <div class="flex justify-center py-2">
-                        <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
-                        <UserButton 
-                            userProfileMode="navigation" 
-                            userProfileUrl="/profile" 
-                            appearance={{
-                                elements: {
-                                    userPreviewSecondaryIdentifier: "capitalize"
-                                }
-                            }}
-                        />
-                    </div>
                 </Show>
             </div>
         </nav>
