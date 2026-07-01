@@ -23,7 +23,7 @@ const currentPath = Astro.url.pathname;
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" is:inline></script>
     <script src="https://unpkg.com/feather-icons" is:inline></script>
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-gray-50 font-sans pb-24 lg:pb-0">
     <!-- Header Component -->
     <Header />
 
@@ -37,30 +37,40 @@ const currentPath = Astro.url.pathname;
     <Footer />
 
     <!-- Mobile Bottom Nav (hidden on desktop) -->
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-45">
-        <div class="flex justify-between py-3">
-            <a href="/" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>
-                <i data-feather="home" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Beranda</span>
-            </a>
-            <a href="/packages" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>
-                <i data-feather="search" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Cari</span>
-            </a>
-            <a href="/planner" class="flex-1 flex flex-col items-center justify-center relative">
-                <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-primary text-white rounded-full w-14 h-14 shadow-lg hover:bg-primary-dark transition flex items-center justify-center leading-none">
-                    <i data-feather="plus" class="w-7 h-7"></i>
-                </div>
-                <span class={`text-xs mt-7 ${currentPath === '/planner' ? 'text-primary font-semibold' : 'text-gray-600'}`}>Buat</span>
-            </a>
-            <a href="/dashboard" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600'}`}>
-                <i data-feather="credit-card" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Dompet</span>
-            </a>
-            <a href="/community" class={`flex-1 flex flex-col items-center justify-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>
-                <i data-feather="users" class="w-6 h-6"></i>
-                <span class="text-xs mt-1">Komunitas</span>
-            </a>
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
+        <div class="glass-nav rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/50 pointer-events-auto">
+            <div class="flex justify-between py-2 px-2">
+                <a href="/" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="home" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Beranda</span>
+                </a>
+                <a href="/packages" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/packages' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="search" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Cari</span>
+                </a>
+                <a href="/planner" class="tap-active flex-1 flex flex-col items-center justify-center relative -mt-5">
+                    <div class="bg-primary text-white rounded-full w-14 h-14 shadow-lg hover:bg-primary-dark transition-smooth flex items-center justify-center leading-none ring-4 ring-white/50 backdrop-blur-sm">
+                        <i data-feather="plus" class="w-6 h-6"></i>
+                    </div>
+                    <span class={`text-[10px] mt-2 font-semibold ${currentPath === '/planner' ? 'text-primary' : 'text-gray-500'}`}>Buat</span>
+                </a>
+                <a href="/dashboard" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/dashboard' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="credit-card" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Dompet</span>
+                </a>
+                <a href="/community" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/community' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="users" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Sosial</span>
+                </a>
+            </div>
         </div>
     </div>
 

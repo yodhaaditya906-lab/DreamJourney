@@ -30,33 +30,33 @@ if (clerkUser) {
         </div>
 
         <div class="container mx-auto px-4 w-11/12 lg:w-3/4 max-w-5xl relative z-10">
-            <div class="text-center mb-10">
-                <span class="inline-block px-5 py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-4 text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>
-                <h2 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-5 tracking-tight">Rancang Trip & Kalkulasi Biaya</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto text-lg">Catat seluruh kebutuhan akomodasi, transportasi, dan wahana Anda. Sistem akan otomatis menghitung total biaya dan merekomendasikan skema tabungan.</p>
+            <div class="text-center mb-6 md:mb-10">
+                <span class="inline-block px-4 py-1.5 md:px-5 md:py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-3 md:mb-4 text-[10px] md:text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>
+                <h2 class="text-2xl md:text-5xl font-extrabold text-gray-900 mb-3 md:mb-5 tracking-tight">Rancang Trip & Kalkulasi Biaya</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto text-sm md:text-lg px-2">Catat seluruh kebutuhan akomodasi, transportasi, dan wahana Anda. Sistem akan otomatis menghitung total biaya dan merekomendasikan skema tabungan.</p>
             </div>
             
-            <form id="design-trip-form" class="bg-white p-6 md:p-10 rounded-2xl shadow-xl space-y-12 mb-12 border border-gray-100 relative overflow-hidden">
+            <form id="design-trip-form" class="bg-white p-4 sm:p-6 md:p-10 rounded-2xl shadow-xl space-y-8 md:space-y-12 mb-12 border border-gray-100 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-full h-2 bg-gradient-to-r from-primary via-blue-400 to-secondary"></div>
                 
                 <div class="relative z-10 space-y-12 mt-4">
                 
                 <!-- STEP 1: INFORMASI DASAR PERJALANAN -->
-                <div class="space-y-6">
-                    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">1</span>
-                        <h3 class="text-2xl font-bold text-gray-800">Informasi Dasar</h3>
+                <div class="space-y-5 md:space-y-6">
+                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">1</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Informasi Dasar</h3>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         <div class="md:col-span-2">
-                            <label class="block text-gray-700 font-medium mb-2">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
-                            <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Paris" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
+                            <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Paris" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
                         </div>
                         
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Tipe Perjalanan <span class="text-red-500">*</span></label>
-                            <select id="trip-type" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tipe Perjalanan <span class="text-red-500">*</span></label>
+                            <select id="trip-type" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
                                 <option value="Solo">Solo Trip (Sendiri)</option>
                                 <option value="Couple">Couple (2 Orang)</option>
                                 <option value="Family">Keluarga</option>
@@ -99,23 +99,23 @@ if (clerkUser) {
                         </div>
 
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
-                            <input type="date" id="departure-date" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
+                            <input type="date" id="departure-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
                         </div>
                         
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Target Selesai Menabung <span class="text-red-500">*</span></label>
-                            <input type="date" id="saving-end-date" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Target Selesai Menabung <span class="text-red-500">*</span></label>
+                            <input type="date" id="saving-end-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
                         </div>
                     </div>
                 </div>
 
                 <!-- STEP 2: AKOMODASI PENGINAPAN -->
                 <div class="space-y-4">
-                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
-                        <div class="flex items-center gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">2</span>
-                            <h3 class="text-2xl font-bold text-gray-800">Akomodasi Penginapan</h3>
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">2</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Akomodasi Penginapan</h3>
                         </div>
                         <button type="button" id="btn-add-hotel" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
                             <i data-feather="plus" class="w-4 h-4"></i> Tambah
@@ -141,10 +141,10 @@ if (clerkUser) {
 
                 <!-- STEP 3: TRANSPORTASI -->
                 <div class="space-y-4">
-                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
-                        <div class="flex items-center gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">3</span>
-                            <h3 class="text-2xl font-bold text-gray-800">Transportasi</h3>
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">3</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Transportasi</h3>
                         </div>
                         <button type="button" id="btn-add-transport" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
                             <i data-feather="plus" class="w-4 h-4"></i> Tambah
@@ -171,10 +171,10 @@ if (clerkUser) {
 
                 <!-- STEP 4: AKTIVITAS & WAHANA -->
                 <div class="space-y-4">
-                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
-                        <div class="flex items-center gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">4</span>
-                            <h3 class="text-2xl font-bold text-gray-800">Aktivitas & Wahana</h3>
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">4</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Aktivitas & Wahana</h3>
                         </div>
                         <button type="button" id="btn-add-activity" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
                             <i data-feather="plus" class="w-4 h-4"></i> Tambah
@@ -199,10 +199,10 @@ if (clerkUser) {
 
                 <!-- STEP 5: PENGELUARAN LAIN-LAIN -->
                 <div class="space-y-4">
-                    <div class="flex justify-between items-end border-b border-gray-100 pb-4">
-                        <div class="flex items-center gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">5</span>
-                            <h3 class="text-2xl font-bold text-gray-800">Pengeluaran Lain-lain</h3>
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">5</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengeluaran Lain</h3>
                         </div>
                         <button type="button" id="btn-add-other" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
                             <i data-feather="plus" class="w-4 h-4"></i> Tambah
@@ -227,10 +227,10 @@ if (clerkUser) {
                 </div>
 
                 <!-- STEP 6: ESTIMASI & SKEMA TABUNGAN -->
-                <div class="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50/30 -mx-6 md:-mx-10 px-6 md:px-10 py-10 border-y border-blue-100 shadow-inner">
-                    <div class="flex items-center gap-4 pb-2">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">6</span>
-                        <h3 class="text-2xl font-bold text-gray-800">Skema Tabungan Impian</h3>
+                <div class="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50/30 -mx-4 sm:-mx-6 md:-mx-10 px-4 sm:px-6 md:px-10 py-6 md:py-10 border-y border-blue-100 shadow-inner">
+                    <div class="flex items-center gap-3 md:gap-4 pb-2">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">6</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Skema Tabungan Impian</h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -311,10 +311,10 @@ if (clerkUser) {
                 </div>
 
                 <!-- STEP 7: PENGATURAN TABUNGAN -->
-                <div class="space-y-6">
-                    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold shadow-md">7</span>
-                        <h3 class="text-2xl font-bold text-gray-800">Pengaturan Tabungan</h3>
+                <div class="space-y-5 md:space-y-6">
+                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">7</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengaturan Tabungan</h3>
                     </div>
                     
                     <!-- Tipe Tabungan -->
@@ -398,9 +398,9 @@ if (clerkUser) {
                 </div>
             </div>
 
-                <div class="pt-8 border-t border-gray-200">
-                    <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                        <i data-feather="check-circle" class="w-6 h-6"></i>
+                <div class="pt-6 md:pt-8 border-t border-gray-200 mt-6 md:mt-0">
+                    <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-3.5 md:py-4 rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                        <i data-feather="check-circle" class="w-5 h-5 md:w-6 md:h-6"></i>
                         Simpan Rencana & Mulai Menabung
                     </button>
                     <p class="text-center text-xs text-gray-500 mt-4">Sistem akan menyimpan rincian biaya Anda untuk dilacak melalui Dashboard.</p>
