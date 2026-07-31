@@ -1,0 +1,149 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Portal Setoran Tunai Mitra - DreamJourney">
+    <main class="pt-24 pb-16 bg-slate-50 min-h-screen relative overflow-hidden">
+        <!-- Background Accents -->
+        <div class="absolute top-10 -right-10 text-blue-100 transform rotate-12 pointer-events-none">
+            <i data-feather="briefcase" class="w-72 h-72"></i>
+        </div>
+        <div class="absolute bottom-10 -left-10 text-emerald-100 transform -rotate-12 pointer-events-none">
+            <i data-feather="dollar-sign" class="w-72 h-72"></i>
+        </div>
+
+        <div class="container mx-auto px-4 w-full max-w-xl relative z-10 space-y-6">
+            
+            <!-- Header Title -->
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-6 md:p-8 text-white text-center shadow-lg shadow-emerald-600/20 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                    <i data-feather="check-square" class="w-64 h-64"></i>
+                </div>
+                <span class="inline-block bg-white/20 backdrop-blur-md text-white text-xs font-semibold px-3.5 py-1 rounded-full mb-2 uppercase tracking-wider">DreamJourney Loket Mitra</span>
+                <h1 class="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight">Portal Setoran Tunai</h1>
+                <p class="text-emerald-100 text-xs md:text-sm max-w-md mx-auto opacity-90">Konfirmasi penerimaan uang fisik dari pengguna untuk langsung diinput ke Supabase.</p>
+            </div>
+
+            <!-- Form Card -->
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 space-y-6">
+                
+                <!-- Success Alert Card (Hidden by default) -->
+                <div id="success-banner" class="hidden bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-5 text-center space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-md">
+                        <i data-feather="check" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-base font-extrabold text-emerald-900" id="success-title">Setoran Berhasil Dicatat!</h3>
+                    <p class="text-xs text-emerald-800 leading-relaxed" id="success-msg"></p>
+                    <button type="button" id="btn-reset-form" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">
+                        + Input Setoran Berikutnya
+                    </button>
+                </div>
+
+                <!-- Error Alert Card (Hidden by default) -->
+                <div id="error-banner" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 text-xs font-bold text-red-700 flex items-center gap-2">
+                    <i data-feather="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                    <span id="error-msg"></span>
+                </div>
+
+                <form id="mitra-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1.5">ID Target Tabungan Pengguna (Goal ID)</label>
+                        <input type="text" id="input-goal-id" placeholder="Contoh: TRIP-1728391203" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 outline-none focus:border-emerald-500 focus:bg-white transition" required />
+                        <span class="text-[11px] text-gray-400 mt-1 block">Minta pengguna memperlihatkan ID Target di aplikasi/dashboard mereka.</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1.5">Nominal Uang Tunai yang Diterima (Rp)</label>
+                        <input type="number" id="input-amount" placeholder="Contoh: 50000" min="1000" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-extrabold text-gray-900 outline-none focus:border-emerald-500 focus:bg-white transition" required />
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">Nomor ID Mitra Terdaftar</label>
+                            <input type="text" id="input-mitra-id" value="2907261" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-700 outline-none" required />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">PIN Keamanan Mitra</label>
+                            <input type="password" id="input-pin" value="1234" placeholder="••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-800 outline-none focus:border-emerald-500 focus:bg-white transition" required />
+                        </div>
+                    </div>
+
+                    <div class="pt-3">
+                        <button type="submit" id="btn-submit-mitra" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 px-6 rounded-2xl font-extrabold text-sm shadow-md shadow-emerald-600/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i data-feather="check-circle" class="w-4 h-4"></i>
+                            <span>Konfirmasi & Simpan Setoran Tunai</span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('mitra-form') as HTMLFormElement;
+        const btnSubmit = document.getElementById('btn-submit-mitra') as HTMLButtonElement;
+        const successBanner = document.getElementById('success-banner') as HTMLDivElement;
+        const successMsg = document.getElementById('success-msg') as HTMLParagraphElement;
+        const errorBanner = document.getElementById('error-banner') as HTMLDivElement;
+        const errorMsg = document.getElementById('error-msg') as HTMLSpanElement;
+        const btnReset = document.getElementById('btn-reset-form') as HTMLButtonElement;
+
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBanner.classList.add('hidden');
+            
+            const goalId = (document.getElementById('input-goal-id') as HTMLInputElement).value.trim();
+            const amount = (document.getElementById('input-amount') as HTMLInputElement).value.trim();
+            const mitraId = (document.getElementById('input-mitra-id') as HTMLInputElement).value.trim();
+            const mitraPin = (document.getElementById('input-pin') as HTMLInputElement).value.trim();
+
+            if (!goalId || !amount || !mitraId) {
+                errorMsg.innerText = 'Mohon lengkapi seluruh data transaksi.';
+                errorBanner.classList.remove('hidden');
+                return;
+            }
+
+            const originalBtnHtml = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i data-feather="loader" class="w-4 h-4 animate-spin"></i> Mengirim ke Supabase...';
+            btnSubmit.disabled = true;
+
+            try {
+                const res = await fetch('/api/mitra/deposit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ goalId, amount, mitraId, mitraPin })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    form.classList.add('hidden');
+                    successMsg.innerText = `Uang tunai sebesar Rp ${parseInt(amount).toLocaleString('id-ID')} untuk target "${data.goalTitle}" (${data.goalId}) telah berhasil diverifikasi dan dicatat ke database Supabase.`;
+                    successBanner.classList.remove('hidden');
+                } else {
+                    errorMsg.innerText = data.error || 'Gagal memproses setoran.';
+                    errorBanner.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMsg.innerText = 'Koneksi terganggu saat menghubungi server.';
+                errorBanner.classList.remove('hidden');
+            } finally {
+                btnSubmit.innerHTML = originalBtnHtml;
+                btnSubmit.disabled = false;
+                if ((window as any).feather) {
+                    (window as any).feather.replace();
+                }
+            }
+        });
+
+        btnReset?.addEventListener('click', () => {
+            form.reset();
+            form.classList.remove('hidden');
+            successBanner.classList.add('hidden');
+            errorBanner.classList.add('hidden');
+        });
+    });
+</script>

@@ -1,0 +1,90 @@
+import type { APIRoute } from 'astro';
+import { supabase } from '../../../lib/supabase';
+
+export const POST: APIRoute = async ({ request }) => {
+    try {
+        const body = await request.json();
+        const { goalId, amount, mitraId, mitraPin } = body;
+
+        if (!goalId || !amount || !mitraId) {
+            return new Response(JSON.stringify({ 
+                success: false, 
+                error: 'Data tidak lengkap. Mohon isi ID Target, Nominal, dan ID Mitra.' 
+            }), { status: 400 });
+        }
+
+        const depositAmount = parseInt(amount, 10);
+        if (isNaN(depositAmount) || depositAmount <= 0) {
+            return new Response(JSON.stringify({ 
+                success: false, 
+                error: 'Nominal setoran harus berupa angka positif yang valid.' 
+            }), { status: 400 });
+        }
+
+        // 1. Cari Target di Database Supabase
+        const { data: goal, error: goalError } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('id', goalId)
+            .single();
+
+        if (goalError || !goal) {
+            return new Response(JSON.stringify({ 
+                success: false, 
+                error: `ID Target "${goalId}" tidak ditemukan di database Supabase.` 
+            }), { status: 404 });
+        }
+
+        // 2. Hitung saved_amount baru
+        const currentSaved = goal.saved_amount || 0;
+        const newSavedAmount = currentSaved + depositAmount;
+
+        // 3. Update saved_amount di tabel goals
+        const { error: updateError } = await supabase
+            .from('goals')
+            .update({ 
+                saved_amount: newSavedAmount,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', goalId);
+
+        if (updateError) {
+            console.error("Gagal mengupdate saved_amount:", updateError);
+            throw updateError;
+        }
+
+        // 4. Tambahkan catatan transaksi baru di Supabase
+        const formattedNominal = `Rp ${new Intl.NumberFormat('id-ID').format(depositAmount)}`;
+        const { error: txError } = await supabase
+            .from('transactions')
+            .insert({
+                user_id: goal.user_id,
+                username: goal.username || 'MitraUser',
+                goal_id: goal.id,
+                type: 'SETORAN_MITRA',
+                payment_method: 'Cash',
+                amount: depositAmount,
+                description: `Setoran Tunai via Mitra (${mitraId}) sebesar ${formattedNominal} untuk ${goal.title}`
+            });
+
+        if (txError) {
+            console.error("Gagal mencatat transaksi mitra:", txError);
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: `Setoran Tunai ${formattedNominal} berhasil dicatat ke Supabase!`,
+            goalId: goal.id,
+            goalTitle: goal.title,
+            newSavedAmount,
+            depositAmount
+        }), { status: 200 });
+
+    } catch (err: any) {
+        console.error("Mitra Deposit API Error:", err);
+        return new Response(JSON.stringify({ 
+            success: false, 
+            error: err.message || 'Terjadi kesalahan server saat mengonfirmasi setoran.' 
+        }), { status: 500 });
+    }
+};

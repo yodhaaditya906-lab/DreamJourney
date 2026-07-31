@@ -1,0 +1,302 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+import { fetchCachedCSV } from '../lib/fetchCache';
+import { SignOutButton } from '@clerk/astro/components';
+
+const { userId } = Astro.locals.auth();
+const user = await Astro.locals.currentUser();
+
+if (!userId || !user) {
+    return Astro.redirect('/');
+}
+
+// Get user data from Supabase
+let { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).single();
+if (!dbUser) {
+    await supabase.from('users').insert({ id: userId });
+    dbUser = { id: userId, balance: 0, lentera_id: null };
+}
+
+// Get goals
+const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId);
+const goals = goalsData || [];
+const activeGoalsCount = goals.length;
+
+// --- FETCH DATA TABUNGAN DARI GOOGLE SHEET ---
+const GOOGLE_SHEET_TABUNGAN_URL = "https://docs.google.com/spreadsheets/d/1RQkDKebj_FXnFZnom5JazwHz0f0JLKupHuWu8tebzZo/export?format=csv";
+let tabunganMap = new Map<string, number>();
+try {
+    const res = await fetch(GOOGLE_SHEET_TABUNGAN_URL);
+    if (res.ok) {
+        const csv = await res.text();
+        const allRows = csv.split('\n').filter(r => r.trim());
+
+        if (allRows.length > 0) {
+            const headers = allRows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const idxId = headers.findIndex(h => h.toLowerCase().includes('id target') || h.toLowerCase().includes('id'));
+            const idxType = headers.findIndex(h => h.toLowerCase().includes('tipe tabungan') || h.toLowerCase().includes('tipe'));
+
+            const startSetoranIdx = idxType !== -1 ? idxType + 1 : (idxId !== -1 ? idxId + 1 : 1);
+
+            allRows.slice(1).forEach(row => {
+                const cols = row.split(',');
+                if (cols.length > 0) {
+                    const goalId = cols[idxId !== -1 ? idxId : 0].replace(/"/g, '').trim();
+
+                    let totalAmount = 0;
+                    for (let i = startSetoranIdx; i < cols.length; i++) {
+                        const valStr = cols[i].replace(/[^\d]/g, '');
+                        const val = parseInt(valStr, 10);
+                        if (!isNaN(val)) {
+                            totalAmount += val;
+                        }
+                    }
+
+                    if (goalId) {
+                        tabunganMap.set(goalId, totalAmount);
+                    }
+                }
+            });
+        }
+    }
+} catch (e) {
+    console.error("Gagal mengambil data tabungan dari Sheet", e);
+}
+
+const totalSaved = goals.reduce((acc: number, goal: any) => {
+    const sheetSavedAmount = tabunganMap.has(goal.id.toString()) ? tabunganMap.get(goal.id.toString())! : (goal.saved_amount || 0);
+    return acc + sheetSavedAmount;
+}, 0);
+
+// Format currency
+const formatRp = (num: number) => `Rp ${num.toLocaleString('id-ID')}`;
+
+// --- LENTERA DATA FETCHING ---
+let lenteras: any[] = [];
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1qie-zXXTH6xqEn_oxlZEQYCU2DDGmQn_ACWZNFI7xOM/export?format=csv');
+  
+  function parseCSVRow(row: string) {
+      const result = [];
+      let curVal = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+          if (row[i] === '"') {
+              inQuotes = !inQuotes;
+          } else if (row[i] === ',' && !inQuotes) {
+              result.push(curVal.trim());
+              curVal = '';
+          } else {
+              curVal += row[i];
+          }
+      }
+      result.push(curVal.trim());
+      return result;
+  }
+
+  const rows = csvText.split('\n').slice(1);
+  lenteras = rows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
+      const cols = parseCSVRow(row);
+      return {
+          id: cols[0] || "",
+          name: cols[1] || "Unknown",
+          desc: cols[2] || "",
+          image: cols[3] || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200",
+          telegram: cols[4] || "#",
+          line: cols[5] || "#",
+          color: cols[6] || "bg-blue-100 text-blue-600"
+      };
+  });
+} catch (error) {
+  console.error("Failed to fetch lentera data:", error);
+}
+const activeLentera = lenteras.find(l => l.id === dbUser.lentera_id);
+
+// --- FETCH INVITATIONS ---
+let pendingInvitations: any[] = [];
+const currentUsername = (user.username || dbUser.username || '').toLowerCase();
+if (currentUsername) {
+    const { data } = await supabase
+        .from('group_invitations')
+        .select('*')
+        .eq('invitee_username', currentUsername)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+    if (data) pendingInvitations = data;
+}
+---
+
+<Layout title="Profil Saya - DreamJourney">
+    <main class="pt-20 bg-gray-50 min-h-screen pb-12">
+        <!-- Banner & Profile Header -->
+        <div class="relative bg-gradient-to-r from-primary to-secondary h-48 md:h-64 w-full">
+            <div class="absolute inset-0 bg-black/10"></div>
+            <!-- Decorative Patterns -->
+            <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        </div>
+        
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl -mt-20 md:-mt-24 relative z-10">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                <div class="px-6 py-8 md:p-10 text-center md:text-left md:flex items-center gap-8 border-b border-gray-100 relative">
+                    <div class="relative inline-block mb-4 md:mb-0">
+                        <img src={user.imageUrl} alt={user.fullName || 'User'} class="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg mx-auto md:mx-0 bg-gray-200">
+                        <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-green-500 w-5 h-5 rounded-full border-4 border-white shadow-sm" title="Online"></div>
+                    </div>
+                    <div class="flex-1">
+                        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">{user.fullName || 'Pengguna DreamJourney'}</h1>
+                        <p class="text-gray-500 text-lg flex items-center justify-center md:justify-start gap-2 mb-2">
+                            <i data-feather="mail" class="w-5 h-5 text-gray-400"></i>
+                            {user.primaryEmailAddress?.emailAddress}
+                        </p>
+                        <div class="inline-flex items-center bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-purple-100 mb-6 mx-auto md:mx-0">
+                            <i data-feather="at-sign" class="w-4 h-4 mr-1.5"></i>
+                            {dbUser.username || user.username || 'Username belum diset'}
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                            <a href="/dashboard" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold py-2.5 px-6 rounded-xl transition border border-blue-200 flex items-center shadow-sm hover:shadow">
+                                <i data-feather="pie-chart" class="w-4 h-4 mr-2"></i> Ke Dashboard
+                            </a>
+                            <div class="bg-red-50 text-red-600 hover:bg-red-100 font-semibold py-2.5 px-6 rounded-xl transition border border-red-200 cursor-pointer flex items-center shadow-sm hover:shadow group">
+                                <i data-feather="log-out" class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform"></i> 
+                                <SignOutButton>Keluar Akun</SignOutButton>
+                            </div>
+                        </div>
+                    <div class="p-8 text-center hover:bg-white transition duration-300">
+                        <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-200">
+                            <i data-feather="target" class="w-7 h-7"></i>
+                        </div>
+                        <p class="text-gray-500 font-medium text-sm mb-1 uppercase tracking-wider">Target Aktif</p>
+                        <h3 class="text-3xl font-bold text-gray-900">{activeGoalsCount} <span class="text-lg font-normal text-gray-500">Liburan</span></h3>
+                    </div>
+                    
+                    <div class="p-8 text-center hover:bg-white transition duration-300">
+                        <div class="w-14 h-14 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-purple-200">
+                            <i data-feather="users" class="w-7 h-7"></i>
+                        </div>
+                        <p class="text-gray-500 font-medium text-sm mb-1 uppercase tracking-wider">Lentera Anda</p>
+                        <h3 class="text-xl font-bold text-gray-900 line-clamp-1">{activeLentera ? activeLentera.name : 'Belum Dipilih'}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            {pendingInvitations.length > 0 && (
+                <div class="mt-8 bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-5 border-b border-orange-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-orange-100 text-orange-600 p-2 rounded-lg">
+                                <i data-feather="bell" class="w-5 h-5"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-900">Notifikasi Undangan Grup</h2>
+                        </div>
+                        <span class="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">{pendingInvitations.length} Baru</span>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        {pendingInvitations.map((inv) => (
+                            <div class="p-6 md:flex items-center justify-between hover:bg-orange-50/30 transition">
+                                <div class="mb-4 md:mb-0">
+                                    <h4 class="text-lg font-bold text-gray-900 mb-1">{inv.goal_title}</h4>
+                                    <p class="text-gray-600 text-sm mb-2">
+                                        Anda diundang oleh <span class="font-bold text-primary">@{inv.inviter_username}</span> untuk ikut serta dalam rencana tabungan ini.
+                                    </p>
+                                    <div class="flex gap-4 text-sm font-medium text-gray-500">
+                                        <div class="flex items-center gap-1.5"><i data-feather="target" class="w-4 h-4"></i> Target: {formatRp(inv.target_amount)}</div>
+                                        <div class="flex items-center gap-1.5"><i data-feather="repeat" class="w-4 h-4"></i> {formatRp(inv.auto_debit_amount)} / {inv.frequency == 1 ? 'hari' : (inv.frequency == 7 ? 'minggu' : 'bulan')}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button class="btn-invitation w-full md:w-auto px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition" data-action="REJECT" data-id={inv.id}>
+                                        Tolak
+                                    </button>
+                                    <button class="btn-invitation w-full md:w-auto px-5 py-2.5 bg-primary hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition" data-action="ACCEPT" data-id={inv.id}>
+                                        Setuju
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <!-- Additional Info / Features -->
+            <div class="mt-8 bg-white rounded-2xl shadow-md p-8 border border-gray-100">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                            <i data-feather="settings" class="w-6 h-6 text-primary mr-3"></i>
+                            Pengaturan Akun & Keamanan
+                        </h3>
+                        <p class="text-gray-600 max-w-xl">
+                            Untuk mengubah kata sandi, memperbarui alamat email, atau mengatur keamanan ekstra (autentikasi dua faktor), Anda dapat mengakses portal keamanan.
+                        </p>
+                    </div>
+                    <button id="open-clerk-profile" class="flex-shrink-0 bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2 transform hover:-translate-y-0.5">
+                        <i data-feather="external-link" class="w-4 h-4"></i>
+                        Kelola Akun
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    declare global {
+        interface Window {
+            Clerk: any;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const openClerkProfileBtn = document.getElementById('open-clerk-profile');
+        if (openClerkProfileBtn) {
+            openClerkProfileBtn.addEventListener('click', () => {
+                if (window.Clerk && typeof window.Clerk.openUserProfile === 'function') {
+                    window.Clerk.openUserProfile();
+                } else {
+                    alert("Sistem manajemen profil tidak tersedia saat ini.");
+                }
+            });
+        }
+
+        // Invitation actions
+        const invBtns = document.querySelectorAll('.btn-invitation');
+        invBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                const action = target.getAttribute('data-action');
+                const id = target.getAttribute('data-id');
+                
+                if (!action || !id) return;
+                
+                const originalHTML = target.innerHTML;
+                target.innerHTML = '<i data-feather="loader" class="w-4 h-4 animate-spin"></i>';
+                target.disabled = true;
+                if (window.feather) window.feather.replace();
+                
+                try {
+                    const res = await fetch('/api/invitations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: action, invitationId: id })
+                    });
+                    
+                    if (res.ok) {
+                        window.location.reload();
+                    } else {
+                        const err = await res.json();
+                        alert("Gagal memproses undangan: " + (err.error || 'Unknown Error'));
+                        target.innerHTML = originalHTML;
+                        target.disabled = false;
+                    }
+                } catch (e) {
+                    alert("Kesalahan jaringan.");
+                    target.innerHTML = originalHTML;
+                    target.disabled = false;
+                }
+            });
+        });
+    });
+</script>

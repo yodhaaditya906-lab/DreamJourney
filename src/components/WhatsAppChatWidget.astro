@@ -1,0 +1,234 @@
+---
+const waNumber = "6287896108664";
+const defaultMessage = encodeURIComponent("Halo Admin DreamJourney! Saya butuh bantuan mengenai aplikasi / tabungan liburan saya.");
+---
+
+<!-- Floating Hybrid AI + WhatsApp Chat Widget -->
+<div class="fixed bottom-20 lg:bottom-6 right-6 z-50 flex flex-col items-end">
+    
+    <!-- Expandable Hybrid Chat Box Container -->
+    <div id="wa-chat-box" class="hidden mb-4 w-80 md:w-96 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+        
+        <!-- Header with Tabs (AI Assistant vs WA Admin) -->
+        <div class="bg-gradient-to-r from-primary to-blue-700 p-4 text-white relative">
+            <button id="btn-close-wa-box" class="absolute top-3.5 right-4 text-white/80 hover:text-white transition">
+                <i data-feather="x" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg border border-white/30">
+                    <i data-feather="bot" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h4 class="font-extrabold text-sm leading-tight">DreamJourney Assistant</h4>
+                    <p class="text-[10px] text-blue-100 mt-0.5 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        AI & WhatsApp CS Ready
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tab Switchers -->
+            <div class="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-xl text-xs font-bold">
+                <button id="tab-btn-ai" class="py-1.5 px-3 rounded-lg bg-white text-primary shadow-sm transition flex items-center justify-center gap-1">
+                    <i data-feather="cpu" class="w-3.5 h-3.5"></i>
+                    <span>DreamAI Chat</span>
+                </button>
+                <button id="tab-btn-wa" class="py-1.5 px-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center gap-1">
+                    <i data-feather="message-circle" class="w-3.5 h-3.5"></i>
+                    <span>Admin WA</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- MODE 1: AI Assistant Live Chat Area -->
+        <div id="mode-ai-container" class="flex flex-col h-80 bg-slate-50">
+            <!-- Chat Messages Log Container -->
+            <div id="ai-chat-log" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+                <!-- AI Welcome Message -->
+                <div class="flex gap-2 items-start">
+                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+                        AI
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200/70 shadow-sm text-gray-700 leading-relaxed">
+                        Halo! 👋 Saya <strong>DreamAI</strong>. Tanyakan apa saja seputar cara menabung, paket wisata, QRIS, Mitra, atau kebijakan refund!
+                    </div>
+                </div>
+
+                <!-- Quick Suggestion Chips -->
+                <div class="pt-1 space-y-1.5">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Pertanyaan Cepat:</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button class="ai-chip text-[11px] bg-white hover:bg-blue-50 text-gray-700 hover:text-primary px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm transition" data-query="Bagaimana cara setoran via QRIS dan Mitra?">
+                            💳 QRIS & Mitra
+                        </button>
+                        <button class="ai-chip text-[11px] bg-white hover:bg-blue-50 text-gray-700 hover:text-primary px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm transition" data-query="Bagaimana aturan denda pembatalan dan refund?">
+                            📜 Kebijakan Refund
+                        </button>
+                        <button class="ai-chip text-[11px] bg-white hover:bg-blue-50 text-gray-700 hover:text-primary px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm transition" data-query="Bagaimana cara membuat Tabungan Kelompok?">
+                            👥 Group Trip
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <form id="ai-chat-form" class="p-3 bg-white border-t border-slate-200/80 flex gap-2">
+                <input type="text" id="ai-input-message" placeholder="Ketik pertanyaan Anda..." class="flex-1 bg-slate-100 border-none outline-none rounded-xl px-3 py-2 text-xs font-medium text-gray-800 placeholder-gray-400 focus:bg-white focus:ring-1 ring-primary transition">
+                <button type="submit" id="ai-btn-send" class="bg-primary hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer shadow-sm">
+                    <i data-feather="send" class="w-3.5 h-3.5"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- MODE 2: Admin WhatsApp Direct Connect -->
+        <div id="mode-wa-container" class="hidden p-5 bg-slate-50 space-y-4 text-xs">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/70 shadow-sm text-gray-700 leading-relaxed text-center space-y-2">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <i data-feather="message-square" class="w-6 h-6"></i>
+                </div>
+                <h4 class="font-extrabold text-sm text-gray-900">Hubungi Live Admin WA</h4>
+                <p class="text-xs text-gray-500">Tim Customer Service resmi DreamJourney siap menjawab pertanyaan Anda secara langsung via WhatsApp.</p>
+            </div>
+
+            <a href={`https://wa.me/${waNumber}?text=${defaultMessage}`} target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-600 hover:bg-emerald-700 text-white text-center py-3.5 rounded-2xl font-extrabold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+                <i data-feather="message-circle" class="w-4 h-4"></i>
+                <span>Buka Chat WhatsApp (+62 878-9610-8664)</span>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Floating Circular Button (FAB) -->
+    <div class="relative group">
+        <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none hidden md:block">
+            DreamAI & Admin WA Chat 💬
+        </span>
+
+        <button id="btn-toggle-wa-widget" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary hover:bg-blue-700 text-white flex items-center justify-center shadow-2xl shadow-blue-600/50 hover:scale-105 active:scale-95 transition-all cursor-pointer relative ring-4 ring-white/60">
+            <!-- Friendly speech bubble smiling icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 md:w-8 md:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <span class="w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full absolute top-1 right-1"></span>
+        </button>
+    </div>
+
+</div>
+
+<script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.getElementById('btn-toggle-wa-widget');
+        const closeBtn = document.getElementById('btn-close-wa-box');
+        const chatBox = document.getElementById('wa-chat-box');
+        
+        const tabAi = document.getElementById('tab-btn-ai');
+        const tabWa = document.getElementById('tab-btn-wa');
+        const containerAi = document.getElementById('mode-ai-container');
+        const containerWa = document.getElementById('mode-wa-container');
+
+        const aiForm = document.getElementById('ai-chat-form');
+        const aiInput = document.getElementById('ai-input-message');
+        const aiLog = document.getElementById('ai-chat-log');
+        const aiChips = document.querySelectorAll('.ai-chip');
+
+        toggleBtn?.addEventListener('click', () => {
+            chatBox?.classList.toggle('hidden');
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            chatBox?.classList.add('hidden');
+        });
+
+        // Tab Switching Logic
+        tabAi?.addEventListener('click', () => {
+            tabAi.className = 'py-1.5 px-3 rounded-lg bg-white text-primary shadow-sm transition flex items-center justify-center gap-1';
+            tabWa.className = 'py-1.5 px-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center gap-1';
+            containerAi?.classList.remove('hidden');
+            containerWa?.classList.add('hidden');
+        });
+
+        tabWa?.addEventListener('click', () => {
+            tabWa.className = 'py-1.5 px-3 rounded-lg bg-white text-primary shadow-sm transition flex items-center justify-center gap-1';
+            tabAi.className = 'py-1.5 px-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition flex items-center justify-center gap-1';
+            containerWa?.classList.remove('hidden');
+            containerAi?.classList.add('hidden');
+        });
+
+        // Helper to append message bubble
+        function appendMsg(sender, text) {
+            if (!aiLog) return;
+            const wrap = document.createElement('div');
+            wrap.className = 'flex gap-2 items-start animate-in fade-in';
+            
+            if (sender === 'user') {
+                wrap.innerHTML = `
+                    <div class="ml-auto bg-primary text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] leading-relaxed">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                // Format bold markdown
+                const formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                wrap.innerHTML = `
+                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+                        AI
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200/70 shadow-sm text-gray-700 leading-relaxed max-w-[85%]">
+                        ${formatted}
+                    </div>
+                `;
+            }
+            aiLog.appendChild(wrap);
+            aiLog.scrollTop = aiLog.scrollHeight;
+        }
+
+        async function handleSendQuery(userText) {
+            if (!userText.trim()) return;
+            appendMsg('user', userText);
+
+            // Typing Indicator
+            const typingWrap = document.createElement('div');
+            typingWrap.id = 'ai-typing-indicator';
+            typingWrap.className = 'flex gap-2 items-center text-gray-400 italic text-[11px]';
+            typingWrap.innerHTML = `
+                <div class="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[9px]">AI</div>
+                <span>DreamAI sedang mengetik...</span>
+            `;
+            aiLog?.appendChild(typingWrap);
+            aiLog.scrollTop = aiLog.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userText })
+                });
+                const data = await res.json();
+
+                document.getElementById('ai-typing-indicator')?.remove();
+                appendMsg('ai', data.reply || 'Ada masalah koneksi.');
+            } catch (err) {
+                document.getElementById('ai-typing-indicator')?.remove();
+                appendMsg('ai', 'Maaf, gagal menghubungkan ke AI. Silakan beralih ke tab WA Admin di atas.');
+            }
+        }
+
+        aiForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = aiInput.value;
+            aiInput.value = '';
+            handleSendQuery(text);
+        });
+
+        aiChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const query = chip.getAttribute('data-query') || '';
+                handleSendQuery(query);
+            });
+        });
+    });
+</script>

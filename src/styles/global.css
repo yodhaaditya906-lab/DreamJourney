@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #4F46E5;
+  --color-primary-dark: #3730A3;
+  --color-secondary: #0EA5E9;
+  --color-secondary-dark: #0284C7;
+  --color-accent: #10B981;
+  --color-accent-dark: #059669;
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism Utilities */
+.glass-nav {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Active touch states for mobile */
+.tap-active:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Custom transitions */
+.transition-smooth {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 250ms;
+}
+
+/* Custom button effects */
+.btn-primary {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Custom form inputs */
+.input-custom {
+    transition: all 0.3s ease;
+}
+
+.input-custom:focus {
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    border-color: #4F46E5;
+}
+
+/* Hide scrollbar for horizontal scrolling elements */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .mobile-hidden {
+        display: none;
+    }
+    
+    /* Better spacing on mobile */
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

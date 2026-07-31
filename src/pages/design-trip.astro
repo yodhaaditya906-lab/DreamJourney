@@ -1,0 +1,890 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const clerkUser = await Astro.locals.currentUser();
+if (clerkUser) {
+    const hasDomisili = clerkUser.unsafeMetadata?.domisili;
+    const hasDob = clerkUser.unsafeMetadata?.dob;
+    
+    if (!hasDomisili || !hasDob) {
+        return Astro.redirect('/onboarding?redirect_url=/design-trip');
+    }
+}
+---
+
+<Layout title="Rancang Perjalanan Anda - DreamJourney">
+    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
+        <!-- Elemen Latar Belakang (Travel Theme) -->
+        <div class="absolute top-20 -left-10 text-blue-100/60 transform -rotate-12 pointer-events-none">
+            <i data-feather="compass" class="w-64 h-64 md:w-96 md:h-96"></i>
+        </div>
+        <div class="absolute bottom-20 -right-10 text-blue-100/60 transform rotate-12 pointer-events-none">
+            <i data-feather="map" class="w-64 h-64 md:w-96 md:h-96"></i>
+        </div>
+        <div class="absolute top-1/3 right-10 text-blue-100/40 transform rotate-45 pointer-events-none">
+            <i data-feather="send" class="w-32 h-32 md:w-48 md:h-48"></i>
+        </div>
+        <div class="absolute bottom-1/3 left-10 text-blue-100/40 pointer-events-none">
+            <i data-feather="sun" class="w-32 h-32 md:w-48 md:h-48"></i>
+        </div>
+
+        <div class="container mx-auto px-4 w-11/12 lg:w-3/4 max-w-5xl relative z-10">
+            <div class="text-center mb-6 md:mb-10">
+                <span class="inline-block px-4 py-1.5 md:px-5 md:py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-3 md:mb-4 text-[10px] md:text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>
+                <h2 class="text-2xl md:text-5xl font-extrabold text-gray-900 mb-3 md:mb-5 tracking-tight">Rancang Trip & Kalkulasi Biaya</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto text-sm md:text-lg px-2">Catat seluruh kebutuhan akomodasi, transportasi, dan wahana Anda. Sistem akan otomatis menghitung total biaya dan merekomendasikan skema tabungan.</p>
+            </div>
+            
+            <form id="design-trip-form" class="bg-white p-4 sm:p-6 md:p-10 rounded-2xl shadow-xl space-y-8 md:space-y-12 mb-12 border border-gray-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-full h-2 bg-gradient-to-r from-primary via-blue-400 to-secondary"></div>
+                
+                <div class="relative z-10 space-y-12 mt-4">
+                
+                <!-- STEP 1: INFORMASI DASAR PERJALANAN -->
+                <div class="space-y-5 md:space-y-6">
+                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">1</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Informasi Dasar</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
+                            <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Paris" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tipe Perjalanan <span class="text-red-500">*</span></label>
+                            <select id="trip-type" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                                <option value="Solo">Solo Trip (Sendiri)</option>
+                                <option value="Couple">Couple (2 Orang)</option>
+                                <option value="Family">Keluarga</option>
+                                <option value="Group">Grup Teman</option>
+                            </select>
+                        </div>
+                        
+
+
+                        <!-- Split Bill Toggle -->
+                        <div id="split-bill-toggle-container" class="hidden md:col-span-2 bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" id="checkbox-split-bill" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                                <div>
+                                    <span class="text-sm font-bold text-indigo-900 block">Bagi tagihan dengan anggota grup? (Nabung Bersama)</span>
+                                    <span class="text-xs text-indigo-700 block mt-0.5">Jika dicentang, target tabungan akan dibagi rata ke akun masing-masing.</span>
+                                </div>
+                            </label>
+                            
+                            <!-- Dynamic Group Detail (for Split Bill) -->
+                            <div id="container-group" class="hidden mt-4 bg-white p-4 rounded-xl border border-indigo-200">
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="block text-sm font-bold text-indigo-800"><i data-feather="users" class="w-4 h-4 inline-block mr-1"></i> Anggota Grup</label>
+                                    <span class="text-xs font-bold text-indigo-800 bg-indigo-100 px-2 py-1 rounded-full" id="group-counter">0 Teman Ditambahkan</span>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-2 focus-within:ring-2 ring-indigo-300 transition">
+                                    <!-- Chips Container -->
+                                    <div id="friend-chips-container" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+                                    
+                                    <div class="flex gap-2">
+                                        <input type="text" id="input-friend" placeholder="Ketik username teman disini..." class="flex-1 bg-transparent border-none outline-none text-sm px-1 placeholder-gray-500">
+                                        <button type="button" id="btn-add-friend" class="bg-indigo-500 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-indigo-600 transition flex items-center">
+                                            <i data-feather="plus" class="w-4 h-4 mr-1"></i> Tambah
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-indigo-600 leading-relaxed"><i data-feather="info" class="w-3 h-3 inline-block"></i> Pastikan username teman terdaftar di sistem. Tagihan akan terbagi otomatis.</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
+                            <input type="date" id="departure-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Target Selesai Menabung <span class="text-red-500">*</span></label>
+                            <input type="date" id="saving-end-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: AKOMODASI PENGINAPAN -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">2</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Akomodasi Penginapan</h3>
+                        </div>
+                        <button type="button" id="btn-add-hotel" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    
+                    <div id="hotel-list" class="space-y-3">
+                        <!-- Hotel Row Template -->
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Nama Hotel / Link Airbnb" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: TRANSPORTASI -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">3</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Transportasi</h3>
+                        </div>
+                        <button type="button" id="btn-add-transport" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">Catat semua tiket pesawat, kereta api, sewa mobil, hingga ongkos travel.</p>
+                    
+                    <div id="transport-list" class="space-y-3">
+                        <!-- Transport Row Template -->
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Tiket Pesawat / Sewa Mobil / Link Traveloka" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: AKTIVITAS & WAHANA -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">4</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Aktivitas & Wahana</h3>
+                        </div>
+                        <button type="button" id="btn-add-activity" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    
+                    <div id="activity-list" class="space-y-3">
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Tiket Masuk / Paket Tour / Wahana" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: PENGELUARAN LAIN-LAIN -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
+                        <div class="flex items-center gap-3 md:gap-4">
+                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">5</span>
+                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengeluaran Lain</h3>
+                        </div>
+                        <button type="button" id="btn-add-other" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">Contoh: Visa, Asuransi Perjalanan, Anggaran Belanja Oleh-oleh, Uang Makan Harian.</p>
+                    
+                    <div id="other-list" class="space-y-3">
+                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <div class="flex-grow w-full md:w-auto">
+                                <input type="text" placeholder="Keterangan Pengeluaran" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                            </div>
+                            <div class="w-full md:w-1/3 relative">
+                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                            </div>
+                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                                <i data-feather="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 6: ESTIMASI & SKEMA TABUNGAN -->
+                <div class="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50/30 -mx-4 sm:-mx-6 md:-mx-10 px-4 sm:px-6 md:px-10 py-6 md:py-10 border-y border-blue-100 shadow-inner">
+                    <div class="flex items-center gap-3 md:gap-4 pb-2">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">6</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Skema Tabungan Impian</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                        <!-- Left: Breakdown and Savings -->
+                        <div class="md:col-span-7 space-y-6">
+                            <!-- Summary Box -->
+                            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-gray-600 font-medium">Total Estimasi Trip</span>
+                                    <span id="text-subtotal" class="font-bold text-gray-900 text-lg">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+                                    <div class="flex flex-col">
+                                        <span class="text-gray-600 font-medium text-sm">Tambahan Tabungan Ekstra</span>
+                                        <span class="text-xs text-gray-400">Untuk uang jaga-jaga darurat</span>
+                                    </div>
+                                    <div class="w-1/3 relative">
+                                        <span class="absolute left-3 top-2 text-gray-500 text-xs font-bold">Rp</span>
+                                        <input type="text" id="buffer-input" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold text-right">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-900 font-bold text-lg">GRAND TOTAL</span>
+                                    <span id="text-grandtotal" class="font-extrabold text-primary text-2xl">Rp 0</span>
+                                </div>
+                                <div id="split-bill-result" class="hidden flex justify-between items-center mt-3 pt-3 border-t border-indigo-100 bg-indigo-50 -mx-5 px-5 pb-5 -mb-5 rounded-b-2xl">
+                                    <div class="flex flex-col pt-2">
+                                        <span class="text-indigo-900 font-bold text-lg">TARGET ANDA (Split Bill)</span>
+                                        <span class="text-xs text-indigo-600">Dibagi rata: Anda + <span id="split-friend-count">0</span> teman</span>
+                                    </div>
+                                    <span id="text-personaltotal" class="font-extrabold text-indigo-600 text-2xl pt-2">Rp 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Frequency Selection -->
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-3">Pilih Frekuensi Menabung Anda:</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="1" class="hidden peer" checked>
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Harian</span>
+                                        <span class="text-xs text-gray-400">Setiap Hari</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="7" class="hidden peer">
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Mingguan</span>
+                                        <span class="text-xs text-gray-400">Tiap Akhir Pekan</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
+                                        <input type="radio" name="saving-freq" value="30" class="hidden peer">
+                                        <span class="text-sm font-bold text-gray-700 block mb-1">Bulanan</span>
+                                        <span class="text-xs text-gray-400">Sesuai Gajian</span>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Calculator Result Focus -->
+                        <div class="md:col-span-5">
+                            <div class="bg-primary text-white p-6 rounded-2xl shadow-xl flex flex-col justify-center text-center relative overflow-hidden h-full">
+                                <!-- Abstract circles -->
+                                <div class="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white opacity-10"></div>
+                                <div class="absolute -left-10 -bottom-10 w-24 h-24 rounded-full bg-white opacity-10"></div>
+                                
+                                <div class="relative z-10">
+                                    <span class="text-sm font-bold text-blue-100 uppercase tracking-wider mb-2 block">Target Nabung Rutin</span>
+                                    <div id="saving-simulation-result" class="text-4xl lg:text-4xl font-extrabold text-white mb-2 drop-shadow-md py-4">Rp 0</div>
+                                    <div class="bg-black/20 rounded-lg py-2 px-4 inline-block mt-2">
+                                        <span id="saving-simulation-label" class="text-blue-50 font-medium text-sm">per hari selama -- bulan</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 7: PENGATURAN TABUNGAN -->
+                <div class="space-y-5 md:space-y-6">
+                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
+                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">7</span>
+                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengaturan Tabungan</h3>
+                    </div>
+                    
+                    <!-- Tipe Tabungan -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-3">Tipe Tabungan</label>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="saving_type" value="Konvensional" class="peer sr-only" checked required>
+                                <div class="text-center p-4 rounded-xl border-2 border-gray-200 peer-checked:border-primary peer-checked:bg-blue-50 transition font-semibold text-gray-600 peer-checked:text-primary flex flex-col items-center justify-center h-full">
+                                    <i data-feather="box" class="w-6 h-6 mb-2"></i>
+                                    <span>Konvensional</span>
+                                    <span class="text-xs font-normal mt-2 opacity-80">Estimasi hasil:<br><strong class="text-sm" id="hasil-konvensional">Rp 0</strong></span>
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-not-allowed flex flex-col relative overflow-hidden bg-gray-50 rounded-xl border-2 border-gray-200 opacity-75">
+                                <input type="radio" name="saving_type" value="Investasi" class="peer sr-only" disabled>
+                                <div class="text-center p-4 font-semibold text-gray-500 flex-1 flex flex-col items-center justify-center h-full">
+                                    <i data-feather="trending-up" class="w-6 h-6 mb-2 text-gray-400"></i>
+                                    <span class="text-gray-600">Investasi Reksadana</span>
+                                    <span class="text-[11px] font-medium text-amber-700 mt-2 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200/80">
+                                        ⚠️ Fitur ini sedang dikaji terlebih dahulu
+                                    </span>
+                                </div>
+                                <div class="absolute top-0 right-0 bg-gray-400 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">DALAM PENGKAJIAN</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <label class="block text-gray-700 text-sm font-bold">Metode Pembayaran</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-blue-50 transition group relative bg-white">
+                            <input type="radio" name="payment-method" value="cashless" class="w-5 h-5 text-primary accent-primary mt-0.5 peer" checked>
+                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
+                            <div class="relative z-10">
+                                <span class="font-bold text-gray-800 block mb-1">QRIS / E-Wallet</span>
+                                <span class="text-xs text-gray-500 leading-relaxed">Bayar praktis menggunakan kode QRIS. Didukung oleh semua M-Banking dan E-Wallet.</span>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-orange-50 transition group relative bg-white">
+                            <input type="radio" name="payment-method" value="cash" class="w-5 h-5 text-primary accent-primary mt-0.5 peer">
+                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-orange-400 rounded-xl pointer-events-none transition-all"></div>
+                            <div class="relative z-10">
+                                <span class="font-bold text-gray-800 block mb-1">Transfer Manual (Via Lentera)</span>
+                                <span class="text-xs text-gray-500 leading-relaxed">Setor mandiri dan dipandu oleh agen pendamping Lentera pilihan Anda. Cocok buat yang butuh pengingat rutin.</span>
+                            </div>
+                        </label>
+                        </div>
+                    </div>
+
+                    <!-- Cashless Fields (Removed for QRIS) -->
+                    <div id="cashless-details" class="hidden">
+                        <input type="hidden" value="QRIS" />
+                    </div>
+
+                    <!-- Cash Fields -->
+                    <div id="cash-details" class="hidden space-y-4 p-5 bg-orange-50/50 rounded-xl border border-orange-100">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">ID Lentera Pendamping (Opsional)</label>
+                            <input type="text" placeholder="Misal: 001131JK (Kosongkan jika belum ada)" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-300 outline-none text-sm bg-white">
+                            <p class="text-xs text-orange-600 mt-2">Agen Lentera akan menghubungi Anda untuk membantu mengatur jadwal setoran tabungan manual secara aman.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Custom Warning Modal -->
+            <div id="user-not-found-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 relative z-10 transform scale-100 transition-transform">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
+                        </div>
+                        <h3 id="warning-modal-title" class="text-xl font-bold text-gray-900 mb-2">Peringatan</h3>
+                        <p id="user-not-found-msg" class="text-gray-600 mb-6 leading-relaxed text-sm">
+                            Pesan peringatan akan muncul di sini.
+                        </p>
+                        <button type="button" id="btn-close-warning" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition">
+                            Mengerti
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+                <div class="pt-6 md:pt-8 border-t border-gray-200 mt-6 md:mt-0">
+                    <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-3.5 md:py-4 rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                        <i data-feather="check-circle" class="w-5 h-5 md:w-6 md:h-6"></i>
+                        Simpan Rencana & Mulai Menabung
+                    </button>
+                    <p class="text-center text-xs text-gray-500 mt-4">Sistem akan menyimpan rincian biaya Anda untuk dilacak melalui Dashboard.</p>
+                </div>
+                
+                </div>
+            </form>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- FORM TOGGLES ---
+        const tripTypeSelect = document.getElementById('trip-type') as HTMLSelectElement;
+        const splitBillToggleContainer = document.getElementById('split-bill-toggle-container');
+        const splitBillResult = document.getElementById('split-bill-result');
+        const splitFriendCountText = document.getElementById('split-friend-count');
+        const personalTotalText = document.getElementById('text-personaltotal');
+        
+        let splitBillMembers: string[] = [];
+        
+        if (tripTypeSelect && splitBillToggleContainer) {
+            tripTypeSelect.addEventListener('change', (e) => {
+                const val = (e.target as HTMLSelectElement).value;
+                if (val !== 'Solo') {
+                    splitBillToggleContainer.classList.remove('hidden');
+                } else {
+                    splitBillToggleContainer.classList.add('hidden');
+                    // Reset if switched to Solo
+                    (document.getElementById('checkbox-split-bill') as HTMLInputElement).checked = false;
+                    splitBillMembers = [];
+                    renderSplitFriends();
+                    calculateGrandTotal();
+                }
+            });
+        }
+        
+        // Split Bill Checkbox Toggle
+        const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
+        const containerGroup = document.getElementById('container-group');
+        if (checkboxSplitBill && containerGroup) {
+            checkboxSplitBill.addEventListener('change', () => {
+                if (checkboxSplitBill.checked) {
+                    containerGroup.classList.remove('hidden');
+                } else {
+                    containerGroup.classList.add('hidden');
+                }
+                calculateGrandTotal();
+            });
+        }
+
+        // Friend List Logic
+        const btnAddFriend = document.getElementById('btn-add-friend');
+        const inputFriend = document.getElementById('input-friend') as HTMLInputElement;
+        const friendListEl = document.getElementById('friend-chips-container');
+        
+        function renderSplitFriends() {
+            if (!friendListEl) return;
+            friendListEl.innerHTML = '';
+            splitBillMembers.forEach((friend, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center bg-indigo-100 text-indigo-800 text-sm px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm';
+                chip.innerHTML = `
+                    <span class="font-medium mr-2">${friend}</span>
+                    <button type="button" class="text-indigo-600 hover:text-red-500 transition btn-remove-friend" data-idx="${idx}">
+                        <i data-feather="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                friendListEl.appendChild(chip);
+            });
+            if (window.feather) window.feather.replace();
+            
+            const counter = document.getElementById('group-counter');
+            if (counter) counter.innerText = `${splitBillMembers.length} Teman Ditambahkan`;
+            
+            // Trigger calculation
+            calculateGrandTotal();
+        }
+
+        if (friendListEl) {
+            friendListEl.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const btn = target.closest('.btn-remove-friend');
+                if (btn) {
+                    const idxStr = btn.getAttribute('data-idx');
+                    if (idxStr !== null) {
+                        splitBillMembers.splice(parseInt(idxStr, 10), 1);
+                        renderSplitFriends();
+                    }
+                }
+            });
+        }
+
+        btnAddFriend?.addEventListener('click', async () => {
+            const val = inputFriend.value.trim();
+            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+            
+            if (!val || splitBillMembers.includes(val)) return;
+            
+            if (val.toLowerCase() === currentUsername) {
+                const modal = document.getElementById('user-not-found-modal');
+                const msg = document.getElementById('user-not-found-msg');
+                const title = document.getElementById('warning-modal-title');
+                if (modal && msg && title) {
+                    title.innerText = "Tindakan Ditolak";
+                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
+                    modal.classList.remove('hidden');
+                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                        modal.classList.add('hidden');
+                    }, { once: true });
+                } else {
+                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+                }
+                inputFriend.value = '';
+                return;
+            }
+
+            const originalText = btnAddFriend.innerHTML;
+            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-4 h-4 mr-1 animate-spin"></i> Cek...';
+            (btnAddFriend as HTMLButtonElement).disabled = true;
+
+            try {
+                const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
+                const data = await res.json();
+
+                if (res.ok && data.isAvailable) {
+                    const modal = document.getElementById('user-not-found-modal');
+                    const msg = document.getElementById('user-not-found-msg');
+                    const title = document.getElementById('warning-modal-title');
+                    if (modal && msg && title) {
+                        title.innerText = "Pengguna Tidak Ditemukan";
+                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
+                        modal.classList.remove('hidden');
+                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                            modal.classList.add('hidden');
+                        }, { once: true });
+                    }
+                } else if (res.ok && !data.isAvailable) {
+                    splitBillMembers.push(val);
+                    inputFriend.value = '';
+                    renderSplitFriends();
+                }
+            } catch (err) {
+                alert("Kesalahan jaringan saat mengecek pengguna.");
+            } finally {
+                btnAddFriend.innerHTML = originalText;
+                (btnAddFriend as HTMLButtonElement).disabled = false;
+                if (window.feather) window.feather.replace();
+            }
+        });
+
+        const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
+        const cashDetails = document.getElementById('cash-details');
+        const cashlessDetails = document.getElementById('cashless-details');
+        if (paymentRadios.length > 0 && cashDetails && cashlessDetails) {
+            paymentRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.value === 'cash') {
+                        cashDetails.classList.remove('hidden');
+                        cashlessDetails.classList.add('hidden');
+                    } else {
+                        cashDetails.classList.add('hidden');
+                        cashlessDetails.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // --- DYNAMIC CALCULATOR LOGIC ---
+        const departureInput = document.getElementById('departure-date') as HTMLInputElement;
+        const savingEndInput = document.getElementById('saving-end-date') as HTMLInputElement;
+        
+        // Set min date to tomorrow
+        if (departureInput && savingEndInput) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowString = tomorrow.toISOString().split('T')[0];
+            departureInput.min = tomorrowString;
+            savingEndInput.min = tomorrowString;
+        }
+
+        const savingFreqRadios = document.querySelectorAll('input[name="saving-freq"]');
+        const subtotalText = document.getElementById('text-subtotal');
+        const grandtotalText = document.getElementById('text-grandtotal');
+        const resultVal = document.getElementById('saving-simulation-result');
+        const resultLabel = document.getElementById('saving-simulation-label');
+
+        // Format Currency Helper
+        const formatCurrency = (amount: number) => {
+            return 'Rp ' + amount.toLocaleString('id-ID');
+        };
+
+        // Parse Currency string to number
+        const parseCurrency = (str: string) => {
+            if (!str) return 0;
+            const numeric = parseInt(str.replace(/[^\d]/g, ''));
+            return isNaN(numeric) ? 0 : numeric;
+        };
+
+        // Format input while typing
+        const attachCurrencyFormatter = (input: HTMLInputElement) => {
+            input.addEventListener('input', function(e) {
+                // Get unformatted number
+                let value = parseCurrency(this.value);
+                // Set formatted string back
+                if (value === 0 && this.value.replace(/[^\d]/g, '') === '') {
+                    this.value = '';
+                } else {
+                    this.value = value.toLocaleString('id-ID');
+                }
+                calculateGrandTotal();
+            });
+        };
+
+        // Attach formatter to all existing cost inputs
+        document.querySelectorAll('.cost-input').forEach(input => {
+            attachCurrencyFormatter(input as HTMLInputElement);
+        });
+
+        // Add Row Template Logic
+        const createRowTemplate = (placeholderText: string) => {
+            const div = document.createElement('div');
+            div.className = 'flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200 mb-3';
+            div.innerHTML = `
+                <div class="flex-grow w-full md:w-auto">
+                    <input type="text" placeholder="${placeholderText}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
+                </div>
+                <div class="w-full md:w-1/3 relative">
+                    <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
+                    <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
+                </div>
+                <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
+                    <i data-feather="trash-2" class="w-5 h-5"></i>
+                </button>
+            `;
+            
+            // Attach events
+            const newCostInput = div.querySelector('.cost-input') as HTMLInputElement;
+            attachCurrencyFormatter(newCostInput);
+            
+            const removeBtn = div.querySelector('.btn-remove-row');
+            removeBtn?.addEventListener('click', () => {
+                div.remove();
+                calculateGrandTotal();
+            });
+            
+            return div;
+        };
+
+        // Attach Remove handlers to initial static rows
+        document.querySelectorAll('.btn-remove-row').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('div.flex.gap-3, div.flex-col');
+                if (row) {
+                    row.remove();
+                    calculateGrandTotal();
+                }
+            });
+        });
+
+        // Add Buttons mapping
+        const addConfig = [
+            { btnId: 'btn-add-hotel', containerId: 'hotel-list', placeholder: 'Nama Hotel / Link Airbnb' },
+            { btnId: 'btn-add-transport', containerId: 'transport-list', placeholder: 'Tiket Pesawat / Sewa Mobil' },
+            { btnId: 'btn-add-activity', containerId: 'activity-list', placeholder: 'Tiket Masuk / Paket Tour / Wahana' },
+            { btnId: 'btn-add-other', containerId: 'other-list', placeholder: 'Keterangan Pengeluaran (Visa/Asuransi)' }
+        ];
+
+        addConfig.forEach(config => {
+            const btn = document.getElementById(config.btnId);
+            const container = document.getElementById(config.containerId);
+            if (btn && container) {
+                btn.addEventListener('click', () => {
+                    const newRow = createRowTemplate(config.placeholder);
+                    container.appendChild(newRow);
+                    // Re-init feather icons for the new trash bin
+                    if (window.feather) window.feather.replace();
+                });
+            }
+        });
+
+        function calculateGrandTotal() {
+            let sumSubtotal = 0;
+            let sumBuffer = 0;
+
+            document.querySelectorAll('.cost-input').forEach(input => {
+                const el = input as HTMLInputElement;
+                const val = parseCurrency(el.value);
+                if (el.id === 'buffer-input') {
+                    sumBuffer = val;
+                } else {
+                    sumSubtotal += val;
+                }
+            });
+
+            const grandTotal = sumSubtotal + sumBuffer;
+            
+            // Split Bill Logic
+            let personalTarget = grandTotal;
+            if (checkboxSplitBill && checkboxSplitBill.checked && splitBillResult && splitFriendCountText && personalTotalText) {
+                splitBillResult.classList.remove('hidden');
+                splitBillResult.classList.add('flex');
+                
+                const divider = 1 + splitBillMembers.length;
+                personalTarget = Math.ceil(grandTotal / divider);
+                
+                splitFriendCountText.innerText = splitBillMembers.length.toString();
+                personalTotalText.textContent = formatCurrency(personalTarget);
+            } else if (splitBillResult) {
+                splitBillResult.classList.add('hidden');
+                splitBillResult.classList.remove('flex');
+            }
+
+            // Update UI
+            if (subtotalText) subtotalText.textContent = formatCurrency(sumSubtotal);
+            if (grandtotalText) grandtotalText.textContent = formatCurrency(grandTotal);
+
+            const hasilKonvensional = document.getElementById('hasil-konvensional');
+            if (hasilKonvensional) hasilKonvensional.textContent = formatCurrency(personalTarget);
+            
+            const hasilInvestasi = document.getElementById('hasil-investasi');
+            if (hasilInvestasi) hasilInvestasi.textContent = formatCurrency(Math.round(personalTarget * 1.06));
+
+            // Calculate Installments using personalTarget
+            calculateSavingInstallments(personalTarget);
+        }
+
+        function calculateSavingInstallments(targetAmount: number) {
+            if (!resultVal || !resultLabel || !savingEndInput) return;
+
+            if (targetAmount === 0) {
+                resultVal.textContent = "Rp 0";
+                resultLabel.textContent = "Masukkan biaya untuk simulasi";
+                return;
+            }
+
+            const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+            const freqDays = parseInt(freqEl?.value || "1");
+            let freqText = freqDays === 1 ? 'hari' : (freqDays === 7 ? 'minggu' : 'bulan');
+
+            let totalDays = 180; // Default 6 months
+            let monthsDiff = 6;
+            
+            if (savingEndInput.value) {
+                const targetDate = new Date(savingEndInput.value);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                const diffTime = targetDate.getTime() - today.getTime();
+                totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (totalDays <= 0) totalDays = 1;
+                monthsDiff = Math.max(1, Math.round(totalDays / 30));
+            }
+
+            const periods = Math.max(1, Math.floor(totalDays / freqDays));
+            const savingPerPeriod = targetAmount / periods;
+
+            resultVal.textContent = formatCurrency(Math.ceil(savingPerPeriod));
+            resultLabel.textContent = `per ${freqText} selama ${monthsDiff} bulan`;
+        }
+
+        // Listeners for triggers
+        if (savingEndInput) savingEndInput.addEventListener('change', calculateGrandTotal);
+        savingFreqRadios.forEach(radio => radio.addEventListener('change', calculateGrandTotal));
+
+        // Initial Calc
+        calculateGrandTotal();
+
+        // Handle Submit
+        const form = document.getElementById('design-trip-form');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Recalculate safely
+                calculateGrandTotal();
+                
+                const title = (document.getElementById('dest-input') as HTMLInputElement)?.value || "Custom Trip";
+                const tripType = (document.getElementById('trip-type') as HTMLSelectElement)?.value || "Solo";
+                
+                // Fetch the calculated Personal Target (not Grand Total)
+                let personalTarget = parseInt(grandtotalText?.textContent?.replace(/[^\d]/g, '') || "0");
+                const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
+                if (checkboxSplitBill && checkboxSplitBill.checked && splitBillMembers.length > 0) {
+                    const personalTotalText = document.getElementById('text-personaltotal');
+                    if (personalTotalText) {
+                        personalTarget = parseInt(personalTotalText.textContent?.replace(/[^\d]/g, '') || "0");
+                    }
+                }
+                
+                const savingAmount = parseInt(resultVal?.textContent?.replace(/[^\d]/g, '') || "0");
+                const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+                const freqDays = parseInt(freqEl?.value || "1");
+                
+                const savingTypeEl = document.querySelector('input[name="saving_type"]:checked') as HTMLInputElement;
+                const savingType = savingTypeEl?.value || 'Konvensional';
+                
+                const paymentRadio = document.querySelector('input[name="payment-method"]:checked') as HTMLInputElement;
+                const paymentMethod = paymentRadio?.value || 'cashless';
+                
+                let paymentDetail = '';
+                if (paymentMethod === 'cashless') {
+                    paymentDetail = 'QRIS Dynamic';
+                } else {
+                    paymentDetail = 'Lentera: ' + (document.querySelector('#cash-details input') as HTMLInputElement)?.value;
+                }
+
+                // --- GATHER DETAILED LINE ITEMS ---
+                const gatherItems = (containerId: string) => {
+                    const items: any[] = [];
+                    document.querySelectorAll(`#${containerId} > div`).forEach(row => {
+                        const textInput = row.querySelector('input[type="text"]:not(.cost-input)') as HTMLInputElement;
+                        const costInput = row.querySelector('.cost-input') as HTMLInputElement;
+                        if (textInput && costInput && textInput.value.trim() !== '') {
+                            items.push({
+                                name: textInput.value.trim(),
+                                price: parseCurrency(costInput.value)
+                            });
+                        }
+                    });
+                    return items;
+                };
+
+                const tripDetails = {
+                    accommodations: gatherItems('hotel-list'),
+                    transports: gatherItems('transport-list'),
+                    activities: gatherItems('activity-list'),
+                    others: gatherItems('other-list'),
+                    buffer: parseCurrency((document.getElementById('buffer-input') as HTMLInputElement)?.value || '0')
+                };
+
+                const tripDetailsJSON = JSON.stringify(tripDetails);
+                // Append serialized JSON to paymentDetail using separator
+                paymentDetail = paymentDetail + '|||' + tripDetailsJSON;
+
+                try {
+                    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i data-feather="loader" class="w-6 h-6 animate-spin"></i> Menyimpan...';
+                    submitBtn.disabled = true;
+                    if (window.feather) window.feather.replace();
+
+                    const res = await fetch('/api/goals', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title,
+                            trip_type: tripType,
+                            target_amount: personalTarget,
+                            auto_debit_amount: savingAmount,
+                            frequency: freqDays,
+                            saving_type: savingType,
+                            payment_method: paymentMethod,
+                            payment_detail: paymentDetail,
+                            group_members: splitBillMembers
+                        })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        const goalId = data.id || `TRIP-${Date.now()}`;
+                        
+                        if (paymentMethod === 'cashless') {
+                            // Redirect to payment page for QRIS
+                            window.location.href = `/payment?amount=${savingAmount}&title=Tabungan ${encodeURIComponent(title)}&ref=${goalId}`;
+                        } else {
+                            alert(`Rencana perjalanan Anda ke ${title} telah disimpan!\nSistem akan otomatis mengarahkan ke Dashboard Anda.`);
+                            window.location.href = '/dashboard';
+                        }
+                    } else {
+                        const err = await res.json();
+                        alert("Gagal menyimpan rencana: " + (err.error || 'Unknown Error'));
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        if (window.feather) window.feather.replace();
+                    }
+                } catch (error) {
+                    alert("Terjadi kesalahan jaringan.");
+                }
+            });
+        }
+    });
+</script>

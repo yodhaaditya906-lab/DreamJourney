@@ -1,0 +1,705 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { fetchCachedCSV } from '../lib/fetchCache';
+
+const { userId } = Astro.locals.auth();
+const isLoggedIn = !!userId;
+
+let packages = [];
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  
+  const imageMap = {
+    "bali": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=600&auto=format&fit=crop",
+    "jogja": "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop",
+    "malioboro": "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop",
+    "bandung": "https://images.unsplash.com/photo-1590559899147-eb54a69622df?q=80&w=600&auto=format&fit=crop",
+    "puncak bogor": "https://images.unsplash.com/photo-1626082928503-4c91b5c4644d?q=80&w=600&auto=format&fit=crop",
+    "malang": "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop",
+    "gunung bromo": "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop",
+    "surabaya": "https://images.unsplash.com/photo-1601999109332-542b18dbec57?q=80&w=600&auto=format&fit=crop",
+    "pulau karimun jawa": "https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=600&auto=format&fit=crop",
+    "banda neira": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=600&auto=format&fit=crop",
+    "raja ampat": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop"
+  };
+
+  const defaultImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+  function slugify(text) {
+      if (!text) return '';
+      return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '');
+  }
+
+  function parseCSVRow(row) {
+      const result = [];
+      let curVal = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+          if (row[i] === '"') {
+              inQuotes = !inQuotes;
+          } else if (row[i] === ',' && !inQuotes) {
+              result.push(curVal.trim());
+              curVal = '';
+          } else {
+              curVal += row[i];
+          }
+      }
+      result.push(curVal.trim());
+      return result;
+  }
+
+  const allRows = csvText.split('\n');
+  const headerCols = allRows.length > 0 ? parseCSVRow(allRows[0]) : [];
+  
+  const findHeaderIdx = (keywords: string[], defaultIdx: number) => {
+      const found = headerCols.findIndex(h => keywords.some(k => h.toLowerCase().includes(k)));
+      return found !== -1 ? found : defaultIdx;
+  };
+
+  const idxTitle = findHeaderIdx(['title'], 0);
+  const idxDesc = findHeaderIdx(['description', 'desc'], 1);
+  const idxDaily = findHeaderIdx(['daily', 'harian'], 2);
+  const idxTotal = findHeaderIdx(['total_price', 'total'], 3);
+  const idxWeekly = findHeaderIdx(['weekly', 'mingguan'], -1);
+  const idxMonthly = findHeaderIdx(['monthly', 'bulanan'], -1);
+  const idxTime = findHeaderIdx(['durasi'], 4);
+  const idxOrigin = findHeaderIdx(['origin'], 5);
+  const idxDestination = findHeaderIdx(['destination'], 6);
+  const idxMainImage = findHeaderIdx(['main_image'], 14);
+  const idxAkomodasi = findHeaderIdx(['harga_penginapan', 'harga_akomodasi'], 19);
+  const idxTransport = findHeaderIdx(['harga_transport'], 20);
+  const idxHargaWahana = findHeaderIdx(['harga_wahana'], 21);
+  const idxLainnya = findHeaderIdx(['harga_lainnya'], 22);
+
+  const rows = allRows.slice(1);
+  packages = rows.filter(row => row.trim() && !row.startsWith(',')).map((row, index) => {
+    const cols = parseCSVRow(row);
+    
+    const title = cols[idxTitle] || "Unknown";
+    const desc = cols[idxDesc] || "";
+    const dailyPrice = cols[idxDaily] || "";
+    const rawDailyPrice = cols[idxDaily] ? cols[idxDaily].replace(/[^\d]/g, '') : "0";
+    const parsedDailyPrice = parseInt(rawDailyPrice, 10) || 0;
+    const rawPrice = cols[idxTotal] ? cols[idxTotal].replace(/[^\d]/g, '') : "0";
+    const price = parseInt(rawPrice, 10) || 0;
+    
+    const time = cols[idxTime] || "";
+    const origin = cols[idxOrigin] || "Unknown";
+    const destination = cols[idxDestination] || title;
+    
+    let mainImage = defaultImage;
+    if (idxMainImage !== -1 && cols[idxMainImage] && (cols[idxMainImage].startsWith('http') || cols[idxMainImage].startsWith('"http') || cols[idxMainImage].startsWith('/'))) {
+        mainImage = cols[idxMainImage];
+    } else {
+        const foundImg = cols.find(c => c && (c.startsWith('http') || c.startsWith('"http')));
+        if (foundImg) mainImage = foundImg;
+    }
+    if (mainImage && mainImage.startsWith('"')) mainImage = mainImage.substring(1, mainImage.length-1);
+    
+    const priceAkomodasi = parseInt((cols[idxAkomodasi] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceTransport = parseInt((cols[idxTransport] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceWahana = parseInt((cols[idxHargaWahana] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceLainnya = parseInt((cols[idxLainnya] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    
+    const rawWeeklyPrice = (idxWeekly !== -1 && cols[idxWeekly]) ? cols[idxWeekly].replace(/[^\d]/g, '') : "";
+    const parsedWeeklyPrice = rawWeeklyPrice ? parseInt(rawWeeklyPrice, 10) : (parsedDailyPrice * 7);
+
+    const rawMonthlyPrice = (idxMonthly !== -1 && cols[idxMonthly]) ? cols[idxMonthly].replace(/[^\d]/g, '') : "";
+    const parsedMonthlyPrice = rawMonthlyPrice ? parseInt(rawMonthlyPrice, 10) : (parsedDailyPrice * 30);
+
+    return {
+      title,
+      slug: slugify(title),
+      desc,
+      dailyPrice,
+      parsedDailyPrice,
+      parsedWeeklyPrice,
+      parsedMonthlyPrice,
+      price,
+      origin,
+      destination,
+      time,
+      badge: index === 0 ? "Hot Deal" : (index === 1 ? "Best Seller" : ""),
+      badgeColor: index === 0 ? "bg-red-500 text-white" : (index === 1 ? "bg-blue-500 text-white" : ""),
+      image: mainImage,
+      priceAkomodasi,
+      priceTransport,
+      priceWahana,
+      priceLainnya
+    };
+  });
+} catch (error) {
+  console.error("Failed to fetch packages:", error);
+}
+
+// --- PROMO BANNER DATA FETCHING ---
+let promos: any[] = [];
+try {
+  const promoCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1s3pSHYsAhMuCDKZBM92zfbWntqRm4_0ESdaG9rNEz0s/export?format=csv');
+  
+  function parseCSVRowLocal(row: string) {
+      const result = [];
+      let curVal = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+          if (row[i] === '"') {
+              inQuotes = !inQuotes;
+          } else if (row[i] === ',' && !inQuotes) {
+              result.push(curVal.trim());
+              curVal = '';
+          } else {
+              curVal += row[i];
+          }
+      }
+      result.push(curVal.trim());
+      return result;
+  }
+
+  const promoRows = promoCsvText.split('\n').slice(1);
+  promos = promoRows.filter(row => row.trim() && !row.startsWith(',')).map((row, idx) => {
+      const cols = parseCSVRowLocal(row);
+      return {
+          id: `promo-${idx}`,
+          label: cols[0] || "Promo",
+          title: cols[1] || "",
+          desc: cols[2] || "",
+          image: cols[3] || "/images/promo_banner_1.png",
+          ctaText: cols[4] || "Klaim",
+          ctaLink: cols[5] || "/packages"
+      };
+  });
+} catch (error) {
+  console.error("Failed to fetch promo data:", error);
+}
+
+// Fallback if empty
+if (promos.length === 0) {
+    promos = [
+        {
+            id: "promo-fallback",
+            label: "Spesial Liburan",
+            title: "Eksplorasi Keindahan Bali",
+            desc: "Diskon hingga 30% untuk pemesanan minggu ini. Jangan sampai kehabisan!",
+            image: "/images/promo_banner_1.png",
+            ctaText: "Klaim Promo",
+            ctaLink: "/packages"
+        }
+    ];
+}
+---
+
+<Layout title="DreamJourney - Smart Travel Financing">
+    <main class="pt-20" data-is-logged-in={isLoggedIn ? 'true' : 'false'}>
+        <!-- Hero Search and Filter Section -->
+        <section class="relative py-12 lg:py-20 bg-cover bg-center" style="background-image: url('/images/bromo_hero_bg.png');">
+            <!-- Overlay -->
+            <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.5);"></div>
+            
+            <div class="container mx-auto px-4 relative z-10">
+                <div class="max-w-5xl mx-auto">
+                    <!-- Search Bar with Interactive Autocomplete Dropdown -->
+                    <div class="glass-card rounded-2xl p-5 md:p-6 mb-0 relative">
+                        <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Temukan Destinasi Impian Anda</h1>
+                        <div class="relative max-w-4xl mx-auto">
+                            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
+                                <div class="flex-1 relative">
+                                    <!-- Search Icon -->
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-blue-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="main-search-input" autocomplete="off" placeholder="Ketik nama kota atau destinasi (contoh: Bandung, Bali, Bromo)..." class="w-full pl-12 pr-10 py-3.5 md:py-3 border border-white/60 bg-white/95 backdrop-blur-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-800 placeholder-gray-400 shadow-sm font-medium text-sm md:text-base">
+                                    
+                                    <!-- Clear Input Button (X) -->
+                                    <button type="button" id="search-clear-btn" class="hidden absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 transition cursor-pointer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button id="main-search-btn" class="tap-active bg-primary hover:bg-primary-dark text-white font-bold py-3.5 md:py-3 px-8 rounded-xl transition-smooth shadow-md w-full md:w-auto flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span>Cari</span>
+                                </button>
+                            </div>
+
+                            <!-- Autocomplete Dropdown Popup -->
+                            <div id="search-autocomplete-dropdown" class="hidden absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 z-50 p-4 max-h-[460px] overflow-y-auto transition-all duration-200">
+                                <div id="dropdown-results-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Promotional Banner Section -->
+        <section class="pt-12 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <div class="relative rounded-2xl overflow-hidden shadow-lg group">
+                    <div id="promo-carousel" class="flex transition-transform duration-500 ease-in-out">
+                        {promos.map((promo) => (
+                            <div class="min-w-full relative">
+                                <img src={promo.image} alt={promo.title} class="w-full h-[250px] md:h-[350px] lg:h-[400px] object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center">
+                                    <div class="px-6 md:px-16 text-white max-w-xl">
+                                        <span class="inline-block px-3 py-1 bg-primary text-[10px] md:text-xs font-bold rounded-full mb-3 uppercase tracking-wider">{promo.label}</span>
+                                        <h2 class="text-2xl md:text-4xl font-bold mb-3 md:mb-4 drop-shadow-md">{promo.title}</h2>
+                                        <p class="text-sm md:text-lg drop-shadow mb-5 md:mb-6 text-gray-100">{promo.desc}</p>
+                                        <a href={promo.ctaLink} class="inline-block bg-white text-primary font-bold py-2.5 px-6 md:py-3 md:px-8 rounded-lg text-sm md:text-base hover:bg-gray-100 transition shadow-lg">{promo.ctaText}</a>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <!-- Carousel Controls -->
+                    <button id="promo-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/30 backdrop-blur-md hover:bg-white/50 flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+                    </button>
+                    <button id="promo-next" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/30 backdrop-blur-md hover:bg-white/50 flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                    </button>
+                    
+                    <!-- Carousel Indicators -->
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                        {promos.map((_, idx) => (
+                            <button class={`promo-dot h-2 rounded-full transition-all ${idx === 0 ? 'w-4 bg-white' : 'w-2 bg-white/50'}`}></button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Package List Section -->
+        <section id="packages-list" class="py-12 bg-gray-50 min-h-screen">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center mb-6 md:mb-8 flex-col sm:flex-row gap-3 md:gap-4">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 text-center sm:text-left">Daftar Paket Destinasi</h2>
+                    <div class="flex items-center gap-3 w-full sm:w-auto flex-col sm:flex-row">
+                        <span id="package-count" class="text-gray-500 text-sm font-medium w-full sm:w-auto text-center">Menampilkan {packages.length} paket</span>
+                        
+                        <!-- Quick Hitungan Tabungan dropdown in section toolbar -->
+                        <div class="flex items-center gap-2 bg-white px-3.5 py-2.5 rounded-xl shadow-sm border border-gray-200 w-full sm:w-auto focus-within:ring-2 focus-within:ring-primary/20">
+                            <span class="text-xs font-semibold text-gray-500 whitespace-nowrap">Tabungan:</span>
+                            <select id="filter-tipe-tabungan-quick" class="bg-transparent text-sm font-semibold text-gray-700 cursor-pointer outline-none hover:text-primary transition-smooth">
+                                <option value="1">Harian (/hari)</option>
+                                <option value="7">Mingguan (/minggu)</option>
+                                <option value="30">Bulanan (/bulan)</option>
+                            </select>
+                        </div>
+
+                        <select id="sort-price" class="bg-white w-full sm:w-auto px-4 py-2.5 rounded-xl shadow-sm border border-gray-200 text-sm font-semibold text-gray-700 cursor-pointer outline-none hover:bg-gray-50 transition-smooth focus:ring-2 focus:ring-primary/20">
+                            <option value="">Urutkan: Paling Relevan</option>
+                            <option value="asc">Harga Terendah - Tertinggi</option>
+                            <option value="desc">Harga Tertinggi - Terendah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="packages-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    {packages.map((pkg, index) => (
+                        <div class="package-item bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-smooth border border-gray-100 flex flex-col" 
+                             data-index={index}
+                             data-time={pkg.time} 
+                             data-origin={pkg.origin} 
+                             data-destination={pkg.destination} 
+                             data-price={pkg.price}
+                             data-title={pkg.title}
+                             data-daily-price={pkg.parsedDailyPrice}
+                             data-weekly-price={pkg.parsedWeeklyPrice}
+                             data-monthly-price={pkg.parsedMonthlyPrice}
+                             data-akomodasi={pkg.priceAkomodasi}
+                             data-transport={pkg.priceTransport}
+                             data-wahana={pkg.priceWahana}
+                             data-lainnya={pkg.priceLainnya}>
+                            <a href={`/package/${pkg.slug}`} class="block flex-grow cursor-pointer tap-active">
+                                <div class="relative">
+                                    <img src={pkg.image} alt={pkg.destination} class="w-full h-52 object-cover transition-smooth hover:scale-105">
+                                    {pkg.badge && (
+                                        <span class={`absolute top-3 right-3 text-xs px-3 py-1.5 rounded-full font-bold shadow-md ${pkg.badgeColor}`}>
+                                            {pkg.badge}
+                                        </span>
+                                    )}
+                                </div>
+                                <div class="p-5 pb-0 flex-grow">
+                                    <h3 class="font-bold text-lg text-gray-900 leading-tight mb-1">{pkg.title}</h3>
+                                    <p class="text-gray-500 text-sm line-clamp-2">{pkg.desc}</p>
+                                    <div class="mt-4 mb-2 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/50">
+                                        <p class="text-primary font-bold text-xl price-display-text">{pkg.dailyPrice}<span class="text-sm font-medium text-gray-500">/hari</span></p>
+                                        <p class="text-gray-500 text-xs mt-1 font-medium">Total: Rp {pkg.price.toLocaleString('id-ID')}</p>
+                                    </div>
+                                </div>
+                            </a>
+                            <div class="p-5 pt-3">
+                                <button class="tap-active w-full bg-primary hover:bg-primary-dark text-white py-3 rounded-xl font-bold transition-smooth shadow-md shadow-primary/20 cursor-pointer start-saving-btn mt-auto flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z" />
+                                    </svg>
+                                    Mulai Menabung
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <!-- View All Button -->
+                <div class="flex justify-center mt-8 mb-12">
+                    <a href="/packages" class="tap-active bg-white text-primary border-2 border-primary hover:bg-primary hover:text-white font-bold py-3.5 px-8 rounded-xl transition-smooth shadow-sm text-base flex items-center gap-2">
+                        Lihat Semua Paket
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    </a>
+                </div>
+
+                <!-- Custom Trip Planner CTA -->
+                <div class="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900 group">
+                    <img src="/images/planner_cta_bg.png" alt="Travel Planner" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition duration-500">
+                    <div class="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-transparent"></div>
+                    
+                    <div class="relative z-10 p-8 md:p-12 lg:p-16 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div class="text-white max-w-2xl">
+                            <span class="inline-block px-4 py-1.5 bg-yellow-500 text-gray-900 font-bold rounded-full mb-4 text-sm tracking-wide uppercase shadow-sm">Fitur Fleksibel</span>
+                            <h2 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">Punya Rencana Sendiri?</h2>
+                            <p class="text-gray-200 text-lg md:text-xl mb-0">Gunakan fitur Planner kami untuk menyusun itinerary impian Anda dari nol. Tentukan destinasi, atur budget harian, dan pilih aktivitas sesuai keinginan Anda secara bebas!</p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <a href="/planner" class="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-lg py-4 px-8 rounded-xl hover:bg-gray-100 transition shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-105 transform duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l12.673-12.673z" /></svg>
+                                Buat Planner Sekarang
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</Layout>
+
+<script define:vars={{ packages }}>
+    window.__PACKAGES_DATA__ = packages;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const filterOriginCity = document.getElementById('filter-kota-asal') as HTMLSelectElement;
+        const filterDestCity = document.getElementById('filter-kota-tujuan') as HTMLInputElement;
+        const priceInput = document.getElementById('filter-price-input') as HTMLInputElement;
+        const tipeTabungan = document.getElementById('filter-tipe-tabungan') as HTMLSelectElement;
+        const tipeTabunganQuick = document.getElementById('filter-tipe-tabungan-quick') as HTMLSelectElement;
+        const sortSelect = document.getElementById('sort-price') as HTMLSelectElement;
+        const packageCountEl = document.getElementById('package-count');
+        
+        const btnReset = document.getElementById('btn-reset-filter');
+        
+        const mainSearchInput = document.getElementById('main-search-input') as HTMLInputElement;
+        const mainSearchBtn = document.getElementById('main-search-btn');
+        const searchDropdown = document.getElementById('search-autocomplete-dropdown');
+        const dropdownContainer = document.getElementById('dropdown-results-container');
+        const searchClearBtn = document.getElementById('search-clear-btn');
+
+        const rawPackages = (window as any).__PACKAGES_DATA__ || [];
+
+        // Location Metadata
+        const locationMeta: Record<string, { sub: string; type: string; image: string }> = {
+            "Bandung": { sub: "Jawa Barat, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1590559899147-eb54a69622df?q=80&w=600&auto=format&fit=crop" },
+            "Bali": { sub: "Bali, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=600&auto=format&fit=crop" },
+            "Jakarta": { sub: "DKI Jakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1555899434-94d1368aa7af?q=80&w=600&auto=format&fit=crop" },
+            "Jogja": { sub: "DI Yogyakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop" },
+            "Yogyakarta": { sub: "DI Yogyakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop" },
+            "Lombok": { sub: "Nusa Tenggara Barat, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1570784400788-b2a488667b45?q=80&w=600&auto=format&fit=crop" },
+            "Bromo": { sub: "Jawa Timur, Indonesia", type: "Wisata Alam", image: "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop" },
+            "Purwokerto": { sub: "Jawa Tengah, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?q=80&w=600&auto=format&fit=crop" },
+            "Surabaya": { sub: "Jawa Timur, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1601999109332-542b18dbec57?q=80&w=600&auto=format&fit=crop" },
+            "Raja Ampat": { sub: "Papua Barat, Indonesia", type: "Bahari", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop" },
+            "Labuan Bajo": { sub: "Nusa Tenggara Timur, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=600&auto=format&fit=crop" },
+            "Dufan": { sub: "Ancol, Jakarta", type: "Wahana Rekreasi", image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=600&auto=format&fit=crop" }
+        };
+
+        // Dynamically compute package count per location from Google Sheet DB
+        const locCounts: Record<string, number> = {};
+        const locImages: Record<string, string> = {};
+
+        if (Array.isArray(rawPackages)) {
+            rawPackages.forEach((pkg: any) => {
+                const dest = (pkg.destination || "").trim();
+                const title = (pkg.title || "").trim();
+
+                if (dest && dest !== "Unknown") {
+                    locCounts[dest] = (locCounts[dest] || 0) + 1;
+                    if (!locImages[dest] && pkg.image) locImages[dest] = pkg.image;
+                }
+
+                Object.keys(locationMeta).forEach(loc => {
+                    if (title.toLowerCase().includes(loc.toLowerCase()) && loc !== dest) {
+                        locCounts[loc] = (locCounts[loc] || 0) + 1;
+                        if (!locImages[loc] && pkg.image) locImages[loc] = pkg.image;
+                    }
+                });
+            });
+        }
+
+        const availableLocations = Object.keys(locCounts).sort((a, b) => (locCounts[b] || 0) - (locCounts[a] || 0));
+        const allLocationKeys = availableLocations.length > 0 ? availableLocations : Object.keys(locationMeta);
+
+        function renderDropdown(searchTerm = "") {
+            if (!dropdownContainer) return;
+            const query = searchTerm.toLowerCase().trim();
+
+            const filteredLocs = allLocationKeys.filter(loc => {
+                const meta = locationMeta[loc] || {};
+                return query === "" || 
+                       loc.toLowerCase().includes(query) || 
+                       (meta.sub && meta.sub.toLowerCase().includes(query)) ||
+                       (meta.type && meta.type.toLowerCase().includes(query));
+            });
+
+            let html = "";
+
+            if (filteredLocs.length > 0) {
+                html += `<div class="mb-3"><h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-2">Destinasi Sesuai Spreadsheet</h4><div class="space-y-1">`;
+                
+                filteredLocs.slice(0, 5).forEach(loc => {
+                    const meta = locationMeta[loc] || { sub: "Indonesia", type: "Destinasi", image: locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop" };
+                    const count = locCounts[loc] || 1;
+                    
+                    html += `
+                        <div class="suggestion-item flex items-center justify-between p-3 rounded-xl hover:bg-blue-50/80 cursor-pointer transition group" data-location="${loc}">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-blue-100 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-sm group-hover:text-blue-700 transition">${loc}</h4>
+                                    <p class="text-xs text-gray-500">${meta.sub}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium group-hover:bg-blue-100 group-hover:text-blue-800 transition">${meta.type}</span>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold shadow-xs">${count} Paket Wisata</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            } else {
+                html += `
+                    <div class="p-4 text-center text-gray-500 text-sm">
+                        Tidak ditemukan destinasi untuk "<span class="font-semibold text-gray-800">${searchTerm}</span>"
+                    </div>
+                `;
+            }
+
+            // Discover Best Places Grid (Cards like screenshot!)
+            const popularCards = allLocationKeys.slice(0, 4);
+            if (popularCards.length > 0) {
+                html += `
+                    <div class="pt-3 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2.5 px-2">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Discover the best places to go</h4>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                `;
+
+                popularCards.forEach(loc => {
+                    const meta = locationMeta[loc] || { sub: "Indonesia", type: "Destinasi", image: locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop" };
+                    const count = locCounts[loc] || 1;
+                    const img = meta.image || locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+                    html += `
+                        <div class="suggestion-card relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer shadow-xs hover:shadow-md transition" data-location="${loc}">
+                            <img src="${img}" alt="${loc}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2.5 flex flex-col justify-between">
+                                <span class="self-start text-[10px] bg-black/50 backdrop-blur-xs text-white px-2 py-0.5 rounded-md font-semibold">${meta.type}</span>
+                                <div>
+                                    <span class="text-[11px] font-bold text-amber-300 block">${count} Paket</span>
+                                    <h5 class="text-xs font-bold text-white leading-tight truncate">${loc}</h5>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            dropdownContainer.innerHTML = html;
+
+            const suggestionElements = dropdownContainer.querySelectorAll('.suggestion-item, .suggestion-card');
+            suggestionElements.forEach(el => {
+                el.addEventListener('click', () => {
+                    const selectedLoc = el.getAttribute('data-location');
+                    if (selectedLoc) {
+                        window.location.href = `/packages?search=${encodeURIComponent(selectedLoc)}`;
+                    }
+                });
+            });
+        }
+
+        function showDropdown() {
+            if (searchDropdown) {
+                renderDropdown(mainSearchInput ? mainSearchInput.value : "");
+                searchDropdown.classList.remove('hidden');
+            }
+        }
+
+        function hideDropdown() {
+            if (searchDropdown) {
+                searchDropdown.classList.add('hidden');
+            }
+        }
+
+        // Start Saving logic
+        const startSavingBtns = document.querySelectorAll('.start-saving-btn');
+        startSavingBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const mainEl = document.querySelector('main');
+                const isLoggedIn = mainEl?.getAttribute('data-is-logged-in') === 'true';
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('custom-login-modal');
+                    if (modal) modal.classList.remove('hidden');
+                    return;
+                }
+                
+                const item = (e.target as HTMLElement).closest('.package-item');
+                if (!item) return;
+                
+                const title = item.getAttribute('data-title') || '';
+                const price = item.getAttribute('data-price') || '0';
+                const dailyPrice = item.getAttribute('data-daily-price') || '0';
+                const weeklyPrice = item.getAttribute('data-weekly-price') || '0';
+                const monthlyPrice = item.getAttribute('data-monthly-price') || '0';
+                const time = item.getAttribute('data-time') || '';
+                
+                const ak = parseInt(item.getAttribute('data-akomodasi') || '0');
+                const tr = parseInt(item.getAttribute('data-transport') || '0');
+                const wh = parseInt(item.getAttribute('data-wahana') || '0');
+                const ln = parseInt(item.getAttribute('data-lainnya') || '0');
+                const hasCustomBreakdown = (ak + tr + wh + ln) > 0;
+
+                const imgEl = item.querySelector('img');
+                const image = imgEl ? imgEl.getAttribute('src') : '';
+                
+                const query = new URLSearchParams({
+                    title, price, dailyPrice, weeklyPrice, monthlyPrice, time, image: image || '',
+                    akomodasi: (hasCustomBreakdown ? ak : parseInt(price) * 0.45).toString(),
+                    transport: (hasCustomBreakdown ? tr : 0).toString(),
+                    wahana: (hasCustomBreakdown ? wh : parseInt(price) * 0.30).toString(),
+                    lainnya: (hasCustomBreakdown ? ln : parseInt(price) * 0.25).toString()
+                }).toString();
+                
+                window.location.href = `/setup-saving?${query}`;
+            });
+        });
+
+        if (mainSearchInput) {
+            mainSearchInput.addEventListener('focus', showDropdown);
+            mainSearchInput.addEventListener('input', () => {
+                const val = mainSearchInput.value;
+                if (searchClearBtn) {
+                    if (val.trim() !== '') searchClearBtn.classList.remove('hidden');
+                    else searchClearBtn.classList.add('hidden');
+                }
+                showDropdown();
+            });
+            mainSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const val = mainSearchInput.value.trim();
+                    window.location.href = `/packages${val ? '?search=' + encodeURIComponent(val) : ''}`;
+                }
+            });
+        }
+
+        if (searchClearBtn) {
+            searchClearBtn.addEventListener('click', () => {
+                if (mainSearchInput) {
+                    mainSearchInput.value = '';
+                    searchClearBtn.classList.add('hidden');
+                    showDropdown();
+                    mainSearchInput.focus();
+                }
+            });
+        }
+
+        if (mainSearchBtn) {
+            mainSearchBtn.addEventListener('click', () => {
+                const val = mainSearchInput ? mainSearchInput.value.trim() : '';
+                window.location.href = `/packages${val ? '?search=' + encodeURIComponent(val) : ''}`;
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (searchDropdown && !searchDropdown.contains(target) && mainSearchInput && !mainSearchInput.contains(target)) {
+                hideDropdown();
+            }
+        });
+
+        // Promo Carousel Logic
+        const carousel = document.getElementById('promo-carousel');
+        const prevBtn = document.getElementById('promo-prev');
+        const nextBtn = document.getElementById('promo-next');
+        const dots = document.querySelectorAll('.promo-dot');
+        
+        if (carousel && prevBtn && nextBtn && dots.length > 0) {
+            let currentIndex = 0;
+            const totalSlides = dots.length;
+
+            function updateCarousel() {
+                if (carousel) carousel.style.transform = `translateX(-${currentIndex * 100}%)`;
+                dots.forEach((dot, index) => {
+                    if (index === currentIndex) {
+                        dot.classList.remove('bg-white/50');
+                        dot.classList.add('bg-white', 'w-4');
+                    } else {
+                        dot.classList.remove('bg-white', 'w-4');
+                        dot.classList.add('bg-white/50');
+                    }
+                });
+            }
+
+            nextBtn.addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % totalSlides;
+                updateCarousel();
+            });
+
+            prevBtn.addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
+                updateCarousel();
+            });
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    currentIndex = index;
+                    updateCarousel();
+                });
+            });
+
+            setInterval(() => {
+                currentIndex = (currentIndex + 1) % totalSlides;
+                updateCarousel();
+            }, 5000);
+        }
+
+        if (tipeTabunganQuick) {
+            tipeTabunganQuick.addEventListener('change', function() {
+                filterPackages();
+            });
+        }
+
+        filterPackages();
+    });
+</script>

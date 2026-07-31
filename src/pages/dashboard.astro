@@ -1,0 +1,761 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+import { fetchCachedCSV } from '../lib/fetchCache';
+
+const { userId } = Astro.locals.auth();
+
+if (!userId) {
+    return Astro.redirect('/');
+}
+
+const clerkUser = await Astro.locals.currentUser();
+if (clerkUser) {
+    const hasDomisili = clerkUser.unsafeMetadata?.domisili;
+    const hasDob = clerkUser.unsafeMetadata?.dob;
+    
+    if (!hasDomisili || !hasDob) {
+        return Astro.redirect('/onboarding?redirect_url=/dashboard');
+    }
+}
+
+// 1. Get user data
+let { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
+if (!user) {
+    // If not exists, create it
+    await supabase.from('users').insert({ id: userId });
+    user = { id: userId, balance: 0, lentera_id: null };
+}
+
+// 2. Get goals
+const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+const goals = goalsData || [];
+
+// 3. Get transactions (limit to 20)
+const { data: transactionsData } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
+const transactions = transactionsData || [];
+
+function parseCSVRow(r: string) {
+    const result = [];
+    let curVal = '';
+    let inQuotes = false;
+    for (let i = 0; i < r.length; i++) {
+        if (r[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (r[i] === ',' && !inQuotes) {
+            result.push(curVal.trim());
+            curVal = '';
+        } else {
+            curVal += r[i];
+        }
+    }
+    result.push(curVal.trim());
+    return result;
+}
+
+// --- FETCH DATA TABUNGAN DARI GOOGLE SHEET ---
+const GOOGLE_SHEET_TABUNGAN_URL = "https://docs.google.com/spreadsheets/d/1RQkDKebj_FXnFZnom5JazwHz0f0JLKupHuWu8tebzZo/export?format=csv";
+let tabunganMap = new Map<string, { totalAmount: number; savingType?: string }>();
+try {
+    const res = await fetch(GOOGLE_SHEET_TABUNGAN_URL);
+    if (res.ok) {
+        const csv = await res.text();
+        const allRows = csv.split('\n').filter(r => r.trim());
+
+        if (allRows.length > 0) {
+            const headers = parseCSVRow(allRows[0]);
+            const idxId = headers.findIndex(h => h.toLowerCase().includes('id target') || h.toLowerCase().includes('id'));
+            const idxType = headers.findIndex(h => h.toLowerCase().includes('tipe tabungan') || h.toLowerCase().includes('tipe'));
+
+            const startSetoranIdx = idxType !== -1 ? idxType + 1 : (idxId !== -1 ? idxId + 1 : 1);
+
+            allRows.slice(1).forEach(row => {
+                const cols = parseCSVRow(row);
+                if (cols.length > 0) {
+                    const goalId = cols[idxId !== -1 ? idxId : 0].replace(/"/g, '').trim();
+                    const savingType = (idxType !== -1 && cols[idxType]) ? cols[idxType].replace(/"/g, '').trim() : undefined;
+
+                    let totalAmount = 0;
+                    for (let i = startSetoranIdx; i < cols.length; i++) {
+                        const valStr = cols[i].replace(/[^\d]/g, '');
+                        const val = parseInt(valStr, 10);
+                        if (!isNaN(val)) {
+                            totalAmount += val;
+                        }
+                    }
+
+                    if (goalId) {
+                        tabunganMap.set(goalId, { totalAmount, savingType });
+                    }
+                }
+            });
+        }
+    }
+} catch (e) {
+    console.error("Gagal mengambil data tabungan dari Sheet", e);
+}
+
+// Map Supabase snake_case back to camelCase for UI
+const wallet = {
+    isLinked: goals.length > 0,
+    balance: user.balance || 0,
+    lenteraId: user.lentera_id,
+    goals: goals.map((g: any) => ({
+        id: g.id,
+        title: g.title,
+        targetAmount: g.target_amount,
+        autoDebitAmount: g.auto_debit_amount,
+        autoDebitFrequency: g.frequency === '1' ? 'Harian' : (g.frequency === '7' ? 'Mingguan' : (g.frequency === '30' ? 'Bulanan' : g.frequency)),
+        paymentMethod: g.payment_method,
+        paymentDetail: g.payment_detail,
+        tripType: g.trip_type,
+        savingType: (tabunganMap.has(g.id.toString()) && tabunganMap.get(g.id.toString())?.savingType)
+            ? tabunganMap.get(g.id.toString())!.savingType
+            : g.saving_type,
+        groupMembers: g.group_members || [],
+        savedAmount: tabunganMap.has(g.id.toString()) ? tabunganMap.get(g.id.toString())!.totalAmount : (g.saved_amount || 0),
+        createdAt: g.created_at
+    })),
+    transactions: transactions.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        desc: t.description,
+        date: t.created_at
+    }))
+};
+
+// Calculate total saved amount across all goals
+const totalSaved = wallet.goals.reduce((acc: number, goal: any) => acc + (goal.savedAmount || 0), 0);
+const displayBalance = totalSaved; // Balance reflects total saved
+
+// Helper for formatting currency
+const formatRp = (num: number) => `Rp ${num.toLocaleString('id-ID')}`;
+
+// Format date relative or simple
+const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+// --- LENTERA DATA FETCHING ---
+let lenteras: any[] = [];
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1qie-zXXTH6xqEn_oxlZEQYCU2DDGmQn_ACWZNFI7xOM/export?format=csv');
+  
+  const rows = csvText.split('\n').slice(1);
+  lenteras = rows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
+      const cols = parseCSVRow(row);
+      return {
+          id: cols[0] || "",
+          name: cols[1] || "Unknown",
+          desc: cols[2] || "",
+          image: cols[3] || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200",
+          telegram: cols[4] || "#",
+          line: cols[5] || "#",
+          color: cols[6] || "bg-blue-100 text-blue-600"
+      };
+  });
+} catch (error) {
+  console.error("Failed to fetch lentera data:", error);
+}
+
+const activeLentera = lenteras.find(l => l.id === wallet.lenteraId);
+
+// --- MITRA DATA FETCHING ---
+let mitraMap = new Map();
+try {
+  const mitraCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1iF_gSErDUz9kMnDiSSgySE1gePeoFRmTdRffdQ4A9ys/export?format=csv');
+  const mitraRows = mitraCsvText.split('\n').slice(1);
+  mitraRows.forEach(row => {
+      if (!row.trim() || row.startsWith(',')) return;
+      const cols = parseCSVRow(row);
+      const id = (cols[1] || '').trim();
+      const name = (cols[2] || '').trim();
+      const waRaw = (cols[4] || '').trim().replace(/[^\d]/g, '');
+      const wa = waRaw.startsWith('0') ? '62' + waRaw.slice(1) : waRaw;
+      if (id) {
+          mitraMap.set(id.toLowerCase(), { id, name, wa });
+      }
+  });
+} catch (error) {
+  console.error("Failed to fetch mitra data:", error);
+}
+
+// --- PACKAGE DATA FETCHING FOR DEPARTURE DATES ---
+let packageMap = new Map();
+try {
+  const pkgCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  const pkgRows = pkgCsvText.split('\n');
+  if (pkgRows.length > 0) {
+      const headers = parseCSVRow(pkgRows[0]);
+      const idxTitle = headers.findIndex(h => h.toLowerCase().includes('title'));
+      const idxTanggal = headers.findIndex(h => h.toLowerCase().includes('tanggal pergi'));
+      const idxHitung = headers.findIndex(h => h.toLowerCase().includes('hitung mundur liburan'));
+      
+      pkgRows.slice(1).forEach(row => {
+          if (!row.trim() || row.startsWith(',')) return;
+          const cols = parseCSVRow(row);
+          const title = (cols[idxTitle !== -1 ? idxTitle : 0] || '').trim();
+          const tanggalPergi = (cols[idxTanggal !== -1 ? idxTanggal : 25] || '').trim();
+          const hitungMundur = (cols[idxHitung !== -1 ? idxHitung : 24] || '').trim();
+          if (title) {
+              packageMap.set(title.toLowerCase(), { tanggalPergi, hitungMundur });
+          }
+      });
+  }
+} catch (e) {
+  console.error("Failed to fetch package data for departure estimation:", e);
+}
+
+---
+
+<Layout title="Savings Dashboard - DreamJourney">
+    <main class="pt-20">
+        <section class="py-16 bg-gray-50 min-h-screen">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-10 text-center">📊 Dashboard Tabungan Anda</h2>
+                
+                <!-- Balance Card -->
+                <div class="max-w-4xl mx-auto bg-gradient-to-r from-primary to-secondary text-white p-8 rounded-xl shadow-lg mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <div class="mb-4 md:mb-0">
+                            <h3 class="font-bold text-xl opacity-90">TOTAL TABUNGAN</h3>
+                            <div class="text-4xl font-bold mt-2">{formatRp(displayBalance)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <!-- Active Savings -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                        <h3 class="font-bold text-xl mb-6 flex items-center">
+                            <i data-feather="target" class="mr-2 text-primary"></i> Target Aktif
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            {wallet.goals.length === 0 ? (
+                                <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                    <i data-feather="flag" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                                    <p>Belum ada target liburan.</p>
+                                    <a href="/packages" class="text-primary font-semibold hover:underline mt-2 inline-block">Cari Paket Liburan!</a>
+                                </div>
+                            ) : (
+                                wallet.goals.map((goal: any, index: number) => {
+                                    const percentage = Math.min(100, Math.round((goal.savedAmount / goal.targetAmount) * 100));
+                                    const colors = ['bg-primary text-primary', 'bg-secondary text-secondary', 'bg-accent text-accent', 'bg-green-500 text-green-500'];
+                                    const colorPair = colors[index % colors.length].split(' ');
+                                    const bgClass = colorPair[0];
+                                    const textClass = colorPair[1];
+
+                                    // --- ESTIMATION CALCULATION ---
+                                    const remainingAmount = Math.max(0, goal.targetAmount - goal.savedAmount);
+                                    let remainingCycles = 0;
+                                    if (goal.autoDebitAmount > 0) {
+                                        remainingCycles = Math.ceil(remainingAmount / goal.autoDebitAmount);
+                                    }
+                                    
+                                    let daysPerCycle = 30; // default Bulanan
+                                    if (goal.autoDebitFrequency === 'Harian') daysPerCycle = 1;
+                                    else if (goal.autoDebitFrequency === 'Mingguan') daysPerCycle = 7;
+                                    
+                                    const daysLeft = remainingCycles * daysPerCycle;
+                                    
+                                    const estimatedDate = new Date();
+                                    estimatedDate.setDate(estimatedDate.getDate() + daysLeft);
+                                    const dateOptions: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+                                    const formattedDate = estimatedDate.toLocaleDateString('id-ID', dateOptions);
+                                    const isAcakFreq = goal.autoDebitFrequency?.includes('Acak') || goal.autoDebitAmount === 0;
+                                    const freqBadgeText = isAcakFreq ? 'Acak (Sesuka Hati)' : `${goal.autoDebitFrequency} (${formatRp(goal.autoDebitAmount)})`;
+                                    
+                                    // Check departure date from Google Sheet package
+                                    const pkgInfo = packageMap.get(goal.title.toLowerCase().trim());
+                                    const hasSheetDeparture = pkgInfo && pkgInfo.hitungMundur !== "0" && pkgInfo.tanggalPergi && !pkgInfo.tanggalPergi.toLowerCase().includes("tidak") && pkgInfo.tanggalPergi !== "-";
+                                    
+                                    let sheetDisplayDate = '';
+                                    if (hasSheetDeparture) {
+                                        sheetDisplayDate = pkgInfo.tanggalPergi;
+                                        try {
+                                            const parsedDate = new Date(pkgInfo.tanggalPergi);
+                                            if (!isNaN(parsedDate.getTime())) {
+                                                sheetDisplayDate = parsedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                                            }
+                                        } catch (e) {}
+                                    }
+
+                                     // --- DEPOSIT FREQUENCY & LAST DEPOSIT CALCULATION ---
+                                    const goalTransactions = wallet.transactions.filter((t: any) => 
+                                        t.desc?.toLowerCase().includes(goal.title.toLowerCase()) || 
+                                        t.desc?.toLowerCase().includes(goal.id.toString().toLowerCase())
+                                    );
+
+                                    let lastDepositDate: Date | null = null;
+                                    if (goalTransactions.length > 0) {
+                                        const dates = goalTransactions.map((t: any) => new Date(t.date).getTime());
+                                        lastDepositDate = new Date(Math.max(...dates));
+                                    } else if (goal.savedAmount > 0) {
+                                        lastDepositDate = new Date(goal.createdAt || Date.now());
+                                    }
+
+                                    const now = new Date();
+                                    let depositStatusBadge = { text: '', colorClass: '', icon: '', isWarning: false };
+
+                                    const freqType = goal.autoDebitFrequency;
+                                    const isHarian = freqType === 'Harian';
+                                    const isMingguan = freqType === 'Mingguan';
+                                    const isBulanan = freqType === 'Bulanan';
+
+                                    if (isHarian) {
+                                        const hasSavedToday = lastDepositDate ? (
+                                            lastDepositDate.getFullYear() === now.getFullYear() &&
+                                            lastDepositDate.getMonth() === now.getMonth() &&
+                                            lastDepositDate.getDate() === now.getDate()
+                                        ) : false;
+
+                                        if (hasSavedToday) {
+                                            depositStatusBadge = {
+                                                text: 'Sudah Menabung Hari Ini',
+                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                icon: 'check-circle',
+                                                isWarning: false
+                                            };
+                                        } else {
+                                            depositStatusBadge = {
+                                                text: 'Belum Menabung Hari Ini',
+                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                icon: 'alert-circle',
+                                                isWarning: true
+                                            };
+                                        }
+                                    } else if (isMingguan) {
+                                        const getMonday = (d: Date) => {
+                                            const date = new Date(d);
+                                            const day = date.getDay();
+                                            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+                                            const m = new Date(date.setDate(diff));
+                                            m.setHours(0,0,0,0);
+                                            return m;
+                                        };
+                                        const hasSavedThisWeek = lastDepositDate ? (
+                                            getMonday(lastDepositDate).getTime() === getMonday(now).getTime()
+                                        ) : false;
+
+                                        if (hasSavedThisWeek) {
+                                            depositStatusBadge = {
+                                                text: 'Sudah Menabung Minggu Ini',
+                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                icon: 'check-circle',
+                                                isWarning: false
+                                            };
+                                        } else {
+                                            depositStatusBadge = {
+                                                text: 'Belum Menabung Minggu Ini',
+                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                icon: 'alert-circle',
+                                                isWarning: true
+                                            };
+                                        }
+                                    } else if (isBulanan) {
+                                        const hasSavedThisMonth = lastDepositDate ? (
+                                            lastDepositDate.getFullYear() === now.getFullYear() &&
+                                            lastDepositDate.getMonth() === now.getMonth()
+                                        ) : false;
+
+                                        if (hasSavedThisMonth) {
+                                            depositStatusBadge = {
+                                                text: 'Sudah Menabung Bulan Ini',
+                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                icon: 'check-circle',
+                                                isWarning: false
+                                            };
+                                        } else {
+                                            depositStatusBadge = {
+                                                text: 'Belum Menabung Bulan Ini',
+                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                icon: 'alert-circle',
+                                                isWarning: true
+                                            };
+                                        }
+                                    } else {
+                                        // Acak (Sesuka Hati)
+                                        if (lastDepositDate) {
+                                            const diffMs = now.getTime() - lastDepositDate.getTime();
+                                            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                                            let dateFormatted = '';
+                                            if (diffDays === 0) dateFormatted = 'Hari ini';
+                                            else if (diffDays === 1) dateFormatted = 'Kemarin';
+                                            else if (diffDays < 7) dateFormatted = `${diffDays} hari yang lalu`;
+                                            else dateFormatted = lastDepositDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                                            depositStatusBadge = {
+                                                text: `Terakhir Menabung: ${dateFormatted}`,
+                                                colorClass: 'bg-blue-50 text-blue-700 border-blue-200',
+                                                icon: 'clock',
+                                                isWarning: false
+                                            };
+                                        } else {
+                                            depositStatusBadge = {
+                                                text: 'Terakhir Menabung: Belum ada setoran',
+                                                colorClass: 'bg-slate-100 text-slate-600 border-slate-200',
+                                                icon: 'clock',
+                                                isWarning: false
+                                            };
+                                        }
+                                    }
+
+                                    return (
+                                        <div class="group relative">
+                                            <div class="flex justify-between mb-2">
+                                                <span class="font-semibold text-gray-800">{goal.title}</span>
+                                                <span class={`${textClass} font-bold`}>{percentage}%</span>
+                                            </div>
+                                            <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                                                <div class={`${bgClass} h-3 rounded-full transition-all duration-1000`} style={`width: ${percentage}%`}></div>
+                                            </div>
+                                            <div class="flex justify-between mt-1 text-sm text-gray-500">
+                                                <span>{formatRp(goal.savedAmount)} / {formatRp(goal.targetAmount)}</span>
+                                                <span class="bg-gray-100 px-2 py-0.5 rounded text-xs">{freqBadgeText}</span>
+                                            </div>
+                                            
+                                            <div class="mt-2 bg-blue-50 text-blue-800 text-xs px-3 py-2 rounded-lg flex items-center border border-blue-100">
+                                                <i data-feather="calendar" class="w-3.5 h-3.5 mr-2"></i>
+                                                {hasSheetDeparture ? (
+                                                    <span>Estimasi Keberangkatan: <strong>{sheetDisplayDate}</strong> ({pkgInfo.hitungMundur} hari lagi)</span>
+                                                ) : percentage >= 100 ? (
+                                                    <span>Target tercapai! Siap berangkat kapan saja. ✈️</span>
+                                                ) : isAcakFreq ? (
+                                                    <span>Estimasi Keberangkatan: <strong>Fleksibel (Menabung Acak)</strong></span>
+                                                ) : (
+                                                    <span>Estimasi Keberangkatan: <strong>{formattedDate}</strong> ({daysLeft} hari lagi)</span>
+                                                )}
+                                            </div>
+                                            
+                                            <!-- Status Menabung Indicator Badge -->
+                                            <div class={`mt-2 text-xs px-3 py-2 rounded-lg flex items-center justify-between border font-bold ${depositStatusBadge.colorClass}`}>
+                                                <div class="flex items-center gap-1.5">
+                                                    <i data-feather={depositStatusBadge.icon} class="w-3.5 h-3.5"></i>
+                                                    <span>Status Tabungan: <strong>{depositStatusBadge.text}</strong></span>
+                                                </div>
+                                                {depositStatusBadge.isWarning && (
+                                                    <span class="text-[10px] uppercase tracking-wider bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded font-extrabold">Waktunya Setor!</span>
+                                                )}
+                                            </div>
+                                            
+                                            <div class="flex flex-wrap gap-2 mt-3">
+                                                {goal.tripType === 'Group' || goal.tripType === 'Couple' ? (
+                                                    <span class="bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
+                                                        <i data-feather="users" class="w-3 h-3 mr-1"></i> {goal.tripType} Trip
+                                                    </span>
+                                                ) : (
+                                                    <span class="bg-gray-100 text-gray-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
+                                                        <i data-feather="user" class="w-3 h-3 mr-1"></i> {goal.tripType === 'Solo' ? 'Solo' : goal.tripType} Trip
+                                                    </span>
+                                                )}
+                                                
+                                                {goal.savingType?.toLowerCase().includes('investasi') ? (
+                                                    <span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
+                                                        <i data-feather="trending-up" class="w-3 h-3 mr-1"></i> {goal.savingType}
+                                                    </span>
+                                                ) : (
+                                                    <span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
+                                                        <i data-feather="box" class="w-3 h-3 mr-1"></i> {goal.savingType || 'Konvensional'}
+                                                    </span>
+                                                )}
+                                                
+                                                <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
+                                                    <i data-feather={goal.paymentMethod === 'Cash' ? 'briefcase' : 'credit-card'} class="w-3 h-3 mr-1"></i> 
+                                                    {goal.paymentMethod === 'Cash' ? 'Mitra' : 'Cashless'}: {goal.paymentDetail ? goal.paymentDetail.split('|||')[0] : '-'}
+                                                </span>
+                                            </div>
+
+                                            {goal.groupMembers && goal.groupMembers.length > 0 && (
+                                                <div class="mt-3 text-xs text-gray-600 bg-gray-50/80 px-3 py-2 rounded-lg border border-gray-100">
+                                                    <span class="font-bold text-gray-800">Anggota Grup:</span> {goal.groupMembers.map((m: string) => `@${m}`).join(', ')}
+                                                </div>
+                                            )}
+                                            
+                                            <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+                                                <a href={`/goal-detail/${goal.id}`} class="text-xs font-semibold text-primary hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition border border-transparent hover:border-blue-100 flex items-center">
+                                                    <i data-feather="file-text" class="w-3 h-3 mr-1"></i> Rincian Biaya
+                                                </a>
+                                                <a href={`/cancel-trip/${goal.id}`} class="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition border border-transparent hover:border-red-100 flex items-center">
+                                                    <i data-feather="x-circle" class="w-3 h-3 mr-1"></i> Batalkan
+                                                </a>
+                                            </div>
+                                            
+                                            {(() => {
+                                                const isMitra = goal.paymentMethod === 'Cash' || (goal.paymentDetail && goal.paymentDetail.toLowerCase().includes('mitra'));
+                                                let waNumber = '6287896108664';
+                                                let waButtonText = 'Setor via WA (QRIS)';
+                                                const nominalText = (goal.autoDebitAmount && goal.autoDebitAmount > 0 && !isAcakFreq) ? `Rp ${goal.autoDebitAmount.toLocaleString('id-ID')}` : 'Tidak Ditentukan';
+                                                let waText = `Halo Admin DreamJourney! Saya ingin setor tabungan untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon info QRIS-nya ya, terima kasih!`;
+
+                                                if (isMitra) {
+                                                    waButtonText = 'Hubungi mitra via WA';
+                                                    let mitraId: string | null = null;
+                                                    if (goal.paymentDetail) {
+                                                        const match = goal.paymentDetail.match(/Mitra ID:\s*([A-Za-z0-9]+)/i);
+                                                        if (match) {
+                                                            mitraId = match[1].trim().toLowerCase();
+                                                        } else {
+                                                            mitraId = goal.paymentDetail.split('|||')[0].trim().toLowerCase();
+                                                        }
+                                                    }
+                                                    const mitraObj = mitraId ? mitraMap.get(mitraId) : null;
+                                                    if (mitraObj && mitraObj.wa) {
+                                                        waNumber = mitraObj.wa;
+                                                    }
+                                                    const mitraNameText = mitraObj ? ` (${mitraObj.name})` : '';
+                                                    waText = `Halo Mitra DreamJourney${mitraNameText}! Saya ingin setor tabungan tunai untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon bantuannya untuk proses setoran tunai ini ya, terima kasih!`;
+                                                }
+
+                                                const hasAlreadySavedCycle = !depositStatusBadge.isWarning && !isAcakFreq && goal.autoDebitFrequency !== 'Acak (Sesuka Hati)';
+                                                let cyclePeriodText = 'Periode Ini';
+                                                if (isHarian) cyclePeriodText = 'Hari Ini';
+                                                else if (isMingguan) cyclePeriodText = 'Minggu Ini';
+                                                else if (isBulanan) cyclePeriodText = 'Bulan Ini';
+
+                                                return (
+                                                    <div class="mt-3 space-y-2">
+                                                        {hasAlreadySavedCycle ? (
+                                                            <div class="bg-emerald-50 text-emerald-700 font-extrabold text-xs text-center py-3 px-4 rounded-xl border border-emerald-200/80 shadow-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                                                                <i data-feather="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                                                                <span>Anda Sudah Menabung {cyclePeriodText}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                {!isMitra && (
+                                                                    <button type="button" 
+                                                                        class="btn-midtrans-pay w-full bg-primary hover:bg-blue-700 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-sm cursor-pointer"
+                                                                        data-goal-id={goal.id}
+                                                                        data-amount={goal.autoDebitAmount > 0 ? goal.autoDebitAmount : (goal.targetAmount - goal.savedAmount)}
+                                                                        data-title={goal.title}>
+                                                                        <i data-feather="qr-code" class="w-4 h-4 mr-2"></i> Bayar Setoran (Midtrans QRIS)
+                                                                    </button>
+                                                                )}
+                                                                <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-sm">
+                                                                    <i data-feather="message-circle" class="w-4 h-4 mr-2"></i> {waButtonText}
+                                                                </a>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col h-full">
+                        <h3 class="font-bold text-xl mb-6 flex items-center">
+                            <i data-feather="clock" class="mr-2 text-primary"></i> Riwayat Aktivitas
+                        </h3>
+                        
+                        <div class="space-y-4 flex-1 overflow-y-auto pr-2 max-h-[350px]">
+                            {wallet.transactions.length === 0 ? (
+                                <p class="text-center text-gray-500 italic py-4">Belum ada riwayat aktivitas.</p>
+                            ) : (
+                                wallet.transactions.map((trx: any) => {
+                                    let icon = "activity";
+                                    let iconColor = "bg-gray-100 text-gray-600";
+                                    let amountColor = "text-gray-800";
+                                    let prefix = "";
+
+                                    const isDepositType = trx.type === 'AUTO_DEBIT' || trx.type === 'SETORAN' || trx.type === 'SETORAN_MITRA' || trx.type === 'SETORAN_QRIS' || trx.desc?.toLowerCase().includes('berhasil menabung');
+                                    
+                                    if (isDepositType) {
+                                        icon = "arrow-up-right";
+                                        iconColor = "bg-emerald-100 text-emerald-600";
+                                        amountColor = "text-emerald-600";
+                                        prefix = "+ ";
+                                    } else if (trx.type === 'SYSTEM') {
+                                        icon = "link";
+                                        iconColor = "bg-blue-100 text-blue-600";
+                                    } else if (trx.type === 'GOAL_CREATED') {
+                                        icon = "flag";
+                                        iconColor = "bg-yellow-100 text-yellow-600";
+                                    }
+
+                                    return (
+                                        <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition border border-transparent hover:border-gray-100">
+                                            <div class="flex items-center">
+                                                <div class={`${iconColor} p-2.5 rounded-full mr-3 shadow-sm`}>
+                                                    <i data-feather={icon} class="w-4 h-4"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="font-semibold text-gray-800 text-sm">{trx.desc}</p>
+                                                    <p class="text-xs text-gray-500 mt-0.5">{formatDate(trx.date)}</p>
+                                                </div>
+                                            </div>
+                                            {trx.amount > 0 && (
+                                                <span class={`${amountColor} font-bold text-sm whitespace-nowrap ml-2`}>{prefix}{formatRp(trx.amount)}</span>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LENTERA SECTION -->
+                <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100 mb-12">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-2xl flex items-center text-gray-800">
+                            <i data-feather="heart" class="mr-3 text-red-500"></i> Pendamping Lentera Anda
+                        </h3>
+                        {activeLentera && (
+                            <button id="btn-change-lentera" class="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center transition">
+                                <i data-feather="repeat" class="w-4 h-4 mr-1"></i> Ganti Lentera
+                            </button>
+                        )}
+                    </div>
+
+                    {!activeLentera ? (
+                        <div>
+                            <p class="text-gray-600 mb-6 text-sm">Pilih satu pendamping (Lentera) yang akan memotivasi Anda mencapai target tabungan impian Anda!</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="lentera-gallery">
+                                {lenteras.map((lentera) => (
+                                    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300 group flex flex-col hover:-translate-y-1">
+                                        <div class="h-40 w-full overflow-hidden relative">
+                                            <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition z-10"></div>
+                                            <img src={lentera.image} alt={lentera.name} class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                                        </div>
+                                        <div class="p-5 flex flex-col flex-grow text-center">
+                                            <h4 class="font-bold text-xl text-gray-900 mb-2">{lentera.name}</h4>
+                                            <p class="text-sm text-gray-500 mb-6 flex-grow">{lentera.desc}</p>
+                                            <button class="btn-select-lentera w-full bg-blue-50 text-blue-600 hover:bg-primary hover:text-white font-bold py-2.5 rounded-lg transition mt-auto shadow-sm" data-id={lentera.id}>
+                                                Pilih {lentera.name}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div class="flex flex-col md:flex-row items-center gap-8 bg-blue-50/50 p-6 rounded-xl border border-blue-100" id="active-lentera-view">
+                            <img src={activeLentera.image} alt={activeLentera.name} class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md">
+                            <div class="flex-1 text-center md:text-left">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full inline-block mb-2">Lentera Aktif</span>
+                                <h4 class="font-bold text-3xl text-gray-800 mb-2">{activeLentera.name}</h4>
+                                <p class="text-gray-600 italic mb-4">"{activeLentera.desc}"</p>
+                                
+                                <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                                    <a href={activeLentera.telegram} target="_blank" class="bg-[#0088cc] hover:bg-[#007ab8] text-white font-bold py-2.5 px-5 rounded-lg flex items-center transition shadow-sm">
+                                        <i data-feather="message-circle" class="w-4 h-4 mr-2"></i> Chat Telegram
+                                    </a>
+                                    <a href={activeLentera.line} target="_blank" class="bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-2.5 px-5 rounded-lg flex items-center transition shadow-sm">
+                                        <i data-feather="message-square" class="w-4 h-4 mr-2"></i> Chat Line
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </section>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // Lentera Selection Logic
+        const lenteraBtns = document.querySelectorAll('.btn-select-lentera');
+        lenteraBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const lenteraId = target.getAttribute('data-id');
+                if (!lenteraId) return;
+
+                target.innerHTML = '<i data-feather="loader" class="w-4 h-4 animate-spin mx-auto"></i>';
+                
+                try {
+                    const res = await fetch('/api/wallet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'SET_LENTERA', lenteraId })
+                    });
+                    
+                    if (res.ok) {
+                        window.location.reload();
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Gagal menyimpan Lentera.");
+                }
+            });
+        });
+
+        const btnChangeLentera = document.getElementById('btn-change-lentera');
+        if (btnChangeLentera) {
+            btnChangeLentera.addEventListener('click', async () => {
+                const confirmChange = confirm("Anda yakin ingin mengganti pendamping Lentera Anda?");
+                if (!confirmChange) return;
+
+                btnChangeLentera.innerHTML = '<i data-feather="loader" class="w-4 h-4 animate-spin"></i>';
+                try {
+                    const res = await fetch('/api/wallet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'SET_LENTERA', lenteraId: "" })
+                    });
+                    
+                    if (res.ok) {
+                        window.location.reload();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
+
+        // --- MIDTRANS SNAP PAY BUTTON LISTENER ---
+        const payBtns = document.querySelectorAll('.btn-midtrans-pay');
+        payBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                const goalId = target.getAttribute('data-goal-id') || '';
+                const amount = parseFloat(target.getAttribute('data-amount') || '0');
+                const title = target.getAttribute('data-title') || 'Setoran Tabungan';
+
+                if (!goalId || amount <= 0) return;
+
+                const origHtml = target.innerHTML;
+                target.disabled = true;
+                target.innerHTML = '<i data-feather="loader" class="w-4 h-4 animate-spin mr-2"></i> Memproses QRIS...';
+
+                try {
+                    const res = await fetch('/api/payment/midtrans', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ goalId, amount, title })
+                    });
+                    const data = await res.json();
+
+                    if (data.success && data.token && !data.is_mock && (window as any).snap) {
+                        (window as any).snap.pay(data.token, {
+                            onSuccess: () => window.location.reload(),
+                            onPending: () => window.location.reload(),
+                            onError: () => alert('Pembayaran gagal atau dibatalkan.'),
+                            onClose: () => window.location.reload()
+                        });
+                    } else if (data.is_mock) {
+                        alert('Mode Simulasi: Server Key belum terbaca oleh Astro. Mohon restart dev server terminal Anda.');
+                    } else {
+                        alert('Gagal membuka QRIS Midtrans.');
+                    }
+                } catch (err) {
+                    console.error("Midtrans Pay Error:", err);
+                    alert('Gangguan koneksi.');
+                } finally {
+                    target.disabled = false;
+                    target.innerHTML = origHtml;
+                }
+            });
+        });
+    });
+</script>

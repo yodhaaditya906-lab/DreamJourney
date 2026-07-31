@@ -1,0 +1,1358 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { fetchCachedCSV } from '../lib/fetchCache';
+
+const { userId } = Astro.locals.auth();
+const isLoggedIn = !!userId;
+
+let packages = [];
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  
+  const imageMap = {
+    "bali": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=600&auto=format&fit=crop",
+    "jogja": "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop",
+    "malioboro": "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop",
+    "bandung": "https://images.unsplash.com/photo-1590559899147-eb54a69622df?q=80&w=600&auto=format&fit=crop",
+    "puncak bogor": "https://images.unsplash.com/photo-1626082928503-4c91b5c4644d?q=80&w=600&auto=format&fit=crop",
+    "malang": "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop",
+    "gunung bromo": "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop",
+    "surabaya": "https://images.unsplash.com/photo-1601999109332-542b18dbec57?q=80&w=600&auto=format&fit=crop",
+    "pulau karimun jawa": "https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=600&auto=format&fit=crop",
+    "banda neira": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=600&auto=format&fit=crop",
+    "raja ampat": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop"
+  };
+
+  const defaultImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+  function slugify(text) {
+      if (!text) return '';
+      return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '');
+  }
+
+  function parseCSVRow(row) {
+      const result = [];
+      let curVal = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+          if (row[i] === '"') {
+              inQuotes = !inQuotes;
+          } else if (row[i] === ',' && !inQuotes) {
+              result.push(curVal.trim());
+              curVal = '';
+          } else {
+              curVal += row[i];
+          }
+      }
+      result.push(curVal.trim());
+      return result;
+  }
+
+  const allRows = csvText.split('\n');
+  const headerCols = allRows.length > 0 ? parseCSVRow(allRows[0]) : [];
+  
+  const findHeaderIdx = (keywords: string[], defaultIdx: number) => {
+      const found = headerCols.findIndex(h => keywords.some(k => h.toLowerCase().includes(k)));
+      return found !== -1 ? found : defaultIdx;
+  };
+
+  const idxTitle = findHeaderIdx(['title'], 0);
+  const idxDesc = findHeaderIdx(['description', 'desc'], 1);
+  const idxDaily = findHeaderIdx(['daily', 'harian'], 2);
+  const idxTotal = findHeaderIdx(['total_price', 'total'], 3);
+  const idxWeekly = findHeaderIdx(['weekly', 'mingguan'], -1);
+  const idxMonthly = findHeaderIdx(['monthly', 'bulanan'], -1);
+  const idxTime = findHeaderIdx(['durasi'], 4);
+  const idxOrigin = findHeaderIdx(['origin'], 5);
+  const idxDestination = findHeaderIdx(['destination'], 6);
+  const idxWahana = findHeaderIdx(['wahana'], 9);
+  const idxPenginapan = findHeaderIdx(['penginapan'], 10);
+  const idxTransKeberangkatan = findHeaderIdx(['transportasi keberangkatan', 'keberangkatan'], 11);
+  const idxTransKepulangan = findHeaderIdx(['transportasi kepulangan', 'kepulangan'], 12);
+  const idxMainImage = findHeaderIdx(['main_image'], 14);
+  const idxAkomodasi = findHeaderIdx(['harga_penginapan', 'harga_akomodasi'], 19);
+  const idxTransport = findHeaderIdx(['harga_transport'], 20);
+  const idxHargaWahana = findHeaderIdx(['harga_wahana'], 21);
+  const idxLainnya = findHeaderIdx(['harga_lainnya'], 22);
+  const idxJenis = findHeaderIdx(['jenis liburan', 'jenis'], 29);
+
+  const isTidak = (str: string) => !str || str.trim() === "" || str.trim() === "-" || str.toLowerCase().includes('tidak') || str.toLowerCase().includes('tanpa');
+
+  const rows = allRows.slice(1);
+  packages = rows.filter(row => row.trim() && !row.startsWith(',')).map((row, index) => {
+    const cols = parseCSVRow(row);
+    
+    const title = cols[idxTitle] || "Unknown";
+    const desc = cols[idxDesc] || "";
+    const dailyPrice = cols[idxDaily] || "";
+    const rawDailyPrice = cols[idxDaily] ? cols[idxDaily].replace(/[^\d]/g, '') : "0";
+    const parsedDailyPrice = parseInt(rawDailyPrice, 10) || 0;
+    const rawPrice = cols[idxTotal] ? cols[idxTotal].replace(/[^\d]/g, '') : "0";
+    const price = parseInt(rawPrice, 10) || 0;
+
+    const rawWeeklyPrice = (idxWeekly !== -1 && cols[idxWeekly]) ? cols[idxWeekly].replace(/[^\d]/g, '') : "";
+    const parsedWeeklyPrice = rawWeeklyPrice ? parseInt(rawWeeklyPrice, 10) : (parsedDailyPrice * 7);
+
+    const rawMonthlyPrice = (idxMonthly !== -1 && cols[idxMonthly]) ? cols[idxMonthly].replace(/[^\d]/g, '') : "";
+    const parsedMonthlyPrice = rawMonthlyPrice ? parseInt(rawMonthlyPrice, 10) : (parsedDailyPrice * 30);
+    
+    const time = cols[idxTime] || "";
+    const origin = cols[idxOrigin] || "Unknown";
+    const destination = cols[idxDestination] || title;
+    const jenisLiburan = cols[idxJenis] || "Private Trip";
+
+    const wahanaRaw = cols[idxWahana] || "";
+    const penginapanRaw = cols[idxPenginapan] || "";
+    const transKeberangkatanRaw = cols[idxTransKeberangkatan] || "";
+    const transKepulanganRaw = cols[idxTransKepulangan] || "";
+
+    const hasTransport = !isTidak(transKeberangkatanRaw) || !isTidak(transKepulanganRaw);
+    const hasAkomodasi = !isTidak(penginapanRaw);
+    const hasWahana = !isTidak(wahanaRaw);
+    
+    let mainImage = defaultImage;
+    if (idxMainImage !== -1 && cols[idxMainImage] && (cols[idxMainImage].startsWith('http') || cols[idxMainImage].startsWith('"http') || cols[idxMainImage].startsWith('/'))) {
+        mainImage = cols[idxMainImage];
+    } else {
+        const foundImg = cols.find(c => c && (c.startsWith('http') || c.startsWith('"http')));
+        if (foundImg) mainImage = foundImg;
+    }
+    if (mainImage && mainImage.startsWith('"')) mainImage = mainImage.substring(1, mainImage.length-1);
+    
+    const priceAkomodasi = parseInt((cols[idxAkomodasi] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceTransport = parseInt((cols[idxTransport] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceWahana = parseInt((cols[idxHargaWahana] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceLainnya = parseInt((cols[idxLainnya] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    
+    return {
+      title,
+      slug: slugify(title),
+      desc,
+      dailyPrice,
+      parsedDailyPrice,
+      parsedWeeklyPrice,
+      parsedMonthlyPrice,
+      price,
+      origin,
+      destination,
+      time,
+      jenisLiburan,
+      hasTransport,
+      hasAkomodasi,
+      hasWahana,
+      badge: index === 0 ? "Hot Deal" : (index === 1 ? "Best Seller" : ""),
+      badgeColor: index === 0 ? "bg-red-500 text-white" : (index === 1 ? "bg-blue-500 text-white" : ""),
+      image: mainImage,
+      priceAkomodasi,
+      priceTransport,
+      priceWahana,
+      priceLainnya
+    };
+  });
+} catch (error) {
+  console.error("Failed to fetch packages:", error);
+}
+---
+
+<Layout title="Featured Packages - DreamJourney">
+    <main class="pt-20" data-is-logged-in={isLoggedIn ? 'true' : 'false'}>
+        <section class="relative py-16 bg-cover bg-center" style="background-image: url('/images/bromo_hero_bg.png');">
+            <!-- Overlay -->
+            <div class="absolute inset-0" style="background-color: rgba(0,0,0,0.4);"></div>
+            
+            <div class="container mx-auto px-4 relative z-10">
+                <div class="max-w-5xl mx-auto">
+                    <!-- Search Bar with Interactive Autocomplete Dropdown -->
+                    <div class="glass-card rounded-2xl p-5 md:p-6 mb-0 relative">
+                        <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Temukan Paket Perjalanan Terbaik</h1>
+                        <div class="relative max-w-4xl mx-auto">
+                            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
+                                <div class="flex-1 relative">
+                                    <!-- Search Icon -->
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-blue-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="main-search-input" autocomplete="off" placeholder="Ketik nama kota atau destinasi (contoh: Bandung, Bali, Bromo)..." class="w-full pl-12 pr-10 py-3.5 md:py-3 border border-white/60 bg-white/95 backdrop-blur-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-800 placeholder-gray-400 shadow-sm font-medium text-sm md:text-base">
+                                    
+                                    <!-- Clear Input Button (X) -->
+                                    <button type="button" id="search-clear-btn" class="hidden absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 transition cursor-pointer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button id="main-search-btn" class="tap-active bg-primary hover:bg-primary-dark text-white font-bold py-3.5 md:py-3 px-8 rounded-xl transition-smooth shadow-md w-full md:w-auto flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span>Cari</span>
+                                </button>
+                            </div>
+
+                            <!-- Autocomplete Dropdown Popup -->
+                            <div id="search-autocomplete-dropdown" class="hidden absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 z-50 p-4 max-h-[460px] overflow-y-auto transition-all duration-200">
+                                <div id="dropdown-results-container"></div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </section>
+
+        <section id="packages" class="py-10 bg-slate-50 min-h-screen">
+            <div class="container mx-auto px-4 max-w-7xl">
+                <!-- Promo Cashback Alert Banner -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 md:p-5 mb-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-white/20 backdrop-blur-md rounded-xl text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm md:text-base">Dapatkan Bonus Cashback & Diskon Eksklusif Paket Wisata!</h4>
+                            <p class="text-xs text-blue-100">Menabung mulai hari ini untuk mengamankan harga tiket terendah & garansi berangkat 100%.</p>
+                        </div>
+                    </div>
+                    <span class="text-xs bg-yellow-400 text-gray-900 font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-sm">
+                        Promo Spesial 🎉
+                    </span>
+                </div>
+
+                <!-- 2-COLUMN MAIN CONTENT (Left Filter Sidebar + Right Ticket Card List) -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+                    
+                    <!-- LEFT SIDEBAR FILTER (1/4 width on desktop) -->
+                    <aside class="lg:col-span-1 space-y-6">
+                        <!-- 1. Map Widget Card -->
+                        <div class="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm relative overflow-hidden group">
+                            <div class="h-28 rounded-xl bg-cover bg-center relative flex items-center justify-center" style="background-image: url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=600&auto=format&fit=crop');">
+                                <div class="absolute inset-0 bg-blue-900/40 backdrop-blur-[1px] rounded-xl group-hover:bg-blue-900/50 transition"></div>
+                                <button id="open-map-modal-btn" type="button" class="relative z-10 bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl font-bold text-xs shadow-md flex items-center gap-2 transition transform group-hover:scale-105 cursor-pointer">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span>Tampilkan Peta</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Price Range Filter Card -->
+                        <div class="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-sm space-y-4">
+                            <div class="flex justify-between items-center pb-1 border-b border-gray-100">
+                                <div>
+                                    <h3 class="font-bold text-sm text-gray-900">Price Range</h3>
+                                    <p id="price-range-subtitle" class="text-[11px] text-gray-400 font-medium">Rentang setoran tabungan harian</p>
+                                </div>
+                                <button type="button" id="price-range-reset" class="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">Reset</button>
+                            </div>
+
+                            <!-- Frequency Mode Switcher Pills (Harian / Mingguan / Bulanan) -->
+                            <div class="flex bg-gray-100 p-1 rounded-xl gap-1 text-[11px] font-semibold text-gray-500">
+                                <button type="button" class="freq-tab-btn flex-1 py-1.5 rounded-lg text-center transition cursor-pointer bg-white text-blue-700 shadow-xs font-bold" data-freq="1">Harian</button>
+                                <button type="button" class="freq-tab-btn flex-1 py-1.5 rounded-lg text-center transition cursor-pointer hover:text-gray-900" data-freq="7">Mingguan</button>
+                                <button type="button" class="freq-tab-btn flex-1 py-1.5 rounded-lg text-center transition cursor-pointer hover:text-gray-900" data-freq="30">Bulanan</button>
+                            </div>
+
+                            <!-- Dual Range Slider Control -->
+                            <div class="relative py-3 px-1">
+                                <div class="relative w-full h-2 bg-gray-200 rounded-full">
+                                    <div id="price-slider-track" class="absolute top-0 bottom-0 bg-blue-600 rounded-full transition-all duration-75" style="left: 0%; right: 0%;"></div>
+                                </div>
+                                <input type="range" id="price-slider-min" min="0" max="250000" step="5000" value="0" class="absolute top-1/2 -translate-y-1/2 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none cursor-pointer z-30 [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-blue-600 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:appearance-none">
+                                <input type="range" id="price-slider-max" min="0" max="250000" step="5000" value="250000" class="absolute top-1/2 -translate-y-1/2 left-0 w-full h-2 appearance-none bg-transparent pointer-events-none cursor-pointer z-40 [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-blue-600 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:appearance-none">
+                            </div>
+
+                            <!-- Grid Min - Max Input Boxes (Editable Manual Input) -->
+                            <div class="grid grid-cols-2 gap-2.5 pt-1">
+                                <div class="bg-gray-50/90 border border-gray-200/90 rounded-xl p-2.5 flex flex-col justify-center focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 transition cursor-text">
+                                    <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Minimal</span>
+                                    <input type="text" id="price-min-input" value="IDR 0" class="w-full text-xs font-bold text-gray-900 bg-transparent outline-none truncate mt-0.5 cursor-text">
+                                </div>
+                                <div class="bg-gray-50/90 border border-gray-200/90 rounded-xl p-2.5 flex flex-col justify-center focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500 transition cursor-text">
+                                    <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Maksimal</span>
+                                    <input type="text" id="price-max-input" value="IDR 250.000" class="w-full text-xs font-bold text-gray-900 bg-transparent outline-none truncate mt-0.5 cursor-text">
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Presets Container -->
+                            <div class="pt-1">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Preset Budget</span>
+                                <div id="preset-buttons-container" class="flex flex-wrap gap-1.5">
+                                    <!-- Populated dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Filters Box -->
+                        <div class="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-sm space-y-5">
+                            <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                                <h3 class="font-bold text-sm text-gray-900 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                    </svg>
+                                    Filter Pencarian
+                                </h3>
+                                <button type="button" id="sidebar-reset-btn" class="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">Reset</button>
+                            </div>
+
+                            <!-- Filter: Tipe Liburan / Category -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5">Kategori Liburan</h4>
+                                <div class="space-y-2 text-xs text-gray-600 font-medium">
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="Open Trip" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>Open Trip</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="Private Trip" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>Private Trip</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="Bebas" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>Tiket Liburan (Bebas Tanggal)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Filter: Fasilitas Included -->
+                            <div class="pt-3 border-t border-gray-100">
+                                <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5">Fasilitas Termasuk</h4>
+                                <div class="space-y-2 text-xs text-gray-600 font-medium">
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="facility_transport" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>🚗 Transportasi Keberangkatan</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="facility_akomodasi" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>🏨 Hotel / Penginapan</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 cursor-pointer hover:text-gray-900">
+                                        <input type="checkbox" value="facility_wahana" class="filter-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                                        <span>🎟️ Tiket Entry Wisata</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- RIGHT COLUMN: Header Toolbar & Ticket Cards List (3/4 width on desktop) -->
+                    <main class="lg:col-span-3 space-y-5">
+                        
+                        <!-- Toolbar Header -->
+                        <div class="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h2 id="results-heading" class="text-base md:text-lg font-bold text-gray-900 leading-tight">Semua Paket Wisata Impian</h2>
+                                <span id="package-count" class="text-xs text-gray-500 font-medium">Menampilkan {packages.length} tiket perjalanan</span>
+                            </div>
+
+                            <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                                <!-- Frequency Selector -->
+                                <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 text-xs">
+                                    <span class="font-semibold text-gray-500">Hitungan:</span>
+                                    <select id="filter-tipe-tabungan-quick" class="bg-transparent font-bold text-blue-700 cursor-pointer outline-none">
+                                        <option value="1">Harian (/hari)</option>
+                                        <option value="7">Mingguan (/minggu)</option>
+                                        <option value="30">Bulanan (/bulan)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Sort Selector -->
+                                <select id="sort-price" class="bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 cursor-pointer outline-none hover:bg-gray-100 transition">
+                                    <option value="">Urutkan: Popularitas</option>
+                                    <option value="asc">Harga Terendah</option>
+                                    <option value="desc">Harga Tertinggi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Cards Container -->
+                        <div id="packages-container" class="space-y-5">
+                            {packages.map((pkg, index) => (
+                                <div class="package-item cursor-pointer bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden group"
+                                     data-index={index}
+                                     data-slug={pkg.slug}
+                                     data-time={pkg.time} 
+                                     data-origin={pkg.origin} 
+                                     data-destination={pkg.destination} 
+                                     data-price={pkg.price}
+                                     data-title={pkg.title}
+                                     data-jenis={pkg.jenisLiburan}
+                                     data-has-transport={pkg.hasTransport ? 'true' : 'false'}
+                                     data-has-akomodasi={pkg.hasAkomodasi ? 'true' : 'false'}
+                                     data-has-wahana={pkg.hasWahana ? 'true' : 'false'}
+                                     data-daily-price={pkg.parsedDailyPrice}
+                                     data-weekly-price={pkg.parsedWeeklyPrice}
+                                     data-monthly-price={pkg.parsedMonthlyPrice}
+                                     data-akomodasi={pkg.priceAkomodasi}
+                                     data-transport={pkg.priceTransport}
+                                     data-wahana={pkg.priceWahana}
+                                     data-lainnya={pkg.priceLainnya}>
+
+                                    <!-- Top & Bottom Ticket Tear-off Notches (Physical Ticket Cutout Effect) -->
+                                    <div class="hidden md:block absolute top-1/2 -translate-y-1/2 right-[250px] lg:right-[270px] w-6 h-6 bg-slate-50 rounded-full border border-gray-200 -mr-3 z-20"></div>
+                                    <div class="hidden md:block absolute top-0 right-[250px] lg:right-[270px] w-5 h-2.5 bg-slate-50 rounded-b-full border-b border-l border-r border-gray-200 -mr-2.5 z-20"></div>
+                                    <div class="hidden md:block absolute bottom-0 right-[250px] lg:right-[270px] w-5 h-2.5 bg-slate-50 rounded-t-full border-t border-l border-r border-gray-200 -mr-2.5 z-20"></div>
+
+                                    <!-- LEFT SIDE: Image & Badges (30-35% width) -->
+                                    <a href={`/package/${pkg.slug}`} class="md:w-64 lg:w-72 flex-shrink-0 relative overflow-hidden block">
+                                        <img src={pkg.image} alt={pkg.destination} class="w-full h-48 md:h-full object-cover group-hover:scale-105 transition duration-500">
+                                        <span class="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 shadow-md">
+                                            📍 {pkg.destination}
+                                        </span>
+                                        {pkg.badge && (
+                                            <span class={`absolute top-3 right-3 text-[11px] px-2.5 py-1 rounded-full font-bold shadow-md ${pkg.badgeColor}`}>
+                                                {pkg.badge}
+                                            </span>
+                                        )}
+                                        <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs">
+                                            📷 {index + 4} Foto Tiket
+                                        </div>
+                                    </a>
+
+                                    <!-- MIDDLE SECTION: Details & Facilities (Flexible width) -->
+                                    <div class="p-5 flex-grow flex flex-col justify-between border-b md:border-b-0 md:border-r border-dashed border-gray-200 relative">
+                                        <div>
+                                            <div class="flex justify-between items-start gap-2 mb-2">
+                                                <a href={`/package/${pkg.slug}`} class="hover:text-blue-600 transition">
+                                                    <h3 class="font-bold text-base md:text-lg text-gray-900 leading-snug">{pkg.title}</h3>
+                                                </a>
+                                                <div class="flex items-center gap-1 flex-shrink-0 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-bold">
+                                                    <span>8.8/10</span>
+                                                    <span class="font-medium text-gray-500 text-[11px] hidden sm:inline">(Sangat Bagus)</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-3">
+                                                <span class="flex items-center gap-1 font-medium">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                    Keberangkatan {pkg.origin}
+                                                </span>
+                                                <span>•</span>
+                                                <span class="flex items-center gap-1 font-medium">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    {pkg.time || "Fleksibel"}
+                                                </span>
+                                            </div>
+
+                                            <div class="flex flex-wrap gap-1.5 mb-3">
+                                                {pkg.hasAkomodasi && (
+                                                    <span class="text-[11px] bg-blue-50 text-blue-700 border border-blue-200/60 px-2 py-0.5 rounded-md font-semibold">🏨 Hotel / Penginapan</span>
+                                                )}
+                                                {pkg.hasTransport && (
+                                                    <span class="text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-200/60 px-2 py-0.5 rounded-md font-semibold">🚗 Transportasi</span>
+                                                )}
+                                                {pkg.hasWahana && (
+                                                    <span class="text-[11px] bg-amber-50 text-amber-700 border border-amber-200/60 px-2 py-0.5 rounded-md font-semibold">🎟️ Tiket Rekreasi</span>
+                                                )}
+                                            </div>
+
+                                            <p class="text-gray-500 text-xs line-clamp-2">{pkg.desc}</p>
+                                        </div>
+
+                                        <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                                            <span>No. Tiket: DJ-77{10 + index}</span>
+                                            <span class="text-emerald-600 font-semibold flex items-center gap-1">
+                                                ✓ Garansi Berangkat 100%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- RIGHT STUB: Pricing & Action Button (250px-270px width on desktop) -->
+                                    <div class="w-full md:w-[250px] lg:w-[270px] bg-gradient-to-br from-blue-50/30 via-white to-slate-50 p-5 flex flex-col justify-between items-center md:items-end text-center md:text-right flex-shrink-0">
+                                        <div>
+                                            <div class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-[11px] font-bold mb-2">
+                                                🏷️ Best Deal For You!
+                                            </div>
+
+                                            <p class="text-gray-400 text-xs line-through">Rp {Math.round(pkg.price * 1.15).toLocaleString('id-ID')}</p>
+
+                                            <div class="price-display-text text-primary font-extrabold text-xl lg:text-2xl leading-tight">
+                                                {pkg.dailyPrice}<span class="text-xs font-normal text-gray-500">/hari</span>
+                                            </div>
+
+                                            <p class="text-gray-500 text-[11px] mt-1 font-medium">Total: Rp {pkg.price.toLocaleString('id-ID')}</p>
+                                            <p class="text-emerald-600 text-[10px] font-semibold">Bisa ditabung harian/mingguan/bulanan/acak</p>
+                                        </div>
+
+                                        <div class="w-full mt-4">
+                                            <button class="w-full bg-primary hover:bg-primary-dark text-white py-2.5 px-4 rounded-xl font-bold text-xs md:text-sm shadow-md hover:shadow-lg transition-all tap-active start-saving-btn flex items-center justify-center gap-1.5 cursor-pointer">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
+                                                </svg>
+                                                <span>Mulai Menabung</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </section>
+<!-- Leaflet Map CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Interactive Map Modal -->
+<div id="map-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+        
+        <!-- Header Bar -->
+        <div class="p-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 z-10">
+            <div>
+                <h3 class="text-base md:text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                    <span class="p-1.5 bg-blue-100 text-blue-700 rounded-lg">📍</span> Peta Destinasi Wisata Impian
+                </h3>
+                <p class="text-xs text-gray-500">Klik pin lokasi di peta untuk menyaring paket liburan berdasarkan daerah</p>
+            </div>
+            
+            <!-- Quick City Pills inside Modal Header -->
+            <div class="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
+                <button type="button" class="map-city-pill bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer" data-city="Jakarta">📍 Jakarta</button>
+                <button type="button" class="map-city-pill bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer" data-city="Bandung">📍 Bandung</button>
+                <button type="button" class="map-city-pill bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer" data-city="Yogyakarta">📍 Yogyakarta</button>
+                <button type="button" class="map-city-pill bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer" data-city="Bali">📍 Bali</button>
+                <button type="button" class="map-city-pill bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer" data-city="Lombok">📍 Lombok</button>
+            </div>
+
+            <button type="button" id="close-map-modal-btn" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition cursor-pointer">✕</button>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="leaflet-map" class="w-full flex-1 bg-slate-100 z-0"></div>
+
+        <!-- Footer Info Bar -->
+        <div class="p-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 flex flex-wrap justify-between items-center px-6 gap-2">
+            <span>💡 Tip: Geser & zoom peta untuk jelajahi berbagai destinasi impian di seluruh Indonesia</span>
+            <button type="button" id="map-show-all-btn" class="text-blue-600 font-bold hover:underline cursor-pointer">Tampilkan Semua Paket</button>
+        </div>
+    </div>
+</div>
+</Layout>
+
+<script define:vars={{ packages }}>
+    window.__PACKAGES_DATA__ = packages;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const tipeTabunganQuick = document.getElementById('filter-tipe-tabungan-quick') as HTMLSelectElement;
+        const sortSelect = document.getElementById('sort-price') as HTMLSelectElement;
+        const packageCountEl = document.getElementById('package-count');
+        
+        const mainSearchInput = document.getElementById('main-search-input') as HTMLInputElement;
+        const mainSearchBtn = document.getElementById('main-search-btn');
+        const searchDropdown = document.getElementById('search-autocomplete-dropdown');
+        const dropdownContainer = document.getElementById('dropdown-results-container');
+        const searchClearBtn = document.getElementById('search-clear-btn');
+
+        const rawPackages = (window as any).__PACKAGES_DATA__ || [];
+
+        // Location Metadata
+        const locationMeta: Record<string, { sub: string; type: string; image: string }> = {
+            "Bandung": { sub: "Jawa Barat, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1590559899147-eb54a69622df?q=80&w=600&auto=format&fit=crop" },
+            "Bali": { sub: "Bali, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=600&auto=format&fit=crop" },
+            "Jakarta": { sub: "DKI Jakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1555899434-94d1368aa7af?q=80&w=600&auto=format&fit=crop" },
+            "Jogja": { sub: "DI Yogyakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop" },
+            "Yogyakarta": { sub: "DI Yogyakarta, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1626125345510-4603468eedfb?q=80&w=600&auto=format&fit=crop" },
+            "Lombok": { sub: "Nusa Tenggara Barat, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1570784400788-b2a488667b45?q=80&w=600&auto=format&fit=crop" },
+            "Bromo": { sub: "Jawa Timur, Indonesia", type: "Wisata Alam", image: "https://images.unsplash.com/photo-1602167732001-97b7b137a1f5?q=80&w=600&auto=format&fit=crop" },
+            "Purwokerto": { sub: "Jawa Tengah, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?q=80&w=600&auto=format&fit=crop" },
+            "Surabaya": { sub: "Jawa Timur, Indonesia", type: "Kota", image: "https://images.unsplash.com/photo-1601999109332-542b18dbec57?q=80&w=600&auto=format&fit=crop" },
+            "Raja Ampat": { sub: "Papua Barat, Indonesia", type: "Bahari", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=600&auto=format&fit=crop" },
+            "Labuan Bajo": { sub: "Nusa Tenggara Timur, Indonesia", type: "Destinasi", image: "https://images.unsplash.com/photo-1516690561799-46d8f74f9abf?q=80&w=600&auto=format&fit=crop" },
+            "Dufan": { sub: "Ancol, Jakarta", type: "Wahana Rekreasi", image: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=600&auto=format&fit=crop" }
+        };
+
+        const locCounts: Record<string, number> = {};
+        const locImages: Record<string, string> = {};
+
+        if (Array.isArray(rawPackages)) {
+            rawPackages.forEach((pkg: any) => {
+                const dest = (pkg.destination || "").trim();
+                const title = (pkg.title || "").trim();
+
+                if (dest && dest !== "Unknown") {
+                    locCounts[dest] = (locCounts[dest] || 0) + 1;
+                    if (!locImages[dest] && pkg.image) locImages[dest] = pkg.image;
+                }
+
+                Object.keys(locationMeta).forEach(loc => {
+                    if (title.toLowerCase().includes(loc.toLowerCase()) && loc !== dest) {
+                        locCounts[loc] = (locCounts[loc] || 0) + 1;
+                        if (!locImages[loc] && pkg.image) locImages[loc] = pkg.image;
+                    }
+                });
+            });
+        }
+
+        const availableLocations = Object.keys(locCounts).sort((a, b) => (locCounts[b] || 0) - (locCounts[a] || 0));
+        const allLocationKeys = availableLocations.length > 0 ? availableLocations : Object.keys(locationMeta);
+
+        function renderDropdown(searchTerm = "") {
+            if (!dropdownContainer) return;
+            const query = searchTerm.toLowerCase().trim();
+
+            const filteredLocs = allLocationKeys.filter(loc => {
+                const meta = locationMeta[loc] || {};
+                return query === "" || 
+                       loc.toLowerCase().includes(query) || 
+                       (meta.sub && meta.sub.toLowerCase().includes(query)) ||
+                       (meta.type && meta.type.toLowerCase().includes(query));
+            });
+
+            let html = "";
+
+            if (filteredLocs.length > 0) {
+                html += `<div class="mb-3"><h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-2">Destinasi Sesuai Spreadsheet</h4><div class="space-y-1">`;
+                
+                filteredLocs.slice(0, 5).forEach(loc => {
+                    const meta = locationMeta[loc] || { sub: "Indonesia", type: "Destinasi", image: locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop" };
+                    const count = locCounts[loc] || 1;
+                    
+                    html += `
+                        <div class="suggestion-item flex items-center justify-between p-3 rounded-xl hover:bg-blue-50/80 cursor-pointer transition group" data-location="${loc}">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-blue-100 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-sm group-hover:text-blue-700 transition">${loc}</h4>
+                                    <p class="text-xs text-gray-500">${meta.sub}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium group-hover:bg-blue-100 group-hover:text-blue-800 transition">${meta.type}</span>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold shadow-xs">${count} Paket Wisata</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            } else {
+                html += `
+                    <div class="p-4 text-center text-gray-500 text-sm">
+                        Tidak ditemukan destinasi untuk "<span class="font-semibold text-gray-800">${searchTerm}</span>"
+                    </div>
+                `;
+            }
+
+            const popularCards = allLocationKeys.slice(0, 4);
+            if (popularCards.length > 0) {
+                html += `
+                    <div class="pt-3 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2.5 px-2">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Discover the best places to go</h4>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                `;
+
+                popularCards.forEach(loc => {
+                    const meta = locationMeta[loc] || { sub: "Indonesia", type: "Destinasi", image: locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop" };
+                    const count = locCounts[loc] || 1;
+                    const img = meta.image || locImages[loc] || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+                    html += `
+                        <div class="suggestion-card relative rounded-xl overflow-hidden aspect-[4/3] group cursor-pointer shadow-xs hover:shadow-md transition" data-location="${loc}">
+                            <img src="${img}" alt="${loc}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2.5 flex flex-col justify-between">
+                                <span class="self-start text-[10px] bg-black/50 backdrop-blur-xs text-white px-2 py-0.5 rounded-md font-semibold">${meta.type}</span>
+                                <div>
+                                    <span class="text-[11px] font-bold text-amber-300 block">${count} Paket</span>
+                                    <h5 class="text-xs font-bold text-white leading-tight truncate">${loc}</h5>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            dropdownContainer.innerHTML = html;
+
+            const suggestionElements = dropdownContainer.querySelectorAll('.suggestion-item, .suggestion-card');
+            suggestionElements.forEach(el => {
+                el.addEventListener('click', () => {
+                    const selectedLoc = el.getAttribute('data-location');
+                    if (selectedLoc && mainSearchInput) {
+                        mainSearchInput.value = selectedLoc;
+                        if (searchClearBtn) searchClearBtn.classList.remove('hidden');
+                        filterPackages();
+                        hideDropdown();
+                    }
+                });
+            });
+        }
+
+        function showDropdown() {
+            if (searchDropdown) {
+                renderDropdown(mainSearchInput ? mainSearchInput.value : "");
+                searchDropdown.classList.remove('hidden');
+            }
+        }
+
+        function hideDropdown() {
+            if (searchDropdown) {
+                searchDropdown.classList.add('hidden');
+            }
+        }
+
+        // Price Range Slider Controls & Dynamic Frequency Presets
+        const sliderMin = document.getElementById('price-slider-min') as HTMLInputElement;
+        const sliderMax = document.getElementById('price-slider-max') as HTMLInputElement;
+        const sliderTrack = document.getElementById('price-slider-track');
+        const inputMin = document.getElementById('price-min-input') as HTMLInputElement;
+        const inputMax = document.getElementById('price-max-input') as HTMLInputElement;
+        const priceResetBtn = document.getElementById('price-range-reset');
+        const sidebarResetBtn = document.getElementById('sidebar-reset-btn');
+        const filterCheckboxes = document.querySelectorAll('.filter-checkbox') as NodeListOf<HTMLInputElement>;
+        const freqTabBtns = document.querySelectorAll('.freq-tab-btn');
+        const presetContainer = document.getElementById('preset-buttons-container');
+        const priceSubtitle = document.getElementById('price-range-subtitle');
+
+        let currentFreqMultiplier = 1; // 1 = Harian, 7 = Mingguan, 30 = Bulanan
+
+        const presetsByFreq: Record<number, { label: string; min: number; max: number }[]> = {
+            1: [
+                { label: "< 10rb/hari", min: 0, max: 10000 },
+                { label: "10rb - 50rb", min: 10000, max: 50000 },
+                { label: "50rb - 100rb", min: 50000, max: 100000 },
+                { label: "> 100rb/hari", min: 100000, max: 250000 }
+            ],
+            7: [
+                { label: "< 350rb/minggu", min: 0, max: 350000 },
+                { label: "350rb - 700rb", min: 350000, max: 700000 },
+                { label: "> 700rb/minggu", min: 700000, max: 1750000 }
+            ],
+            30: [
+                { label: "< 1,5 Jt/bulan", min: 0, max: 1500000 },
+                { label: "1,5 Jt - 3 Jt", min: 1500000, max: 3000000 },
+                { label: "> 3 Jt/bulan", min: 3000000, max: 7500000 }
+            ]
+        };
+
+        const maxLimitByFreq: Record<number, number> = {
+            1: 250000,
+            7: 1750000,
+            30: 7500000
+        };
+
+        function renderPresets(freq: number) {
+            if (!presetContainer) return;
+            const presets = presetsByFreq[freq] || presetsByFreq[1];
+            const maxLim = maxLimitByFreq[freq] || 250000;
+
+            let html = "";
+            presets.forEach(p => {
+                html += `<button type="button" class="preset-price-btn text-[11px] bg-gray-100 hover:bg-blue-50 hover:text-blue-700 font-semibold text-gray-600 px-2.5 py-1 rounded-lg transition cursor-pointer border border-transparent hover:border-blue-200" data-min="${p.min}" data-max="${p.max}">${p.label}</button>`;
+            });
+
+            presetContainer.innerHTML = html;
+
+            presetContainer.querySelectorAll('.preset-price-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const min = btn.getAttribute('data-min') || "0";
+                    const max = btn.getAttribute('data-max') || maxLim.toString();
+                    if (sliderMin && sliderMax) {
+                        sliderMin.value = min;
+                        sliderMax.value = max;
+                        updateSliderFill();
+                    }
+                });
+            });
+        }
+
+        function updateSliderFill(updateInputs = true) {
+            if (!sliderMin || !sliderMax || !sliderTrack) return;
+            const maxLim = maxLimitByFreq[currentFreqMultiplier] || 250000;
+            let minVal = parseInt(sliderMin.value);
+            let maxVal = parseInt(sliderMax.value);
+
+            if (minVal > maxVal - (maxLim * 0.02)) {
+                minVal = Math.max(0, maxVal - (maxLim * 0.02));
+                sliderMin.value = minVal.toString();
+            }
+
+            const percentMin = (minVal / maxLim) * 100;
+            const percentMax = 100 - ((maxVal / maxLim) * 100);
+
+            sliderTrack.style.left = `${percentMin}%`;
+            sliderTrack.style.right = `${percentMax}%`;
+
+            if (updateInputs) {
+                if (inputMin && document.activeElement !== inputMin) {
+                    inputMin.value = `IDR ${new Intl.NumberFormat('id-ID').format(minVal)}`;
+                }
+                if (inputMax && document.activeElement !== inputMax) {
+                    inputMax.value = `IDR ${new Intl.NumberFormat('id-ID').format(maxVal)}`;
+                }
+            }
+
+            filterPackages();
+        }
+
+        function setupManualInputEditing(inputEl: HTMLInputElement, isMin: boolean) {
+            if (!inputEl) return;
+
+            const getCleanNumber = (val: string) => {
+                const clean = val.replace(/[^\d]/g, '');
+                return clean ? parseInt(clean, 10) : 0;
+            };
+
+            inputEl.addEventListener('focus', () => {
+                const num = getCleanNumber(inputEl.value);
+                inputEl.value = num === 0 ? "" : new Intl.NumberFormat('id-ID').format(num);
+                inputEl.select();
+            });
+
+            inputEl.addEventListener('input', () => {
+                const num = getCleanNumber(inputEl.value);
+                const maxLim = maxLimitByFreq[currentFreqMultiplier] || 250000;
+
+                if (num > 0) {
+                    inputEl.value = new Intl.NumberFormat('id-ID').format(num);
+                } else {
+                    inputEl.value = "";
+                }
+
+                if (isMin && sliderMin) {
+                    sliderMin.value = Math.min(num, maxLim).toString();
+                } else if (!isMin && sliderMax) {
+                    sliderMax.value = Math.min(num, maxLim).toString();
+                }
+
+                updateSliderFill(false);
+            });
+
+            const applyFormat = () => {
+                const num = getCleanNumber(inputEl.value);
+                const maxLim = maxLimitByFreq[currentFreqMultiplier] || 250000;
+                
+                let clampedNum = num;
+                if (isMin && sliderMax) {
+                    const currentMax = parseInt(sliderMax.value);
+                    clampedNum = Math.min(num, currentMax);
+                    if (sliderMin) sliderMin.value = clampedNum.toString();
+                } else if (!isMin && sliderMin) {
+                    const currentMin = parseInt(sliderMin.value);
+                    clampedNum = Math.max(num, currentMin);
+                    clampedNum = Math.min(clampedNum, maxLim);
+                    if (sliderMax) sliderMax.value = clampedNum.toString();
+                }
+
+                inputEl.value = `IDR ${new Intl.NumberFormat('id-ID').format(clampedNum)}`;
+                updateSliderFill(true);
+            };
+
+            inputEl.addEventListener('blur', applyFormat);
+            inputEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    applyFormat();
+                    inputEl.blur();
+                }
+            });
+        }
+
+        if (inputMin) setupManualInputEditing(inputMin, true);
+        if (inputMax) setupManualInputEditing(inputMax, false);
+
+        function setFrequencyMode(freq: number, updateQuickSelect = true) {
+            currentFreqMultiplier = freq;
+            const maxLim = maxLimitByFreq[freq] || 250000;
+
+            if (sliderMin && sliderMax) {
+                sliderMin.max = maxLim.toString();
+                sliderMax.max = maxLim.toString();
+                const stepVal = freq === 1 ? "100" : (freq === 7 ? "500" : "1000");
+                sliderMin.step = stepVal;
+                sliderMax.step = stepVal;
+                sliderMin.value = "0";
+                sliderMax.value = maxLim.toString();
+            }
+
+            if (priceSubtitle) {
+                const labelMap: Record<number, string> = { 1: 'harian', 7: 'mingguan', 30: 'bulanan' };
+                priceSubtitle.textContent = `Rentang setoran tabungan ${labelMap[freq] || 'harian'}`;
+            }
+
+            freqTabBtns.forEach(btn => {
+                const f = parseInt(btn.getAttribute('data-freq') || "1");
+                if (f === freq) {
+                    btn.classList.add('bg-white', 'text-blue-700', 'shadow-xs', 'font-bold');
+                    btn.classList.remove('hover:text-gray-900', 'text-gray-500');
+                } else {
+                    btn.classList.remove('bg-white', 'text-blue-700', 'shadow-xs', 'font-bold');
+                    btn.classList.add('text-gray-500', 'hover:text-gray-900');
+                }
+            });
+
+            if (updateQuickSelect && tipeTabunganQuick) {
+                tipeTabunganQuick.value = freq.toString();
+            }
+
+            renderPresets(freq);
+            updateSliderFill();
+        }
+
+        freqTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const freq = parseInt(btn.getAttribute('data-freq') || "1");
+                setFrequencyMode(freq);
+            });
+        });
+
+        if (sliderMin && sliderMax) {
+            sliderMin.addEventListener('input', updateSliderFill);
+            sliderMax.addEventListener('input', updateSliderFill);
+        }
+
+        if (priceResetBtn) {
+            priceResetBtn.addEventListener('click', () => {
+                setFrequencyMode(currentFreqMultiplier);
+            });
+        }
+
+        if (sidebarResetBtn) {
+            sidebarResetBtn.addEventListener('click', () => {
+                if (mainSearchInput) mainSearchInput.value = "";
+                if (searchClearBtn) searchClearBtn.classList.add('hidden');
+                filterCheckboxes.forEach(cb => cb.checked = false);
+                setFrequencyMode(1);
+            });
+        }
+
+        filterCheckboxes.forEach(cb => {
+            cb.addEventListener('change', filterPackages);
+        });
+
+        function filterPackages() {
+            const query = mainSearchInput ? mainSearchInput.value.toLowerCase().trim() : "";
+            const activeTabunganVal = tipeTabunganQuick ? tipeTabunganQuick.value : "1";
+            const tabunganMultiplier = parseInt(activeTabunganVal) || 1;
+            const sortMode = sortSelect ? sortSelect.value : "";
+
+            const maxLim = maxLimitByFreq[currentFreqMultiplier] || 250000;
+            const minVal = sliderMin ? parseInt(sliderMin.value) : 0;
+            const maxVal = sliderMax ? parseInt(sliderMax.value) : maxLim;
+
+            const selectedCategories: string[] = [];
+            const selectedFacilities: string[] = [];
+            filterCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    const val = cb.value.toLowerCase();
+                    if (val.startsWith('facility_')) {
+                        selectedFacilities.push(val);
+                    } else {
+                        selectedCategories.push(val);
+                    }
+                }
+            });
+
+            const resultsHeading = document.getElementById('results-heading');
+            if (resultsHeading) {
+                if (query) {
+                    resultsHeading.textContent = `Paket Wisata di ${mainSearchInput.value.trim()}`;
+                } else {
+                    resultsHeading.textContent = `Semua Paket Wisata Impian`;
+                }
+            }
+
+            const packageItems = document.querySelectorAll('.package-item') as NodeListOf<HTMLElement>;
+            let visibleCount = 0;
+
+            packageItems.forEach(item => {
+                const title = (item.getAttribute('data-title') || "").toLowerCase();
+                const origin = (item.getAttribute('data-origin') || "").toLowerCase();
+                const destination = (item.getAttribute('data-destination') || "").toLowerCase();
+                const fullText = item.textContent ? item.textContent.toLowerCase() : "";
+
+                const baseDailyPrice = parseInt(item.getAttribute('data-daily-price') || "0");
+                const baseWeeklyPrice = parseInt(item.getAttribute('data-weekly-price') || "0");
+                const baseMonthlyPrice = parseInt(item.getAttribute('data-monthly-price') || "0");
+                const itemPrice = parseInt(item.getAttribute('data-price') || "0");
+                
+                let itemDailyPrice = baseDailyPrice;
+                if (tabunganMultiplier === 7) {
+                    itemDailyPrice = baseWeeklyPrice || (baseDailyPrice * 7);
+                } else if (tabunganMultiplier === 30) {
+                    itemDailyPrice = baseMonthlyPrice || (baseDailyPrice * 30);
+                }
+
+                if (itemPrice > 0 && (itemDailyPrice > itemPrice || baseDailyPrice === 0)) {
+                    itemDailyPrice = itemPrice;
+                }
+
+                const priceTextEl = item.querySelector('.price-display-text');
+                if (priceTextEl) {
+                    const suffix = (itemDailyPrice === itemPrice && itemPrice <= 300000) ? ' total' : (tabunganMultiplier === 1 ? '/hari' : (tabunganMultiplier === 7 ? '/minggu' : '/bulan'));
+                    const formatted = new Intl.NumberFormat('id-ID').format(itemDailyPrice);
+                    priceTextEl.innerHTML = `Rp ${formatted}<span class="text-xs font-normal text-gray-500">${suffix}</span>`;
+                }
+
+                const matchesQuery = query === "" || 
+                                     destination.includes(query) || 
+                                     title.includes(query);
+
+                const matchesPrice = itemDailyPrice >= minVal && (maxVal >= maxLim || itemDailyPrice <= maxVal);
+
+                const jenisAttr = (item.getAttribute('data-jenis') || "").toLowerCase();
+                const timeAttr = (item.getAttribute('data-time') || "").toLowerCase();
+
+                const matchesCategory = selectedCategories.length === 0 || selectedCategories.some(cat => {
+                    const catLower = cat.toLowerCase();
+                    if (catLower === 'bebas' || catLower.includes('tiket')) {
+                        return jenisAttr.includes('bebas') || 
+                               jenisAttr.includes('tiket') || 
+                               baseDailyPrice === 0 || 
+                               title.includes('tiket') || 
+                               fullText.includes('bebas');
+                    }
+                    return jenisAttr.includes(catLower) || title.includes(catLower) || fullText.includes(catLower);
+                });
+
+                const hasTransport = item.getAttribute('data-has-transport') === 'true';
+                const hasAkomodasi = item.getAttribute('data-has-akomodasi') === 'true';
+                const hasWahana = item.getAttribute('data-has-wahana') === 'true';
+
+                let matchesFacility = true;
+                if (selectedFacilities.includes('facility_transport') && !hasTransport) matchesFacility = false;
+                if (selectedFacilities.includes('facility_akomodasi') && !hasAkomodasi) matchesFacility = false;
+                if (selectedFacilities.includes('facility_wahana') && !hasWahana) matchesFacility = false;
+
+                if (matchesQuery && matchesPrice && matchesCategory && matchesFacility) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            if (packageCountEl) {
+                packageCountEl.textContent = `Menampilkan ${visibleCount} tiket perjalanan`;
+            }
+
+            const container = document.getElementById('packages-container');
+            if (container) {
+                const itemsArray = Array.from(packageItems);
+                if (sortMode === "asc") {
+                    itemsArray.sort((a, b) => {
+                        const priceA = parseInt(a.getAttribute('data-daily-price') || "0");
+                        const priceB = parseInt(b.getAttribute('data-daily-price') || "0");
+                        return priceA - priceB;
+                    });
+                } else if (sortMode === "desc") {
+                    itemsArray.sort((a, b) => {
+                        const priceA = parseInt(a.getAttribute('data-daily-price') || "0");
+                        const priceB = parseInt(b.getAttribute('data-daily-price') || "0");
+                        return priceB - priceA;
+                    });
+                } else {
+                    itemsArray.sort((a, b) => {
+                        const idxA = parseInt(a.getAttribute('data-index') || "0");
+                        const idxB = parseInt(b.getAttribute('data-index') || "0");
+                        return idxA - idxB;
+                    });
+                }
+                itemsArray.forEach(item => container.appendChild(item));
+            }
+        }
+
+        if (tipeTabunganQuick) {
+            tipeTabunganQuick.addEventListener('change', () => {
+                const freq = parseInt(tipeTabunganQuick.value) || 1;
+                setFrequencyMode(freq, false);
+            });
+        }
+
+        // Initialize Frequency Mode
+        setFrequencyMode(1);
+
+        // READ SEARCH PARAMETER FROM URL (e.g. /packages?search=Bandung)
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialSearch = urlParams.get('search') || urlParams.get('q') || urlParams.get('dest') || "";
+
+        if (initialSearch && mainSearchInput) {
+            mainSearchInput.value = initialSearch;
+            if (searchClearBtn) searchClearBtn.classList.remove('hidden');
+            filterPackages();
+        }
+
+        if (mainSearchInput) {
+            mainSearchInput.addEventListener('focus', showDropdown);
+            mainSearchInput.addEventListener('input', () => {
+                const val = mainSearchInput.value;
+                if (searchClearBtn) {
+                    if (val.trim() !== '') searchClearBtn.classList.remove('hidden');
+                    else searchClearBtn.classList.add('hidden');
+                }
+                showDropdown();
+                filterPackages();
+            });
+            mainSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    hideDropdown();
+                    filterPackages();
+                }
+            });
+        }
+
+        if (searchClearBtn) {
+            searchClearBtn.addEventListener('click', () => {
+                if (mainSearchInput) {
+                    mainSearchInput.value = '';
+                    searchClearBtn.classList.add('hidden');
+                    filterPackages();
+                    showDropdown();
+                    mainSearchInput.focus();
+                }
+            });
+        }
+
+        if (mainSearchBtn) {
+            mainSearchBtn.addEventListener('click', () => {
+                hideDropdown();
+                filterPackages();
+            });
+        }
+
+        if (tipeTabunganQuick) {
+            tipeTabunganQuick.addEventListener('change', filterPackages);
+        }
+
+        if (sortSelect) {
+            sortSelect.addEventListener('change', filterPackages);
+        }
+
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (searchDropdown && !searchDropdown.contains(target) && mainSearchInput && !mainSearchInput.contains(target)) {
+                hideDropdown();
+            }
+        });
+
+        // Entire Package Card Click Listener (Navigates to detail page except when Mulai Menabung button is clicked)
+        document.querySelectorAll('.package-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('.start-saving-btn')) {
+                    return; // Ignore card click if Mulai Menabung button was pressed
+                }
+                const slug = item.getAttribute('data-slug');
+                if (slug) {
+                    window.location.href = `/package/${slug}`;
+                }
+            });
+        });
+
+        // Start Saving Button listener
+        const startSavingBtns = document.querySelectorAll('.start-saving-btn');
+        startSavingBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const mainEl = document.querySelector('main');
+                const isLoggedIn = mainEl?.getAttribute('data-is-logged-in') === 'true';
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('custom-login-modal');
+                    if (modal) modal.classList.remove('hidden');
+                    return;
+                }
+
+                const item = (e.target as HTMLElement).closest('.package-item');
+                if (!item) return;
+                
+                const title = item.getAttribute('data-title') || '';
+                const price = item.getAttribute('data-price') || '0';
+                const dailyPrice = item.getAttribute('data-daily-price') || '0';
+                const weeklyPrice = item.getAttribute('data-weekly-price') || '0';
+                const monthlyPrice = item.getAttribute('data-monthly-price') || '0';
+                const time = item.getAttribute('data-time') || '';
+
+                const ak = parseInt(item.getAttribute('data-akomodasi') || '0');
+                const tr = parseInt(item.getAttribute('data-transport') || '0');
+                const wh = parseInt(item.getAttribute('data-wahana') || '0');
+                const ln = parseInt(item.getAttribute('data-lainnya') || '0');
+                const hasCustomBreakdown = (ak + tr + wh + ln) > 0;
+                
+                const imgEl = item.querySelector('img');
+                const image = imgEl ? imgEl.getAttribute('src') : '';
+                
+                const query = new URLSearchParams({
+                    title, price, dailyPrice, weeklyPrice, monthlyPrice, time, image: image || '',
+                    akomodasi: (hasCustomBreakdown ? ak : parseInt(price) * 0.45).toString(),
+                    transport: (hasCustomBreakdown ? tr : 0).toString(),
+                    wahana: (hasCustomBreakdown ? wh : parseInt(price) * 0.30).toString(),
+                    lainnya: (hasCustomBreakdown ? ln : parseInt(price) * 0.25).toString()
+                }).toString();
+                
+                window.location.href = `/setup-saving?${query}`;
+            });
+        });
+
+        // --- MAP MODAL & LEAFLET LOGIC ---
+        const openMapModalBtn = document.getElementById('open-map-modal-btn');
+        const closeMapModalBtn = document.getElementById('close-map-modal-btn');
+        const mapModal = document.getElementById('map-modal');
+        const mapShowAllBtn = document.getElementById('map-show-all-btn');
+        const mapCityPills = document.querySelectorAll('.map-city-pill');
+
+        let leafletMapObj: any = null;
+        let markersGroup: any = null;
+
+        const cityCoordsMap: Record<string, [number, number]> = {
+            "jakarta": [-6.2088, 106.8456],
+            "bandung": [-6.9175, 107.6191],
+            "yogyakarta": [-7.7956, 110.3695],
+            "jogja": [-7.7956, 110.3695],
+            "bali": [-8.4095, 115.1889],
+            "denpasar": [-8.6705, 115.2126],
+            "lombok": [-8.6509, 116.3249],
+            "malang": [-7.9666, 112.6326],
+            "bromo": [-7.9425, 112.9530],
+            "probolinggo": [-7.7543, 113.2159],
+            "labuan bajo": [-8.4539, 119.8728],
+            "semarang": [-6.9666, 110.4167],
+            "surabaya": [-7.2575, 112.7521],
+            "karimunjawa": [-5.8481, 110.4361],
+            "raja ampat": [-0.2333, 130.5167]
+        };
+
+        function filterByCityFromMap(cityName: string) {
+            if (mainSearchInput) {
+                mainSearchInput.value = cityName;
+                if (searchClearBtn) searchClearBtn.classList.remove('hidden');
+            }
+            filterPackages();
+            closeMap();
+            const container = document.getElementById('packages-container');
+            if (container) {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        (window as any).filterByCityFromMap = filterByCityFromMap;
+
+        function initLeafletMap() {
+            if (!(window as any).L) return;
+            const L = (window as any).L;
+
+            if (!leafletMapObj) {
+                leafletMapObj = L.map('leaflet-map').setView([-2.5489, 118.0149], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(leafletMapObj);
+                markersGroup = L.layerGroup().addTo(leafletMapObj);
+            }
+
+            markersGroup.clearLayers();
+
+            const packageItems = document.querySelectorAll('.package-item') as NodeListOf<HTMLElement>;
+            const addedCoords = new Set<string>();
+
+            packageItems.forEach(item => {
+                const destination = item.getAttribute('data-destination') || item.getAttribute('data-title') || "";
+                const title = item.getAttribute('data-title') || "";
+                const image = item.querySelector('img')?.src || "";
+                const destLower = destination.toLowerCase().trim();
+
+                let coords: [number, number] | null = null;
+                for (const [key, val] of Object.entries(cityCoordsMap)) {
+                    if (destLower.includes(key) || title.toLowerCase().includes(key)) {
+                        coords = val;
+                        break;
+                    }
+                }
+
+                if (!coords) {
+                    coords = [-6.2088, 106.8456];
+                }
+
+                const coordKey = `${coords[0]},${coords[1]}`;
+                if (!addedCoords.has(coordKey)) {
+                    addedCoords.add(coordKey);
+
+                    const customIcon = L.divIcon({
+                        className: 'custom-map-pin',
+                        html: `<div class="bg-blue-600 text-white font-extrabold text-xs px-2.5 py-1 rounded-full shadow-lg border-2 border-white flex items-center gap-1 cursor-pointer hover:bg-blue-800 hover:scale-110 transition transform">📍 ${destination}</div>`,
+                        iconSize: [120, 30],
+                        iconAnchor: [60, 15]
+                    });
+
+                    const marker = L.marker(coords, { icon: customIcon }).addTo(markersGroup);
+                    
+                    const popupHtml = `
+                        <div class="p-1 max-w-[200px] font-sans">
+                            <img src="${image}" class="w-full h-24 object-cover rounded-lg mb-2 shadow-xs">
+                            <h4 class="font-extrabold text-xs text-gray-900 leading-snug mb-1">${title}</h4>
+                            <p class="text-[11px] text-blue-600 font-bold mb-2">📍 ${destination}</p>
+                            <button onclick="filterByCityFromMap('${destination}')" class="w-full bg-blue-600 text-white text-xs font-bold py-1.5 rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                                Lihat Paket ${destination}
+                            </button>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupHtml);
+                }
+            });
+
+            setTimeout(() => {
+                leafletMapObj.invalidateSize();
+            }, 200);
+        }
+
+        function openMap() {
+            if (mapModal) {
+                mapModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                initLeafletMap();
+            }
+        }
+
+        function closeMap() {
+            if (mapModal) {
+                mapModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        if (openMapModalBtn) openMapModalBtn.addEventListener('click', openMap);
+        if (closeMapModalBtn) closeMapModalBtn.addEventListener('click', closeMap);
+
+        if (mapModal) {
+            mapModal.addEventListener('click', (e) => {
+                if (e.target === mapModal) closeMap();
+            });
+        }
+
+        if (mapShowAllBtn) {
+            mapShowAllBtn.addEventListener('click', () => {
+                if (mainSearchInput) mainSearchInput.value = "";
+                if (searchClearBtn) searchClearBtn.classList.add('hidden');
+                filterPackages();
+                closeMap();
+            });
+        }
+
+        mapCityPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                const city = pill.getAttribute('data-city') || "";
+                filterByCityFromMap(city);
+            });
+        });
+    });
+</script>

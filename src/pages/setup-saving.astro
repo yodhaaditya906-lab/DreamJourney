@@ -1,0 +1,871 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { fetchCachedCSV } from '../lib/fetchCache';
+
+const { userId, sessionClaims } = Astro.locals.auth();
+
+if (!userId) {
+    return Astro.redirect('/');
+}
+
+const clerkUser = await Astro.locals.currentUser();
+const unsafeMeta = (sessionClaims?.unsafe_metadata || sessionClaims?.unsafeMetadata || clerkUser?.unsafeMetadata || {}) as any;
+const hasDomisili = unsafeMeta?.domisili;
+const hasDob = unsafeMeta?.dob;
+
+if (!hasDomisili || !hasDob) {
+    const currentUrl = Astro.url.pathname + Astro.url.search;
+    return Astro.redirect('/onboarding?redirect_url=' + encodeURIComponent(currentUrl));
+}
+
+const title = Astro.url.searchParams.get('title') || 'Liburan Impian';
+const priceStr = Astro.url.searchParams.get('price') || '0';
+const dailyPriceStr = Astro.url.searchParams.get('dailyPrice') || '0';
+const weeklyPriceStr = Astro.url.searchParams.get('weeklyPrice') || '0';
+const monthlyPriceStr = Astro.url.searchParams.get('monthlyPrice') || '0';
+const time = Astro.url.searchParams.get('time') || '';
+const image = Astro.url.searchParams.get('image') || '';
+
+let hargaPenginapanStr = Astro.url.searchParams.get('hargaPenginapan') || Astro.url.searchParams.get('akomodasi') || '';
+let hargaTransportStr = Astro.url.searchParams.get('hargaTransport') || Astro.url.searchParams.get('transport') || '';
+let hargaWahanaStr = Astro.url.searchParams.get('hargaWahana') || Astro.url.searchParams.get('wahana') || '';
+
+let hargaPenginapan = parseInt(hargaPenginapanStr.replace(/[^\d]/g, ''), 10) || 0;
+let hargaTransport = parseInt(hargaTransportStr.replace(/[^\d]/g, ''), 10) || 0;
+let hargaWahana = parseInt(hargaWahanaStr.replace(/[^\d]/g, ''), 10) || 0;
+
+const price = parseInt(priceStr, 10);
+let dailyPrice = parseInt(dailyPriceStr, 10);
+let weeklyPrice = parseInt(weeklyPriceStr, 10);
+let monthlyPrice = parseInt(monthlyPriceStr, 10);
+
+const investPrice = Math.round(price * 1.06); // 6% estimation logic
+const formattedPrice = `Rp ${new Intl.NumberFormat('id-ID').format(price)}`;
+const formattedInvestPrice = `Rp ${new Intl.NumberFormat('id-ID').format(investPrice)}`;
+
+let lenteraIds: string[] = [];
+let validMitras: any[] = [];
+
+function parseCSVRow(row: string) {
+    const result = [];
+    let curVal = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+        if (row[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (row[i] === ',' && !inQuotes) {
+            result.push(curVal.trim());
+            curVal = '';
+        } else {
+            curVal += row[i];
+        }
+    }
+    result.push(curVal.trim());
+    return result;
+}
+
+// Fetch package sheet data for exact Harian, Mingguan, Bulanan figures if not passed in searchParams
+try {
+  const pkgCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  const pkgRows = pkgCsvText.split('\n');
+  if (pkgRows.length > 1) {
+    const headers = parseCSVRow(pkgRows[0]);
+    const idxTitle = headers.findIndex(h => h.toLowerCase().includes('title'));
+    const idxDaily = headers.findIndex(h => h.toLowerCase().includes('harian') || h.toLowerCase().includes('daily'));
+    const idxWeekly = headers.findIndex(h => h.toLowerCase().includes('mingguan') || h.toLowerCase().includes('weekly'));
+    const idxMonthly = headers.findIndex(h => h.toLowerCase().includes('bulanan') || h.toLowerCase().includes('monthly'));
+
+    const idxPenginapan = headers.findIndex(h => h.toLowerCase().includes('harga_penginapan') || h.toLowerCase().includes('harga_akomodasi'));
+    const idxTransport = headers.findIndex(h => h.toLowerCase().includes('harga_transport'));
+    const idxWahana = headers.findIndex(h => h.toLowerCase().includes('harga_wahana'));
+
+    const matchRow = pkgRows.slice(1).find(row => {
+      if (!row.trim() || row.startsWith(',')) return false;
+      const cols = parseCSVRow(row);
+      const rowTitle = (cols[idxTitle !== -1 ? idxTitle : 0] || '').trim();
+      return rowTitle.toLowerCase().includes(title.toLowerCase()) || title.toLowerCase().includes(rowTitle.toLowerCase());
+    });
+
+    if (matchRow) {
+      const cols = parseCSVRow(matchRow);
+      if (!dailyPrice && idxDaily !== -1 && cols[idxDaily]) {
+        dailyPrice = parseInt(cols[idxDaily].replace(/[^\d]/g, ''), 10) || 0;
+      }
+      if (!weeklyPrice && idxWeekly !== -1 && cols[idxWeekly]) {
+        weeklyPrice = parseInt(cols[idxWeekly].replace(/[^\d]/g, ''), 10) || 0;
+      }
+      if (!monthlyPrice && idxMonthly !== -1 && cols[idxMonthly]) {
+        monthlyPrice = parseInt(cols[idxMonthly].replace(/[^\d]/g, ''), 10) || 0;
+      }
+      if (idxPenginapan !== -1 && cols[idxPenginapan]) {
+        hargaPenginapan = parseInt(cols[idxPenginapan].replace(/[^\d]/g, ''), 10) || hargaPenginapan;
+      }
+      if (idxTransport !== -1 && cols[idxTransport]) {
+        hargaTransport = parseInt(cols[idxTransport].replace(/[^\d]/g, ''), 10) || hargaTransport;
+      }
+      if (idxWahana !== -1 && cols[idxWahana]) {
+        hargaWahana = parseInt(cols[idxWahana].replace(/[^\d]/g, ''), 10) || hargaWahana;
+      }
+    }
+  }
+} catch (error) {
+  console.error("Failed to fetch package CSV fallback:", error);
+}
+
+if (!weeklyPrice && dailyPrice) weeklyPrice = dailyPrice * 7;
+if (!monthlyPrice && dailyPrice) monthlyPrice = dailyPrice * 30;
+
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1qie-zXXTH6xqEn_oxlZEQYCU2DDGmQn_ACWZNFI7xOM/export?format=csv');
+  const rows = csvText.split('\n').slice(1);
+  lenteraIds = rows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
+      const cols = parseCSVRow(row);
+      return cols[0] || "";
+  }).filter(id => id !== "");
+} catch (error) {
+  console.error("Failed to fetch lentera data:", error);
+}
+
+try {
+  const mitraCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1iF_gSErDUz9kMnDiSSgySE1gePeoFRmTdRffdQ4A9ys/export?format=csv');
+  const mitraRows = mitraCsvText.split('\n').slice(1);
+  validMitras = mitraRows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
+      const cols = parseCSVRow(row);
+      return {
+          id: (cols[1] || '').trim(),
+          name: (cols[2] || '').trim(),
+          domisili: (cols[3] || '').trim(),
+          status: (cols[6] || '').trim()
+      };
+  }).filter(m => m.id !== "");
+} catch (error) {
+  console.error("Failed to fetch mitra data:", error);
+}
+---
+
+<Layout title="Setup Tabungan - DreamJourney">
+    <main class="pt-24 pb-16 bg-blue-50/30 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
+        <!-- Elemen Latar Belakang -->
+        <div class="absolute top-10 -right-10 text-blue-200/40 transform rotate-12 pointer-events-none">
+            <i data-feather="briefcase" class="w-64 h-64 md:w-80 md:h-80"></i>
+        </div>
+        <div class="absolute bottom-10 -left-10 text-blue-200/40 transform -rotate-12 pointer-events-none">
+            <i data-feather="camera" class="w-64 h-64 md:w-80 md:h-80"></i>
+        </div>
+        <div class="absolute top-1/2 left-10 text-blue-100/50 transform -rotate-45 pointer-events-none">
+            <i data-feather="star" class="w-32 h-32 md:w-40 md:h-40"></i>
+        </div>
+        <div class="absolute bottom-1/4 right-20 text-blue-100/50 pointer-events-none">
+            <i data-feather="heart" class="w-24 h-24 md:w-32 md:h-32"></i>
+        </div>
+
+        <div class="container mx-auto px-4 w-full max-w-6xl relative z-10 space-y-6">
+            <!-- Back Navigation & Title Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <a href="/packages" class="inline-flex items-center gap-2 text-xs md:text-sm font-bold text-gray-600 hover:text-primary transition-all group">
+                    <i data-feather="arrow-left" class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform"></i>
+                    <span>Kembali ke Paket Wisata</span>
+                </a>
+                <span class="text-xs font-semibold text-gray-400">DreamJourney Tabungan Wizard</span>
+            </div>
+
+            <!-- Stepper Indicator Bar (3 Steps Wizard) -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between max-w-3xl mx-auto mb-6">
+                <!-- Step 1: Active -->
+                <div class="flex items-center gap-2.5 text-primary">
+                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-blue-500/20">
+                        1
+                    </div>
+                    <span class="text-xs md:text-sm font-extrabold">Atur Tabungan</span>
+                </div>
+
+                <div class="flex-1 max-w-[60px] md:max-w-[100px] h-0.5 bg-slate-200 mx-2"></div>
+
+                <!-- Step 2: Inactive -->
+                <div class="flex items-center gap-2.5 text-gray-400">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 text-gray-400 flex items-center justify-center font-bold text-xs border border-slate-200">
+                        2
+                    </div>
+                    <span class="text-xs md:text-sm font-semibold hidden sm:inline">Bayar QRIS</span>
+                    <span class="text-xs md:text-sm font-semibold sm:hidden">QRIS</span>
+                </div>
+
+                <div class="flex-1 max-w-[60px] md:max-w-[100px] h-0.5 bg-slate-200 mx-2"></div>
+
+                <!-- Step 3: Inactive -->
+                <div class="flex items-center gap-2.5 text-gray-400">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 text-gray-400 flex items-center justify-center font-bold text-xs border border-slate-200">
+                        3
+                    </div>
+                    <span class="text-xs md:text-sm font-semibold">Selesai</span>
+                </div>
+            </div>
+
+            <!-- 2-Column Split-Screen Form -->
+            <form id="setup-form" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" data-daily-price={dailyPrice} data-weekly-price={weeklyPrice} data-monthly-price={monthlyPrice} data-lentera-ids={JSON.stringify(lenteraIds)} data-mitras={JSON.stringify(validMitras)}>
+                
+                <!-- LEFT COLUMN: Form Options -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100/80 space-y-6">
+                        
+                        <!-- 1. Tipe Perjalanan (Solo/Group) -->
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 mb-2">Tipe Perjalanan</label>
+                            <div class="grid grid-cols-2 gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60 mb-2">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="trip_type" value="Solo" class="peer sr-only" checked required>
+                                    <div class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-500 transition-all peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm">
+                                        <i data-feather="user" class="w-4 h-4"></i>
+                                        <span>Solo Trip</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="trip_type" value="Group" class="peer sr-only" required>
+                                    <div class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-500 transition-all peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm">
+                                        <i data-feather="users" class="w-4 h-4"></i>
+                                        <span>Group Trip</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Dynamic Group Detail -->
+                            <div id="container-group" class="hidden bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 mt-3">
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="block text-xs font-bold text-amber-900"><i data-feather="users" class="w-4 h-4 inline-block mr-1"></i> Anggota Grup</label>
+                                    <span class="text-[11px] font-bold text-amber-800 bg-amber-200/70 px-2.5 py-0.5 rounded-full" id="group-counter">0 Teman Ditambahkan</span>
+                                </div>
+                                
+                                <div class="bg-white p-2.5 rounded-xl border border-amber-300/80 mb-2 focus-within:ring-2 ring-amber-400 transition shadow-sm">
+                                    <!-- Chips Container -->
+                                    <div id="friend-chips-container" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+                                    
+                                    <div class="flex gap-2">
+                                        <input type="text" id="input-friend" placeholder="Ketik username / email teman disini..." class="flex-1 bg-transparent border-none outline-none text-xs px-1 placeholder-gray-400">
+                                        <button type="button" id="btn-add-friend" class="bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 transition flex items-center shadow-sm">
+                                            <i data-feather="plus" class="w-3.5 h-3.5 mr-1"></i> Tambah
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <p class="text-[11px] text-amber-800 leading-relaxed"><i data-feather="info" class="w-3 h-3 inline-block"></i> Anda dapat menambahkan beberapa orang sekaligus. Teman Anda akan menerima notifikasi di dashboard mereka.</p>
+                            </div>
+                        </div>
+
+                        <!-- 2. Frekuensi & Nominal -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-800 mb-2">Frekuensi Menabung</label>
+                                <select id="input-frequency" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-primary transition text-sm font-semibold text-gray-700 shadow-sm h-11" required>
+                                    <option value="Harian">Harian</option>
+                                    <option value="Mingguan" selected>Mingguan</option>
+                                    <option value="Bulanan">Bulanan</option>
+                                    <option value="Acak (Sesuka Hati)">Acak (Sesuka Hati)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-800 mb-2">Nominal Setoran (Rp)</label>
+                                <input type="text" id="input-amount" value="100.000" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none text-gray-800 font-extrabold text-sm shadow-sm h-11" readonly required>
+                            </div>
+                        </div>
+
+                        <!-- 3. Metode Pembayaran -->
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 mb-2">Metode Pembayaran</label>
+                            <div class="grid grid-cols-2 gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60 mb-2">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="payment_method" value="Cash" class="peer sr-only" required>
+                                    <div class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-500 transition-all peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z" />
+                                        </svg>
+                                        <span>Tunai (Mitra)</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="payment_method" value="Cashless" class="peer sr-only" checked required>
+                                    <div class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-500 transition-all peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm">
+                                        <i data-feather="smartphone" class="w-4 h-4"></i>
+                                        <span>Cashless</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Dynamic Payment Detail (Clean Without Gray Box) -->
+                            <div id="container-mitra" class="hidden mt-3">
+                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Masukkan Nomor ID Mitra Terdaftar</label>
+                                <input type="text" id="input-mitra" placeholder="Masukkan ID Mitra (Contoh: 2907261)" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-primary font-medium text-sm transition-all shadow-sm">
+                                <div id="mitra-validation-msg" class="mt-2 text-xs font-semibold hidden"></div>
+                            </div>
+                            <div id="container-bank" class="mt-3">
+                                <label class="block text-xs font-bold text-gray-700 mb-1.5">Pilih Channel Pembayaran</label>
+                                <select id="input-bank" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-primary text-sm font-medium shadow-sm h-11">
+                                    <option value="QRIS">QRIS</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 4. Tipe Tabungan -->
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 mb-2">Tipe Tabungan</label>
+                            <div class="grid grid-cols-2 gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="saving_type" value="Konvensional" class="peer sr-only" checked required>
+                                    <div class="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-gray-500 transition-all peer-checked:bg-white peer-checked:text-primary peer-checked:shadow-sm">
+                                        <i data-feather="box" class="w-4 h-4"></i>
+                                        <span>Konvensional</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-not-allowed relative">
+                                    <input type="radio" name="saving_type" value="Investasi" class="peer sr-only" disabled>
+                                    <div class="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-medium text-gray-400 opacity-60">
+                                        <i data-feather="trending-up" class="w-4 h-4"></i>
+                                        <span>Investasi Reksadana</span>
+                                        <span class="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase ml-1">Segera Hadir</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 5. Syarat & Ketentuan Box -->
+                        <div class="border-t border-gray-100 pt-6">
+                            <label class="block text-sm font-bold text-gray-800 mb-2">Syarat & Ketentuan Tabungan DreamJourney</label>
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl h-48 overflow-y-scroll p-4 text-xs text-gray-600 mb-4 leading-relaxed space-y-3">
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 1: Ketentuan Setoran Tabungan via QRIS</p>
+                                    <p class="mb-1">1. Pengguna melakukan setoran dana tabungan secara manual melalui metode pembayaran Quick Response Code Indonesian Standard (QRIS) yang disediakan pada platform DreamJourney.</p>
+                                    <p class="mb-1">2. Platform DreamJourney menyediakan fitur notifikasi pengingat (reminder) pembayaran sesuai frekuensi yang dipilih Pengguna (Harian, Mingguan, atau Bulanan), namun eksekusi setoran merupakan tanggung jawab penuh Pengguna.</p>
+                                    <p>3. Setiap pembayaran yang telah terverifikasi oleh sistem pembayaran QRIS akan dicatat secara otomatis ke dalam saldo target perjalanan Pengguna.</p>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 2: Pengelolaan Saldo dan Penyesuaian Target</p>
+                                    <p class="mb-1">1. Seluruh dana yang disetorkan oleh Pengguna tersimpan aman sebagai saldo target perjalanan pada platform DreamJourney hingga memasuki tahap pemesanan (booking) atau keberangkatan.</p>
+                                    <p>2. Pengguna berhak mengubah nominal setoran atau frekuensi tabungan sewaktu-waktu melalui dasbor aplikasi selama belum memasuki tahap pemesanan tiket akomodasi, transportasi, atau wahana oleh tim DreamJourney.</p>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 3: Ketentuan Tabungan Kelompok (Group Trip)</p>
+                                    <p class="mb-1">1. Pembayaran setoran untuk kategori Group Trip dilakukan oleh masing-masing anggota secara terpisah melalui akun Pengguna masing-masing.</p>
+                                    <p>2. Keterlambatan atau kelalaian setoran oleh salah satu anggota menjadi tanggung jawab internal kelompok dan dapat memengaruhi ketercapaian total target dana Group Trip.</p>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 4: Pengkategorian Periode Perjalanan</p>
+                                    <p class="mb-1">1. Periode Non-High Season adalah seluruh tanggal keberangkatan yang tidak termasuk dalam kategori Periode High Season.</p>
+                                    <p class="mb-1">2. Periode High Season adalah masa liburan dengan tingkat permintaan tinggi yang meliputi:</p>
+                                    <ul class="list-disc list-inside ml-2 space-y-0.5 text-gray-600">
+                                        <li>Libur Sekolah Pertengahan Tahun: 15 Juni s.d. 15 Juli;</li>
+                                        <li>Musim Panas / Summer Holiday: 1 Juli s.d. 31 Agustus;</li>
+                                        <li>Natal dan Tahun Baru (Nataru): 20 Desember s.d. 5 Januari;</li>
+                                        <li>Libur Idulfitri: H-3 s.d. H+7 Lebaran (menyesuaikan kalender Hijriah); dan</li>
+                                        <li>Long Weekend: Hari libur nasional (tanggal merah) yang digabung dengan akhir pekan sehingga menghasilkan total libur lebih dari 3 (tiga) hari berturut-turut.</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 5: Kebijakan Pembatalan dan Denda</p>
+                                    <p class="mb-1">1. Pembatalan perjalanan pada Periode Non-High Season diatur dengan ketentuan sebagai berikut:</p>
+                                    <div class="ml-3 mb-2 space-y-1">
+                                        <p>a. Pembatalan yang diajukan sebelum H-14 keberangkatan dikenakan denda administratif sebesar 10% (sepuluh persen) dari total dana tabungan yang terkumpul.</p>
+                                        <p>b. Pembatalan yang diajukan dalam kurun waktu H-14 s.d. H-0 keberangkatan dikenakan denda administratif sebesar 10% (sepuluh persen) dari total tabungan terkumpul ditambah seluruh denda/biaya pembatalan riil dari pihak ketiga (transportasi, penginapan, dan wahana).</p>
+                                    </div>
+                                    <p class="mb-1">2. Pembatalan perjalanan pada Periode High Season diatur dengan ketentuan sebagai berikut:</p>
+                                    <div class="ml-3 space-y-1">
+                                        <p>a. Pembatalan yang diajukan sebelum H-30 keberangkatan dikenakan denda administratif sebesar 10% (sepuluh persen) dari total dana tabungan yang terkumpul.</p>
+                                        <p>b. Pembatalan yang diajukan dalam kurun waktu H-30 s.d. H-0 keberangkatan dikenakan denda administratif sebesar 10% (sepuluh persen) dari total tabungan terkumpul ditambah seluruh denda/biaya pembatalan riil dari pihak ketiga (transportasi, penginapan, dan wahana).</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 6: Pengembalian Dana (Refund)</p>
+                                    <p class="mb-1">1. Sisa dana tabungan milik Pengguna setelah dikurangi denda pembatalan sebagaimana diatur dalam Pasal 5 akan dikembalikan ke rekening bank atau e-wallet resmi terdaftar atas nama Pengguna.</p>
+                                    <p>2. Proses pengembalian dana membutuhkan waktu 7 (tujuh) hingga 14 (empat belas) hari kerja terhitung sejak permohonan pembatalan diverifikasi dan disetujui.</p>
+                                </div>
+
+                                <div>
+                                    <p class="font-bold text-gray-800 mb-1">Pasal 7: Keadaan Kahar (Force Majeure)</p>
+                                    <p class="mb-1">1. DreamJourney dibebaskan dari kewajiban atas penundaan atau pembatalan perjalanan yang disebabkan oleh Keadaan Kahar (Force Majeure), termasuk namun tidak terbatas pada bencana alam, wabah penyakit, kerusuhan, atau perubahan regulasi pemerintah/maskapai penerbangan.</p>
+                                    <p>2. Kebijakan pengembalian dana akibat Keadaan Kahar disesuaikan sepenuhnya dengan syarat dan ketentuan yang berlaku dari penyedia jasa mitra terkait (maskapai, hotel, dan pihak ketiga lainnya).</p>
+                                </div>
+                            </div>
+                            
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" id="checkbox-tnc" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
+                                <span class="text-sm font-semibold text-gray-800">Saya telah membaca dan menyetujui Syarat dan Ketentuan Tabungan DreamJourney, termasuk ketentuan denda pembatalan (Pasal 5).</span>
+                            </label>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Sticky Summary Sidebar -->
+                <div class="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100/80 space-y-6">
+                        
+                        <!-- Destination Image & Header Banner -->
+                        <div class="relative rounded-2xl overflow-hidden shadow-md group">
+                            {image ? (
+                                <img src={image} alt={title} class="w-full h-48 object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                                <div class="w-full h-48 bg-gradient-to-br from-primary via-blue-600 to-indigo-700 flex items-center justify-center text-white">
+                                    <i data-feather="map-pin" class="w-12 h-12 opacity-60"></i>
+                                </div>
+                            )}
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4 text-white">
+                                <span class="inline-block bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full w-max mb-1 uppercase tracking-wider">Destinasi Pilihan</span>
+                                <h2 class="text-xl font-extrabold leading-tight text-white drop-shadow" id="goal-title">{title}</h2>
+                                {time && (
+                                    <p class="text-xs text-blue-100 mt-1 flex items-center gap-1 font-medium">
+                                        <i data-feather="calendar" class="w-3.5 h-3.5 text-blue-300"></i> Durasi Target: {time}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <!-- Protection Gold Badge Highlight -->
+                        <div class="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border border-amber-200/90 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-500/20">
+                                <i data-feather="shield" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wide">Jaminan Proteksi 100%</h4>
+                                <p class="text-[11px] text-amber-800/90 leading-tight">Dana tabungan tersimpan aman dalam Rekening Penampung (Escrow) DreamJourney.</p>
+                            </div>
+                        </div>
+
+                        <!-- Target Breakdown Details -->
+                        <div class="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 space-y-3 text-sm">
+                            <div class="flex justify-between items-center border-b border-slate-200/60 pb-2.5">
+                                <span class="text-gray-500 font-medium">Total Target Dana</span>
+                                <span class="font-extrabold text-gray-900 text-base" id="goal-target" data-value={price}>{formattedPrice}</span>
+                            </div>
+
+                            <!-- Rincian Biaya dari Google Sheet -->
+                            <div class="space-y-2 border-b border-slate-200/60 pb-2.5 pt-0.5">
+                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Rincian Estimasi Biaya</p>
+                                
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-gray-600 flex items-center gap-1.5">
+                                        <span>🚆</span> Transportasi
+                                    </span>
+                                    <span class="font-semibold text-gray-800">
+                                        {hargaTransport > 0 ? `Rp ${new Intl.NumberFormat('id-ID').format(hargaTransport)}` : 'Termasuk / -'}
+                                    </span>
+                                </div>
+
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-gray-600 flex items-center gap-1.5">
+                                        <span>🏨</span> Penginapan
+                                    </span>
+                                    <span class="font-semibold text-gray-800">
+                                        {hargaPenginapan > 0 ? `Rp ${new Intl.NumberFormat('id-ID').format(hargaPenginapan)}` : 'Tidak Ada / -'}
+                                    </span>
+                                </div>
+
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-gray-600 flex items-center gap-1.5">
+                                        <span>🎟️</span> Wahana & Tiket
+                                    </span>
+                                    <span class="font-semibold text-gray-800">
+                                        {hargaWahana > 0 ? `Rp ${new Intl.NumberFormat('id-ID').format(hargaWahana)}` : 'Tidak Ada / -'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs pt-0.5">
+                                <span class="text-gray-500">Status Keamanan</span>
+                                <span class="font-bold text-emerald-600 flex items-center gap-1">
+                                    <i data-feather="check-circle" class="w-3.5 h-3.5"></i> Terlindungi Escrow
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- CTA Submit Button -->
+                        <div>
+                            <button type="submit" id="btn-submit" disabled class="w-full bg-gray-300 text-gray-500 py-4 rounded-2xl font-extrabold text-base transition-all shadow-md flex items-center justify-center gap-2">
+                                <span>Simpan Target Tabungan</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </form>
+
+            <!-- Custom Warning Modal (User Not Found) -->
+            <div id="user-not-found-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                
+                <!-- Modal Content -->
+                <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 relative z-10 transform scale-100 transition-transform">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
+                        </div>
+                        <h3 id="warning-modal-title" class="text-xl font-bold text-gray-900 mb-2">Peringatan</h3>
+                        <p id="user-not-found-msg" class="text-gray-600 mb-6 leading-relaxed text-sm">
+                            Pesan peringatan akan muncul di sini.
+                        </p>
+                        <button type="button" id="btn-close-warning" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition">
+                            Mengerti
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('setup-form');
+        const inputAmount = document.getElementById('input-amount') as HTMLInputElement;
+        const inputFrequency = document.getElementById('input-frequency') as HTMLSelectElement;
+        const dailyPrice = parseInt(form?.getAttribute('data-daily-price') || '0', 10);
+        const weeklyPrice = parseInt(form?.getAttribute('data-weekly-price') || '0', 10);
+        const monthlyPrice = parseInt(form?.getAttribute('data-monthly-price') || '0', 10);
+
+        // Compute amount based on frequency
+        function updateAmountBasedOnFrequency() {
+            const freq = inputFrequency.value;
+            if (freq.includes('Acak')) {
+                inputAmount.value = 'Tidak Ditentukan';
+                return;
+            }
+            if (dailyPrice === 0 && weeklyPrice === 0 && monthlyPrice === 0) return;
+            let amount = 0;
+            if (freq === 'Harian') amount = dailyPrice;
+            else if (freq === 'Mingguan') amount = weeklyPrice || (dailyPrice * 7);
+            else if (freq === 'Bulanan') amount = monthlyPrice || (dailyPrice * 30);
+
+            inputAmount.value = new Intl.NumberFormat('id-ID').format(amount);
+        }
+
+        if (dailyPrice > 0 || weeklyPrice > 0 || monthlyPrice > 0) {
+            updateAmountBasedOnFrequency();
+        }
+
+        inputFrequency.addEventListener('change', updateAmountBasedOnFrequency);
+
+        // Amount formatting
+        inputAmount.addEventListener('input', function() {
+            let val = this.value.replace(/[^\d]/g, '');
+            if (val) {
+                this.value = new Intl.NumberFormat('id-ID').format(parseInt(val));
+            }
+        });
+
+        // Toggle Payment Method
+        const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
+        const containerMitra = document.getElementById('container-mitra');
+        const containerBank = document.getElementById('container-bank');
+        
+        const validMitras = JSON.parse(form?.getAttribute('data-mitras') || '[]');
+        const inputMitra = document.getElementById('input-mitra') as HTMLInputElement;
+        const mitraValidationMsg = document.getElementById('mitra-validation-msg');
+
+        function validateMitraInput() {
+            if (!inputMitra || !mitraValidationMsg) return false;
+            const val = inputMitra.value.trim();
+            if (val === '') {
+                mitraValidationMsg.classList.add('hidden');
+                mitraValidationMsg.textContent = '';
+                inputMitra.classList.remove('border-red-500', 'bg-red-50/30', 'text-red-900', 'border-emerald-500', 'bg-emerald-50/30', 'text-emerald-900');
+                inputMitra.classList.add('border-gray-300');
+                return false;
+            }
+
+            const found = validMitras.find((m: any) => m.id.toLowerCase() === val.toLowerCase());
+
+            if (found) {
+                mitraValidationMsg.classList.remove('hidden', 'text-red-600');
+                mitraValidationMsg.classList.add('text-emerald-600');
+                mitraValidationMsg.innerHTML = `✓ <strong>ID Mitra Valid:</strong> ${found.name} (${found.domisili})`;
+                
+                inputMitra.classList.remove('border-red-500', 'bg-red-50/30', 'text-red-900', 'border-gray-300');
+                inputMitra.classList.add('border-emerald-500', 'bg-emerald-50/30', 'text-emerald-900');
+                return true;
+            } else {
+                mitraValidationMsg.classList.remove('hidden', 'text-emerald-600');
+                mitraValidationMsg.classList.add('text-red-600');
+                mitraValidationMsg.innerHTML = `✕ <strong>ID Mitra Tidak Terdaftar:</strong> ID "${val}" tidak ada di database Mitra.`;
+                
+                inputMitra.classList.remove('border-emerald-500', 'bg-emerald-50/30', 'text-emerald-900', 'border-gray-300');
+                inputMitra.classList.add('border-red-500', 'bg-red-50/30', 'text-red-900');
+                return false;
+            }
+        }
+
+        if (inputMitra) {
+            inputMitra.addEventListener('input', validateMitraInput);
+            inputMitra.addEventListener('blur', validateMitraInput);
+        }
+
+        paymentRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.value === 'Cash') {
+                    containerMitra?.classList.remove('hidden');
+                    containerBank?.classList.add('hidden');
+                } else {
+                    containerMitra?.classList.add('hidden');
+                    containerBank?.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Toggle Trip Type (Group)
+        const tripRadios = document.querySelectorAll('input[name="trip_type"]');
+        const containerGroup = document.getElementById('container-group');
+        let groupMembers: string[] = [];
+        
+        tripRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.value === 'Group') {
+                    containerGroup?.classList.remove('hidden');
+                } else {
+                    containerGroup?.classList.add('hidden');
+                }
+            });
+        });
+
+        // Group Friend List Logic
+        const btnAddFriend = document.getElementById('btn-add-friend');
+        const inputFriend = document.getElementById('input-friend') as HTMLInputElement;
+        const friendListEl = document.getElementById('friend-chips-container');
+
+        function renderFriends() {
+            if (!friendListEl) return;
+            friendListEl.innerHTML = '';
+            groupMembers.forEach((friend, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center bg-yellow-100 text-yellow-800 text-sm px-3 py-1.5 rounded-full border border-yellow-200 shadow-sm';
+                chip.innerHTML = `
+                    <span class="font-medium mr-2">${friend}</span>
+                    <button type="button" class="text-yellow-600 hover:text-red-500 transition btn-remove-friend" data-idx="${idx}">
+                        <i data-feather="x" class="w-3 h-3"></i>
+                    </button>
+                `;
+                friendListEl.appendChild(chip);
+            });
+
+            // Re-initialize feather icons for the new 'x' icons
+            if ((window as any).feather) {
+                (window as any).feather.replace();
+            }
+
+            // Attach remove logic
+            const removeBtns = document.querySelectorAll('.btn-remove-friend');
+            removeBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idxStr = (e.currentTarget as HTMLElement).getAttribute('data-idx');
+                    if (idxStr !== null) {
+                        groupMembers.splice(parseInt(idxStr, 10), 1);
+                        renderFriends();
+                    }
+                });
+            });
+
+            const counter = document.getElementById('group-counter');
+            if (counter) {
+                counter.innerText = `${groupMembers.length} Teman Ditambahkan`;
+            }
+        }
+
+        btnAddFriend?.addEventListener('click', async () => {
+            const val = inputFriend.value.trim();
+            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+
+            if (!val || groupMembers.includes(val)) return;
+
+            if (val.toLowerCase() === currentUsername) {
+                const modal = document.getElementById('user-not-found-modal');
+                const msg = document.getElementById('user-not-found-msg');
+                const title = document.getElementById('warning-modal-title');
+                if (modal && msg && title) {
+                    title.innerText = "Tindakan Ditolak";
+                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
+                    modal.classList.remove('hidden');
+                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                        modal.classList.add('hidden');
+                    }, { once: true });
+                } else {
+                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+                }
+                inputFriend.value = '';
+                return;
+            }
+
+            const originalText = btnAddFriend.innerHTML;
+            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-4 h-4 mr-1 animate-spin"></i> Cek...';
+            (btnAddFriend as HTMLButtonElement).disabled = true;
+
+            try {
+                const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
+                const data = await res.json();
+
+                // isAvailable = true artinya username BELUM DIPAKAI (belum terdaftar)
+                if (res.ok && data.isAvailable) {
+                    const modal = document.getElementById('user-not-found-modal');
+                    const msg = document.getElementById('user-not-found-msg');
+                    const title = document.getElementById('warning-modal-title');
+                    if (modal && msg && title) {
+                        title.innerText = "Pengguna Tidak Ditemukan";
+                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
+                        modal.classList.remove('hidden');
+                        
+                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
+                            modal.classList.add('hidden');
+                        }, { once: true });
+                    } else {
+                        alert(`Teman dengan username/email "${val}" tidak ditemukan di database kami.`);
+                    }
+                } else if (res.ok && !data.isAvailable) {
+                    groupMembers.push(val);
+                    inputFriend.value = '';
+                    renderFriends();
+                } else {
+                    alert("Gagal memvalidasi pengguna.");
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan jaringan saat mengecek pengguna.");
+            } finally {
+                btnAddFriend.innerHTML = originalText;
+                (btnAddFriend as HTMLButtonElement).disabled = false;
+                if ((window as any).feather) {
+                    (window as any).feather.replace();
+                }
+            }
+        });
+
+        // Allow pressing Enter to add friend (without submitting form)
+        inputFriend.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnAddFriend?.click();
+            }
+        });
+
+        // T&C Logic
+        const checkboxTnc = document.getElementById('checkbox-tnc') as HTMLInputElement;
+        const btnSubmit = document.getElementById('btn-submit') as HTMLButtonElement;
+
+        checkboxTnc.addEventListener('change', () => {
+            if (checkboxTnc.checked) {
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('bg-gray-300', 'text-gray-500');
+                btnSubmit.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700', 'cursor-pointer');
+            } else {
+                btnSubmit.disabled = true;
+                btnSubmit.classList.add('bg-gray-300', 'text-gray-500');
+                btnSubmit.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700', 'cursor-pointer');
+            }
+        });
+
+        // Form Submit
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!checkboxTnc.checked) return;
+
+            const title = document.getElementById('goal-title')?.innerText || '';
+            const targetEl = document.getElementById('goal-target');
+            const targetAmount = parseInt(targetEl?.getAttribute('data-value') || '0');
+            
+            const frequency = (document.getElementById('input-frequency') as HTMLSelectElement).value;
+            const amountRaw = frequency.includes('Acak') ? '0' : inputAmount.value.replace(/[^\d]/g, '');
+            const autoDebitAmount = parseInt(amountRaw || '0');
+
+            const paymentMethod = (document.querySelector('input[name="payment_method"]:checked') as HTMLInputElement).value;
+            let paymentDetail = '';
+            
+            if (paymentMethod === 'Cash') {
+                const mitraInput = (document.getElementById('input-mitra') as HTMLInputElement).value.trim();
+                if (!mitraInput) {
+                    alert('Mohon masukkan Nomor ID Mitra Terdaftar.');
+                    const inputMtr = document.getElementById('input-mitra');
+                    if (inputMtr) inputMtr.focus();
+                    return;
+                }
+                const foundMitra = validMitras.find((m: any) => m.id.toLowerCase() === mitraInput.toLowerCase());
+                if (!foundMitra) {
+                    alert(`Nomor ID Mitra "${mitraInput}" tidak terdaftar di database spreadsheet Mitra. Mohon periksa kembali ID Mitra Anda.`);
+                    const inputMtr = document.getElementById('input-mitra');
+                    if (inputMtr) inputMtr.focus();
+                    return;
+                }
+                paymentDetail = `(Mitra ID: ${foundMitra.id} - ${foundMitra.name})`;
+            } else {
+                paymentDetail = (document.getElementById('input-bank') as HTMLSelectElement).value;
+            }
+
+            const tripType = (document.querySelector('input[name="trip_type"]:checked') as HTMLInputElement).value;
+            const savingType = (document.querySelector('input[name="saving_type"]:checked') as HTMLInputElement).value;
+
+            if (tripType === 'Group' && groupMembers.length === 0) {
+                alert('Silakan tambahkan minimal 1 anggota grup untuk Group Trip.');
+                const inputFriend = document.getElementById('input-friend');
+                if (inputFriend) inputFriend.focus();
+                return;
+            }
+
+            btnSubmit.innerHTML = '<i data-feather="loader" class="w-5 h-5 animate-spin mr-2"></i> Menyimpan ke Database...';
+            btnSubmit.disabled = true;
+
+            const payload = {
+                action: 'ADD_GOAL_FULL',
+                title,
+                targetAmount,
+                frequency,
+                autoDebitAmount,
+                paymentMethod,
+                paymentDetail,
+                tripType,
+                groupMembers,
+                savingType
+            };
+
+            try {
+                const res = await fetch('/api/wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Midtrans Snap In-Page Popup QRIS flow
+                    if (paymentMethod === 'Cashless') {
+                        const goalId = data.id || data.goal?.id || `TRIP-${Date.now()}`;
+                        const amountToPay = autoDebitAmount > 0 ? autoDebitAmount : targetAmount;
+                        const image = (document.querySelector('img[alt="' + title + '"]') as HTMLImageElement)?.src || '';
+
+                        window.location.href = `/payment/checkout?goalId=${encodeURIComponent(goalId)}&amount=${amountToPay}&title=${encodeURIComponent(title)}&image=${encodeURIComponent(image)}&frequency=${encodeURIComponent(frequency)}`;
+                    } else {
+                        const goalId = data.id || data.goal?.id || `TRIP-${Date.now()}`;
+                        const image = (document.querySelector('img[alt="' + title + '"]') as HTMLImageElement)?.src || '';
+                        window.location.href = `/payment/success?goalId=${encodeURIComponent(goalId)}&title=${encodeURIComponent(title)}&image=${encodeURIComponent(image)}&type=cash`;
+                    }
+                } else {
+                    let errMsg = 'Terjadi kesalahan saat menyimpan pengaturan.';
+                    try {
+                        const errData = await res.json();
+                        if (errData.details && errData.details.message) {
+                            errMsg += '\\nDetail: ' + errData.details.message;
+                        } else if (errData.details) {
+                            errMsg += '\\nDetail: ' + JSON.stringify(errData.details);
+                        }
+                    } catch (e) {}
+                    alert(errMsg);
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Gangguan koneksi.');
+            }
+        });
+    });
+</script>

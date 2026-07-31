@@ -1,0 +1,104 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import LoginModal from '../components/LoginModal.astro';
+import WhatsAppChatWidget from '../components/WhatsAppChatWidget.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+}
+
+const { title = "DreamJourney - Smart Travel Financing" } = Astro.props;
+const currentPath = Astro.url.pathname;
+const clientKey = import.meta.env.PUBLIC_MIDTRANS_CLIENT_KEY || '';
+const isProd = import.meta.env.MIDTRANS_IS_PRODUCTION === 'true';
+const snapSdkUrl = isProd 
+  ? 'https://app.midtrans.com/snap/snap.js'
+  : 'https://app.sandbox.midtrans.com/snap/snap.js';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=3" />
+    <!-- Feather Icons CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" is:inline></script>
+    <script src="https://unpkg.com/feather-icons" is:inline></script>
+    <!-- Midtrans Snap SDK -->
+    <script src={snapSdkUrl} data-client-key={clientKey} is:inline></script>
+</head>
+<body class="bg-gray-50 font-sans pb-24 lg:pb-0">
+    <!-- Header Component -->
+    <Header />
+
+    <!-- Page Content Slot -->
+    <slot />
+
+    <!-- Global Custom Login Modal -->
+    <LoginModal />
+
+    <!-- Footer Component -->
+    <Footer />
+
+    <!-- Global Floating WhatsApp Live Chat Widget -->
+    <WhatsAppChatWidget />
+
+    <!-- Mobile Bottom Nav (hidden on desktop) -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
+        <div class="glass-nav rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/50 pointer-events-auto">
+            <div class="flex justify-between py-2 px-2">
+                <a href="/" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="home" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Beranda</span>
+                </a>
+                <a href="/packages" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/packages' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/packages' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="search" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Cari</span>
+                </a>
+                <a href="/planner" class="tap-active flex-1 flex flex-col items-center justify-center relative -mt-5">
+                    <div class="bg-primary text-white rounded-full w-14 h-14 shadow-lg hover:bg-primary-dark transition-smooth flex items-center justify-center leading-none ring-4 ring-white/50 backdrop-blur-sm">
+                        <i data-feather="plus" class="w-6 h-6"></i>
+                    </div>
+                    <span class={`text-[10px] mt-2 font-semibold ${currentPath === '/planner' ? 'text-primary' : 'text-gray-500'}`}>Buat</span>
+                </a>
+                <a href="/dashboard" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/dashboard' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="credit-card" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Dompet</span>
+                </a>
+                <a href="/community" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/community' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="users" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[10px] mt-1 font-medium">Sosial</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client-side Feather Icons Initialization -->
+    <script is:inline>
+        function initFeather() {
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+        
+        // Initial run
+        initFeather();
+        
+        // Run on DOM updates / Astro navigation if applicable
+        document.addEventListener('astro:page-load', initFeather);
+        document.addEventListener('astro:after-swap', initFeather);
+    </script>
+</body>
+</html>

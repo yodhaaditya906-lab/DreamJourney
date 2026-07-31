@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Show, SignInButton } from '@clerk/astro/components';
+---
+
+<Layout title="Trip Planner - DreamJourney">
+    <main class="pt-20">
+        <!-- Trip Planner -->
+        <section id="planner" class="pt-12 pb-16 bg-gray-50">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-12 text-center">Rancang Liburan Impian Anda</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                    <!-- Steps -->
+                    <div class="space-y-8">
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">1</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Tentukan Informasi Dasar</h3>
+                                <p class="text-gray-600">Pilih destinasi impian, tipe perjalanan, dan tentukan target bulan keberangkatan Anda.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">2</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Input Detail Pengeluaran</h3>
+                                <p class="text-gray-600">Catat secara leluasa seluruh biaya akomodasi penginapan, transportasi, tiket wahana, hingga asuransi/visa.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">3</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Kalkulasi Otomatis & Buffer Ekstra</h3>
+                                <p class="text-gray-600">Sistem akan merekap total biaya perjalanan secara otomatis. Anda juga bisa menambahkan uang jaga-jaga (buffer) darurat.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">4</div>
+                            <div>
+                                <h3 class="font-bold text-xl mb-2">Simulasi Skema Menabung</h3>
+                                <p class="text-gray-600">Pilih untuk menabung harian, mingguan, atau bulanan. DreamJourney akan menghitung cicilan pas untuk Anda!</p>
+                            </div>
+                        </div>
+                        
+                        <Show when="signed-in">
+                            <a href="/design-trip" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md">
+                                Mulai Rancang Perjalanan Anda
+                            </a>
+                        </Show>
+                        <Show when="signed-out">
+                            <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md w-fit cursor-pointer">
+                                Mulai Rancang Perjalanan Anda
+                            </button>
+                        </Show>
+                    </div>
+                    
+                    <!-- Interactive Quick Simulator -->
+                    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 flex flex-col justify-center relative overflow-hidden">
+                        <!-- Decorative background elements -->
+                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+
+                        <div class="relative z-10 text-center mb-8">
+                            <div class="bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                                <i data-feather="pie-chart" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="font-black text-2xl text-gray-800 tracking-tight">Simulasi Cepat</h3>
+                            <p class="text-gray-500 text-sm mt-2">Hitung estimasi tabungan untuk liburan impianmu!</p>
+                        </div>
+
+                        <div class="relative z-10 space-y-6">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Target Dana Liburan</label>
+                                <div class="relative group">
+                                    <span class="absolute left-4 top-3.5 font-bold text-gray-400 group-focus-within:text-primary transition-colors">Rp</span>
+                                    <input type="text" id="quick-target" value="10.000.000" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 font-bold text-gray-800 focus:outline-none focus:border-primary focus:ring-2 focus:ring-blue-100 transition-all text-lg" placeholder="10.000.000">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between items-center">
+                                    Waktu Menabung
+                                    <span id="quick-time-label" class="text-primary bg-blue-50 px-3 py-1 rounded-full text-xs">6 Bulan</span>
+                                </label>
+                                <input type="range" id="quick-time" min="1" max="24" value="6" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary mt-2">
+                                <div class="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                                    <span>1 Bln</span>
+                                    <span>24 Bln</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Frekuensi Menabung</label>
+                                <div class="grid grid-cols-3 gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
+                                    <button type="button" data-freq="daily" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all bg-white text-primary shadow-sm cursor-pointer border border-gray-100 text-center">Harian</button>
+                                    <button type="button" data-freq="weekly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-gray-600 hover:text-primary cursor-pointer text-center">Mingguan</button>
+                                    <button type="button" data-freq="monthly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-gray-600 hover:text-primary cursor-pointer text-center">Bulanan</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-6 text-center shadow-sm relative mt-4">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/80 text-primary text-xs font-bold mb-3">
+                                    <i data-feather="sparkles" class="w-3.5 h-3.5"></i>
+                                    <span>Estimasi Tabungan</span>
+                                </div>
+                                <p class="text-xs text-gray-500 font-medium mb-1">Cukup Sisihkan</p>
+                                <div class="text-4xl font-black text-primary mb-2 tracking-tight" id="quick-result">Rp 55.556<span class="text-xl text-blue-500 font-bold ml-1">/hari</span></div>
+                                <p class="text-xs text-blue-600/90 font-medium">Makin cepat mulai, makin ringan langkahmu! ✨</p>
+                            </div>
+                            
+                            <Show when="signed-in">
+                                <button onclick="window.location.href='/design-trip'" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
+                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                </button>
+                            </Show>
+                            <Show when="signed-out">
+                                <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
+                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                </button>
+                            </Show>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</Layout>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const quickTarget = document.getElementById('quick-target') as HTMLInputElement;
+        const quickTime = document.getElementById('quick-time') as HTMLInputElement;
+        const quickTimeLabel = document.getElementById('quick-time-label') as HTMLSpanElement;
+        const quickResult = document.getElementById('quick-result') as HTMLDivElement;
+        const freqBtns = document.querySelectorAll('.freq-btn');
+
+        let currentFreq = 'daily';
+
+        freqBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetBtn = e.currentTarget as HTMLButtonElement;
+                currentFreq = targetBtn.dataset.freq || 'daily';
+
+                freqBtns.forEach(b => {
+                    b.className = 'freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-gray-600 hover:text-primary cursor-pointer text-center';
+                });
+                targetBtn.className = 'freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all bg-white text-primary shadow-sm cursor-pointer border border-gray-100 text-center';
+
+                calculateQuick();
+            });
+        });
+
+        function calculateQuick() {
+            if(!quickTarget || !quickTime || !quickTimeLabel || !quickResult) return;
+            
+            // Format input dengan titik pemisah ribuan otomatis
+            const rawDigits = quickTarget.value.replace(/[^0-9]/g, '');
+            const target = parseInt(rawDigits, 10) || 0;
+            
+            if (rawDigits) {
+                quickTarget.value = parseInt(rawDigits, 10).toLocaleString('id-ID');
+            } else {
+                quickTarget.value = '';
+            }
+
+            const months = parseInt(quickTime.value) || 1;
+            quickTimeLabel.innerText = `${months} Bulan`;
+            
+            let amount = 0;
+            let unitLabel = '/hari';
+
+            if (currentFreq === 'daily') {
+                const days = months * 30;
+                amount = Math.ceil(target / (days || 1));
+                unitLabel = '/hari';
+            } else if (currentFreq === 'weekly') {
+                const weeks = Math.round(months * 4.333);
+                amount = Math.ceil(target / (weeks || 1));
+                unitLabel = '/minggu';
+            } else if (currentFreq === 'monthly') {
+                amount = Math.ceil(target / (months || 1));
+                unitLabel = '/bulan';
+            }
+
+            quickResult.innerHTML = `Rp ${amount.toLocaleString('id-ID')}<span class="text-xl text-blue-500 font-bold ml-1">${unitLabel}</span>`;
+        }
+
+        quickTarget?.addEventListener('input', calculateQuick);
+        quickTime?.addEventListener('input', calculateQuick);
+        
+        calculateQuick();
+    });
+</script>

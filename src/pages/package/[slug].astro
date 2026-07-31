@@ -1,0 +1,885 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Show, SignInButton } from '@clerk/astro/components';
+import { fetchCachedCSV } from '../../lib/fetchCache';
+
+const { slug } = Astro.params;
+
+let pkg = null;
+let moreImages = [];
+let otherPackages = [];
+
+function slugify(text) {
+    if (!text) return '';
+    return text.toString().toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+}
+
+function parseCSVRow(row) {
+    const result = [];
+    let curVal = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+        if (row[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (row[i] === ',' && !inQuotes) {
+            result.push(curVal.trim());
+            curVal = '';
+        } else {
+            curVal += row[i];
+        }
+    }
+    result.push(curVal.trim());
+    return result;
+}
+
+try {
+  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+  
+  const defaultImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=600&auto=format&fit=crop";
+
+  const allRows = csvText.split('\n');
+  const headerCols = allRows.length > 0 ? parseCSVRow(allRows[0]) : [];
+  
+  const findHeaderIdx = (keywords: string[], defaultIdx: number) => {
+      const found = headerCols.findIndex(h => keywords.some(k => h.toLowerCase().trim().includes(k.toLowerCase())));
+      return found !== -1 ? found : defaultIdx;
+  };
+
+  const idxTitle = findHeaderIdx(['title'], 0);
+  const idxDesc = findHeaderIdx(['description', 'desc'], 1);
+  const idxDaily = findHeaderIdx(['daily', 'harian'], 2);
+  const idxTotal = findHeaderIdx(['total_price', 'total'], 3);
+  const idxWeekly = findHeaderIdx(['weekly', 'mingguan'], -1);
+  const idxMonthly = findHeaderIdx(['monthly', 'bulanan'], -1);
+  const idxTime = findHeaderIdx(['durasi'], 4);
+  const idxOrigin = findHeaderIdx(['origin'], 5);
+  const idxDestination = findHeaderIdx(['destination'], 6);
+  const idxWahana = findHeaderIdx(['wahana'], 7);
+  const idxPenginapan = findHeaderIdx(['penginapan'], 8);
+  const idxTransKeberangkatan = findHeaderIdx(['transportasi keberangkatan', 'keberangkatan'], 9);
+  const idxTransKepulangan = findHeaderIdx(['transportasi kepulangan', 'kepulangan'], 10);
+  const idxMainImage = findHeaderIdx(['main_image'], 12);
+  const idxG1 = findHeaderIdx(['gallery_image_1'], 13);
+  const idxG2 = findHeaderIdx(['gallery_image_2'], 14);
+  const idxG3 = findHeaderIdx(['gallery_image_3'], 15);
+  const idxG4 = findHeaderIdx(['gallery_image_4'], 16);
+  const idxAkomodasi = findHeaderIdx(['harga_penginapan', 'harga_akomodasi'], 19);
+  const idxTransport = findHeaderIdx(['harga_transport'], 20);
+  const idxHargaWahana = findHeaderIdx(['harga_wahana'], 21);
+  const idxLainnya = findHeaderIdx(['harga_lainnya'], 22);
+  const idxHitungTabungan = findHeaderIdx(['hitung mundur tabungan'], 21);
+  const idxHitungLiburan = findHeaderIdx(['hitung mundur liburan'], 22);
+  const idxTglPergi = findHeaderIdx(['tanggal pergi'], 23);
+  const idxTglPulang = findHeaderIdx(['tanggal pulang'], 24);
+  const idxJmlPenabung = findHeaderIdx(['jumlah penabung'], 25);
+  const idxBerhasil = findHeaderIdx(['berhasil liburan'], 26);
+  const idxJenis = findHeaderIdx(['jenis liburan'], 27);
+
+  const rows = allRows.slice(1);
+  const packages = rows.filter(row => row.trim() && !row.startsWith(',')).map((row, index) => {
+    const cols = parseCSVRow(row);
+    
+    const title = cols[idxTitle] || "Unknown";
+    const desc = cols[idxDesc] || "";
+    const dailyPrice = cols[idxDaily] || "";
+    const rawDailyPrice = cols[idxDaily] ? cols[idxDaily].replace(/[^\d]/g, '') : "0";
+    const parsedDailyPrice = parseInt(rawDailyPrice, 10) || 0;
+    const rawPrice = cols[idxTotal] ? cols[idxTotal].replace(/[^\d]/g, '') : "0";
+    const price = parseInt(rawPrice, 10) || 0;
+
+    const rawWeeklyPrice = (idxWeekly !== -1 && cols[idxWeekly]) ? cols[idxWeekly].replace(/[^\d]/g, '') : "";
+    const parsedWeeklyPrice = rawWeeklyPrice ? parseInt(rawWeeklyPrice, 10) : (parsedDailyPrice * 7);
+
+    const rawMonthlyPrice = (idxMonthly !== -1 && cols[idxMonthly]) ? cols[idxMonthly].replace(/[^\d]/g, '') : "";
+    const parsedMonthlyPrice = rawMonthlyPrice ? parseInt(rawMonthlyPrice, 10) : (parsedDailyPrice * 30);
+
+    const time = cols[idxTime] || "";
+    const origin = cols[idxOrigin] || "Unknown";
+    const destination = cols[idxDestination] || title;
+    
+    const wahanaRaw = cols[idxWahana] || "";
+    const penginapanRaw = cols[idxPenginapan] || "";
+    const transportasiRaw = cols[idxTransKeberangkatan] || "";
+    const transportPulangRaw = cols[idxTransKepulangan] || "";
+
+    const wahana = (wahanaRaw && wahanaRaw !== "-") 
+      ? (wahanaRaw.includes('|') ? wahanaRaw.split('|').map(s => s.trim()).join(', ') : wahanaRaw) 
+      : "-";
+    const penginapan = (penginapanRaw && penginapanRaw !== "-") ? penginapanRaw : "-";
+    const transportasi = (transportasiRaw && transportasiRaw !== "-") ? transportasiRaw : "-";
+
+    let transportPergi = "-";
+    let transportPulang = "-";
+
+    if (transportPulangRaw && transportPulangRaw !== "-") {
+        transportPergi = (transportasiRaw && transportasiRaw !== "-") ? transportasiRaw : "-";
+        transportPulang = transportPulangRaw;
+    } else if (transportasiRaw && transportasiRaw !== "-") {
+        if (transportasiRaw.includes('|')) {
+            const parts = transportasiRaw.split('|').map(s => s.trim());
+            transportPergi = parts[0] || "-";
+            transportPulang = parts[1] || parts[0] || "-";
+        } else {
+            transportPergi = transportasiRaw;
+            transportPulang = transportasiRaw;
+        }
+    }
+
+    const transportPergiList = transportPergi !== "-" 
+      ? transportPergi.split(/[\n,&]+/).map(s => s.trim()).filter(Boolean)
+      : [];
+
+    const transportPulangList = transportPulang !== "-" 
+      ? transportPulang.split(/[\n,&]+/).map(s => s.trim()).filter(Boolean)
+      : [];
+    
+    let mainImage = defaultImage;
+    if (cols[idxMainImage] && (cols[idxMainImage].startsWith('http') || cols[idxMainImage].startsWith('"http') || cols[idxMainImage].startsWith('/'))) {
+        mainImage = cols[idxMainImage];
+    } else if (cols[11] && (cols[11].startsWith('http') || cols[11].startsWith('"http') || cols[11].startsWith('/'))) {
+        mainImage = cols[11];
+    }
+    if (mainImage && mainImage.startsWith('"')) mainImage = mainImage.substring(1, mainImage.length-1);
+
+    let g1 = cols[idxG1] || mainImage;
+    let g2 = cols[idxG2] || mainImage;
+    let g3 = cols[idxG3] || mainImage;
+    let g4 = cols[idxG4] || mainImage;
+    
+    const priceAkomodasi = parseInt((cols[idxAkomodasi] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceTransport = parseInt((cols[idxTransport] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceWahana = parseInt((cols[idxHargaWahana] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    const priceLainnya = parseInt((cols[idxLainnya] || "0").replace(/[^\d]/g, ''), 10) || 0;
+    
+    // Dynamic Header Detection for Hitung Mundur Tabungan & Liburan
+    const valTabungan = (cols[idxHitungTabungan] !== undefined && cols[idxHitungTabungan] !== null && cols[idxHitungTabungan].trim() !== "") ? cols[idxHitungTabungan].replace(/[^\d]/g, '') : "";
+    const rawTabunganNumber = valTabungan !== "" ? parseInt(valTabungan, 10) : 90;
+
+    const valLiburan = (cols[idxHitungLiburan] !== undefined && cols[idxHitungLiburan] !== null && cols[idxHitungLiburan].trim() !== "") ? cols[idxHitungLiburan].replace(/[^\d]/g, '') : "";
+    const rawLiburanNumber = valLiburan !== "" ? parseInt(valLiburan, 10) : 180;
+    const hitungMundurTabungan = `${rawTabunganNumber} Hari`;
+    const hitungMundurLiburan = `${rawLiburanNumber} Hari`;
+    
+    const tanggalPergi = cols[idxTglPergi] || "11 Januari 2027";
+    const tanggalPulang = cols[idxTglPulang] || "14 Januari 2027";
+
+    const rawJumlahMenabung = cols[idxJmlPenabung] || "472";
+    const jumlahMenabung = rawJumlahMenabung.includes('orang') ? rawJumlahMenabung : `${rawJumlahMenabung} orang`;
+
+    const rawBerhasilLiburan = cols[idxBerhasil] || "128";
+    const berhasilLiburan = rawBerhasilLiburan.includes('orang') ? rawBerhasilLiburan : `${rawBerhasilLiburan} orang`;
+
+    const jenisLiburan = cols[idxJenis] || "Open Trip";
+    
+    return {
+      title,
+      slug: slugify(title),
+      desc,
+      dailyPrice,
+      parsedDailyPrice,
+      parsedWeeklyPrice,
+      parsedMonthlyPrice,
+      price,
+      origin,
+      destination,
+      time,
+      rawTabunganNumber,
+      rawLiburanNumber,
+      hitungMundurTabungan,
+      hitungMundurLiburan,
+      tanggalPergi,
+      tanggalPulang,
+      jumlahMenabung,
+      berhasilLiburan,
+      jenisLiburan,
+      badge: index === 0 ? "Hot Deal" : (index === 1 ? "Best Seller" : ""),
+      badgeColor: index === 0 ? "bg-red-500 text-white" : (index === 1 ? "bg-blue-500 text-white" : ""),
+      image: mainImage,
+      gallery: [mainImage, g1, g2, g3, g4],
+      transportasi,
+      transportPergi,
+      transportPulang,
+      transportPergiList,
+      transportPulangList,
+      penginapan,
+      wahana,
+      priceAkomodasi,
+      priceTransport,
+      priceWahana,
+      priceLainnya
+    };
+  });
+
+  pkg = packages.find(p => p.slug === slug);
+  otherPackages = packages.filter(p => p.slug !== slug).sort(() => 0.5 - Math.random()).slice(0, 4);
+  
+} catch (error) {
+  console.error("Failed to fetch packages:", error);
+}
+
+if (!pkg) {
+  return Astro.redirect('/404');
+}
+
+const hasCustomBreakdown = pkg.priceAkomodasi > 0 || pkg.priceTransport > 0 || pkg.priceWahana > 0 || pkg.priceLainnya > 0;
+
+let breakdown = [];
+if (hasCustomBreakdown) {
+    if (pkg.priceAkomodasi > 0) breakdown.push({ label: "Akomodasi Penginapan", price: pkg.priceAkomodasi });
+    if (pkg.priceTransport > 0) breakdown.push({ label: "Transportasi", price: pkg.priceTransport });
+    if (pkg.priceWahana > 0) breakdown.push({ label: "Tiket Masuk & Wahana", price: pkg.priceWahana });
+    if (pkg.priceLainnya > 0) breakdown.push({ label: "Konsumsi & Lainnya", price: pkg.priceLainnya });
+} else {
+    breakdown = [
+        { label: "Akomodasi & Transportasi", price: pkg.price * 0.45 },
+        { label: "Tiket Masuk & Wahana", price: pkg.price * 0.30 },
+        { label: "Konsumsi & Lainnya", price: pkg.price * 0.25 }
+    ];
+}
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site || 'https://dreamjourney.id').href;
+const redirectUrl = '/setup-saving?' + new URLSearchParams({
+    title: pkg.title,
+    price: pkg.price.toString(),
+    dailyPrice: pkg.parsedDailyPrice.toString(),
+    weeklyPrice: pkg.parsedWeeklyPrice.toString(),
+    monthlyPrice: pkg.parsedMonthlyPrice.toString(),
+    time: pkg.time,
+    image: pkg.image,
+    akomodasi: (hasCustomBreakdown ? pkg.priceAkomodasi : pkg.price * 0.45).toString(),
+    transport: (hasCustomBreakdown ? pkg.priceTransport : 0).toString(),
+    wahana: (hasCustomBreakdown ? pkg.priceWahana : pkg.price * 0.30).toString(),
+    lainnya: (hasCustomBreakdown ? pkg.priceLainnya : pkg.price * 0.25).toString()
+}).toString();
+---
+
+<Layout title={`${pkg.title} - DreamJourney`}>
+    <main class="pt-24 pb-16 bg-gray-50">
+        <div class="w-full lg:w-[85%] mx-auto px-4">
+            <!-- Breadcrumb Navigation -->
+            <nav class="flex text-xs md:text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                    <li class="inline-flex items-center">
+                        <a href="/" class="hover:text-primary transition">Beranda</a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-400 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                            <a href="/packages" class="hover:text-primary transition">Paket Liburan</a>
+                        </div>
+                    </li>
+                    <li aria-current="page">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-400 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span class="text-gray-800 font-medium truncate max-w-[200px] md:max-w-none">{pkg.title}</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Card Utama -->
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 md:p-10 mb-12">
+                <!-- Top Section: 2 Columns -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10">
+                    
+                    <!-- Kolom Kiri (Area Visual): Foto Utama + Thumbnail Galeri Produk -->
+                    <div class="lg:col-span-7 flex flex-col">
+                        <!-- Foto Utama Besar -->
+                        <div class="relative group rounded-2xl overflow-hidden shadow-md bg-gray-100">
+                            <img id="main-product-image" src={pkg.image} alt={pkg.title} class="gallery-image w-full h-[360px] md:h-[450px] object-cover cursor-pointer hover:scale-[1.01] transition-all duration-300">
+                            <div class="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                                <span>Klik untuk memperbesar</span>
+                            </div>
+                        </div>
+
+                        <!-- Deretan Gambar Thumbnail Kecil -->
+                        <div class="grid grid-cols-5 gap-3 mt-4">
+                            {pkg.gallery.map((imgUrl, idx) => (
+                                <button 
+                                    type="button" 
+                                    class={`thumb-btn relative rounded-xl overflow-hidden aspect-square border-2 transition-all duration-200 focus:outline-none ${idx === 0 ? 'border-blue-600 ring-2 ring-blue-600/30' : 'border-transparent opacity-75 hover:opacity-100 hover:border-blue-400'}`}
+                                    data-src={imgUrl}
+                                    data-index={idx}
+                                    aria-label={`Foto ${idx + 1}`}
+                                >
+                                    <img src={imgUrl} alt={`${pkg.title} thumbnail ${idx + 1}`} class="w-full h-full object-cover pointer-events-none">
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <!-- Kolom Kanan (Area Info & Transaksi) -->
+                    <div class="lg:col-span-5 flex flex-col justify-between">
+                        <div>
+                            <!-- Badges & Title -->
+                            {pkg.badge && (
+                                <div class="flex flex-wrap items-center gap-2 mb-3">
+                                    <span class={`${pkg.badgeColor} text-xs font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-xs`}>
+                                        {pkg.badge}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            <h1 class="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 mb-5 leading-tight">
+                                {pkg.title}
+                            </h1>
+
+                            <!-- Right Pricing / Booking Box -->
+                            <div class="bg-white border border-primary/20 rounded-2xl p-5 md:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.05)]">
+                                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                    <h3 class="text-base md:text-lg font-bold text-gray-900">Ringkasan Harga</h3>
+                                </div>
+
+                                <!-- Frequency Toggle Switcher -->
+                                <div class="freq-switcher flex items-center p-1 bg-gray-100/90 rounded-xl border border-gray-200/70 shadow-xs mb-4">
+                                    <button type="button" class="freq-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-white text-blue-700 shadow-xs cursor-pointer text-center" data-mode="harian">Harian</button>
+                                    <button type="button" class="freq-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="mingguan">Mingguan</button>
+                                    <button type="button" class="freq-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="bulanan">Bulanan</button>
+                                </div>
+                                
+                                <div class="space-y-3 mb-5">
+                                    <div class="flex justify-between items-end border-b border-gray-100 pb-3">
+                                        <span class="text-gray-500 font-medium text-xs md:text-sm">Mulai dari</span>
+                                        <span id="display-dynamic-price" 
+                                              class="text-xl md:text-2xl font-extrabold text-primary" 
+                                              data-price={pkg.parsedDailyPrice}
+                                              data-weekly-price={pkg.parsedWeeklyPrice}
+                                              data-monthly-price={pkg.parsedMonthlyPrice}>
+                                            Rp {pkg.parsedDailyPrice.toLocaleString('id-ID')}<span class="text-xs md:text-sm font-normal text-gray-500">/hari</span>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="pt-1 pb-1">
+                                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Rincian Pembayaran</h4>
+                                        {breakdown.map(item => (
+                                            <div class="flex justify-between text-xs md:text-sm mb-1.5">
+                                                <span class="text-gray-600">{item.label}</span>
+                                                <span class="font-semibold text-gray-800">Rp {item.price.toLocaleString('id-ID')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div class="flex justify-between items-center bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+                                        <span class="text-gray-700 font-bold text-sm md:text-base">Total Harga</span>
+                                        <span class="text-lg md:text-xl font-extrabold text-gray-900">Rp {pkg.price.toLocaleString('id-ID')}</span>
+                                    </div>
+                                </div>
+
+                                <Show when="signed-in">
+                                    <a href={redirectUrl} class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 flex justify-center items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z" />
+                                        </svg>
+                                        Mulai Menabung
+                                    </a>
+                                </Show>
+                                <Show when="signed-out">
+                                    <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white py-3 rounded-xl font-bold text-base transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 flex justify-center items-center gap-2 cursor-pointer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z" />
+                                        </svg>
+                                        Mulai Menabung
+                                    </button>
+                                </Show>
+                                
+                                <div class="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <span>Transaksi aman dan terverifikasi</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kolom Bawah (Statistik, Deskripsi & Fasilitas) -->
+                <div class="mt-10 pt-8 border-t border-gray-100">
+                    <!-- Dynamic Package Stats Card (Sebelum Deskripsi Paket) -->
+                    <div class="mb-8 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 p-5 md:p-6 rounded-2xl border border-blue-100/80 shadow-xs">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+                            <h3 class="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Informasi & Timeline Paket
+                            </h3>
+
+                            <!-- Secondary Frequency Toggle Switcher -->
+                            <div class="freq-switcher flex items-center p-1 bg-white rounded-xl border border-gray-200/80 shadow-xs max-w-xs">
+                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all bg-white text-blue-700 shadow-xs cursor-pointer text-center" data-mode="harian">Harian</button>
+                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="mingguan">Mingguan</button>
+                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="bulanan">Bulanan</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 md:gap-4">
+                            <!-- 1. Hitung Mundur Tabungan -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span id="label-countdown-tabungan" class="text-xs font-bold text-gray-500 uppercase tracking-wider">1. Hitung Mundur Tabungan</span>
+                                </div>
+                                <p id="display-countdown-tabungan" class="text-base md:text-lg font-bold text-gray-900 mt-0.5" data-days={pkg.rawTabunganNumber}>{pkg.hitungMundurTabungan}</p>
+                            </div>
+
+                            <!-- 2. Hitung Mundur Liburan -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span id="label-countdown-liburan" class="text-xs font-bold text-gray-500 uppercase tracking-wider">2. Hitung Mundur Liburan</span>
+                                </div>
+                                <p id="display-countdown-liburan" class="text-base md:text-lg font-bold text-gray-900 mt-0.5" data-days={pkg.rawLiburanNumber}>{pkg.hitungMundurLiburan}</p>
+                            </div>
+
+                            <!-- 3. Tanggal Pergi -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-teal-100 text-teal-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">3. Tanggal Pergi</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.tanggalPergi}</p>
+                            </div>
+
+                            <!-- 4. Tanggal Pulang -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-rose-100 text-rose-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">4. Tanggal Pulang</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.tanggalPulang}</p>
+                            </div>
+
+                            <!-- 5. Durasi Liburan -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">5. Durasi Liburan</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.time}</p>
+                            </div>
+
+                            <!-- 6. Jumlah Penabung -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">6. Jumlah Penabung</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-emerald-600 mt-0.5">{pkg.jumlahMenabung}</p>
+                            </div>
+
+                            <!-- 7. Berhasil Liburan -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-purple-100 text-purple-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">7. Berhasil Liburan</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-purple-600 mt-0.5">{pkg.berhasilLiburan}</p>
+                            </div>
+
+                            <!-- 8. Jenis Liburan -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <div class="p-1.5 bg-orange-100 text-orange-700 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-2c-.552 0-1-.448-1-1V3" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">8. Jenis Liburan</span>
+                                </div>
+                                <p class="text-base md:text-lg font-bold text-orange-600 mt-0.5">{pkg.jenisLiburan}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deskripsi Paket -->
+                    <div class="mb-8">
+                        <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Deskripsi Paket
+                        </h2>
+                        <p class="text-gray-700 text-sm md:text-base leading-relaxed bg-gray-50/80 p-5 rounded-2xl border border-gray-200/70">
+                            {pkg.desc}
+                        </p>
+                    </div>
+
+                    <!-- Fasilitas yang Didapat -->
+                    <div>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Fasilitas yang Didapat
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- 1. Transportasi -->
+                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-300 transition-all">
+                                <div class="flex items-center gap-2.5 mb-3">
+                                    <div class="p-2 bg-blue-100 text-blue-700 rounded-xl flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-bold text-gray-900 text-base md:text-lg">1. Transportasi</span>
+                                </div>
+
+                                {pkg.transportPergi === '-' && pkg.transportPulang === '-' ? (
+                                    <p class="text-xs md:text-sm font-semibold text-gray-400 italic">Tidak Termasuk</p>
+                                ) : (
+                                    <div class="space-y-3">
+                                        <!-- Sub-Bagian A: Keberangkatan -->
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-xs md:text-sm mb-0.5">A. Transportasi Keberangkatan</h4>
+                                            <p class="text-xs md:text-sm font-bold text-blue-600 mb-0.5">{pkg.origin} - {pkg.destination}</p>
+                                            {pkg.transportPergiList.length > 0 ? (
+                                                pkg.transportPergiList.map(item => (
+                                                    <p class="text-xs text-gray-600 font-medium leading-relaxed">{item}</p>
+                                                ))
+                                            ) : (
+                                                <p class="text-xs text-gray-600 font-medium leading-relaxed">{pkg.transportPergi}</p>
+                                            )}
+                                        </div>
+
+                                        <!-- Sub-Bagian B: Kepulangan -->
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-xs md:text-sm mb-0.5">B. Transportasi Kepulangan</h4>
+                                            <p class="text-xs md:text-sm font-bold text-blue-600 mb-0.5">{pkg.destination} - {pkg.origin}</p>
+                                            {pkg.transportPulangList.length > 0 ? (
+                                                pkg.transportPulangList.map(item => (
+                                                    <p class="text-xs text-gray-600 font-medium leading-relaxed">{item}</p>
+                                                ))
+                                            ) : (
+                                                <p class="text-xs text-gray-600 font-medium leading-relaxed">{pkg.transportPulang}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <!-- 2. Penginapan -->
+                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-indigo-300 transition-all">
+                                <div class="flex items-center gap-2.5 mb-2.5">
+                                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-bold text-gray-900 text-base md:text-lg">2. Penginapan</span>
+                                </div>
+                                <p class={`text-xs md:text-sm font-medium ${pkg.penginapan === '-' || !pkg.penginapan ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                    {pkg.penginapan === '-' || !pkg.penginapan ? 'Tidak Termasuk' : pkg.penginapan}
+                                </p>
+                            </div>
+
+                            <!-- 3. Wahana -->
+                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-emerald-300 transition-all">
+                                <div class="flex items-center gap-2.5 mb-2.5">
+                                    <div class="p-2 bg-emerald-100 text-emerald-700 rounded-xl flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <span class="font-bold text-gray-900 text-base md:text-lg">3. Wahana</span>
+                                </div>
+                                <p class={`text-xs md:text-sm font-medium ${pkg.wahana === '-' || !pkg.wahana ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                    {pkg.wahana === '-' || !pkg.wahana ? 'Tidak Termasuk' : pkg.wahana}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bagian Bawah: Destinasi Lainnya -->
+            <div class="mt-12 mb-6">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-3">
+                    <h2 class="text-lg md:text-xl font-bold text-gray-900">Eksplorasi Destinasi Lainnya</h2>
+                    <a href="/packages" class="text-primary hover:text-primary-dark font-medium text-xs md:text-sm flex items-center transition">
+                        Lihat Semua 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    {otherPackages.map((opkg, index) => (
+                        <div class="package-item bg-white rounded-xl shadow-xs overflow-hidden hover:shadow-md transition-all duration-300 border border-gray-100 flex flex-col hover:-translate-y-0.5">
+                            <a href={`/package/${opkg.slug}`} class="block flex-grow cursor-pointer">
+                                <div class="relative">
+                                    <img src={opkg.image} alt={opkg.destination} class="w-full h-44 object-cover">
+                                    {opkg.badge && (
+                                        <span class={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium ${opkg.badgeColor}`}>
+                                            {opkg.badge}
+                                        </span>
+                                    )}
+                                </div>
+                                <div class="p-4 pb-0 flex-grow">
+                                    <h3 class="font-bold text-sm md:text-base text-gray-900 line-clamp-1">{opkg.title}</h3>
+                                    <p class="text-gray-500 text-xs mt-1 line-clamp-2">{opkg.desc}</p>
+                                    <div class="my-3">
+                                        <p class="text-primary font-bold text-base md:text-lg">{opkg.dailyPrice}<span class="text-xs font-normal text-gray-500">/hari</span></p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lightbox Modal -->
+        <div id="image-lightbox" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/90 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+            <!-- Close button -->
+            <button id="lightbox-close" class="absolute top-6 right-6 text-white hover:text-gray-300 focus:outline-none z-10 bg-black/40 hover:bg-black/70 p-2.5 rounded-full transition cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <!-- Previous Button -->
+            <button id="lightbox-prev" class="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 focus:outline-none z-10 bg-black/40 hover:bg-black/70 p-3 rounded-full transition transform hover:scale-110 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            
+            <!-- Next Button -->
+            <button id="lightbox-next" class="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 focus:outline-none z-10 bg-black/40 hover:bg-black/70 p-3 rounded-full transition transform hover:scale-110 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+
+            <!-- Image -->
+            <img id="lightbox-img" src="" alt="Pemandangan Full" class="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl transform scale-95 transition-all duration-300 select-none">
+        </div>
+    </main>
+</Layout>
+
+<script define:vars={{ pkg }}>
+    document.addEventListener("DOMContentLoaded", function () {
+        const mainProductImg = document.getElementById('main-product-image');
+        const thumbBtns = document.querySelectorAll('.thumb-btn');
+
+        let currentActiveIndex = 0;
+        const imagesArray = pkg?.gallery && pkg.gallery.length > 0 ? pkg.gallery : (mainProductImg ? [mainProductImg.src] : []);
+
+        // Interactive thumbnail gallery switching on page
+        if (mainProductImg && thumbBtns.length > 0) {
+            thumbBtns.forEach((btn, idx) => {
+                btn.addEventListener('click', () => {
+                    const newSrc = btn.getAttribute('data-src');
+                    if (newSrc) {
+                        mainProductImg.src = newSrc;
+                        currentActiveIndex = idx;
+                        
+                        // Active border highlight state
+                        thumbBtns.forEach(b => {
+                            b.classList.remove('border-blue-600', 'ring-2', 'ring-blue-600/30');
+                            b.classList.add('border-transparent', 'opacity-75');
+                        });
+                        btn.classList.remove('border-transparent', 'opacity-75');
+                        btn.classList.add('border-blue-600', 'ring-2', 'ring-blue-600/30');
+                    }
+                });
+            });
+        }
+
+        // Lightbox logic
+        const lightbox = document.getElementById('image-lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+
+        let currentImageIndex = 0;
+
+        if (mainProductImg && lightbox && lightboxImg) {
+            function updateImage(index) {
+                lightboxImg.classList.add('opacity-50', 'scale-95');
+                setTimeout(() => {
+                    lightboxImg.src = imagesArray[index] || mainProductImg.src;
+                    lightboxImg.classList.remove('opacity-50', 'scale-95');
+                }, 150);
+            }
+
+            function openLightbox(index) {
+                currentImageIndex = index;
+                lightboxImg.src = imagesArray[currentImageIndex] || mainProductImg.src;
+                lightbox.classList.remove('hidden');
+                void lightbox.offsetWidth; // Trigger reflow
+                lightbox.classList.remove('opacity-0');
+                lightboxImg.classList.remove('scale-95');
+                lightboxImg.classList.add('scale-100');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeLightbox() {
+                lightbox.classList.add('opacity-0');
+                lightboxImg.classList.remove('scale-100');
+                lightboxImg.classList.add('scale-95');
+                setTimeout(() => {
+                    lightbox.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }, 300);
+            }
+
+            // Open lightbox when clicking main image
+            mainProductImg.addEventListener('click', () => {
+                openLightbox(currentActiveIndex);
+            });
+
+            if (lightboxPrev) {
+                lightboxPrev.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentImageIndex = (currentImageIndex - 1 + imagesArray.length) % imagesArray.length;
+                    updateImage(currentImageIndex);
+                });
+            }
+
+            if (lightboxNext) {
+                lightboxNext.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentImageIndex = (currentImageIndex + 1) % imagesArray.length;
+                    updateImage(currentImageIndex);
+                });
+            }
+
+            if (lightboxClose) {
+                lightboxClose.addEventListener('click', closeLightbox);
+            }
+            
+            // Close when clicking backdrop outside image
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+            
+            // Close with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+                    closeLightbox();
+                }
+            });
+        }
+
+        // Frequency Switcher Logic (Harian / Mingguan / Bulanan)
+        const freqBtns = document.querySelectorAll('.freq-btn');
+        const displayPrice = document.getElementById('display-dynamic-price');
+        const displayTabungan = document.getElementById('display-countdown-tabungan');
+        const labelTabungan = document.getElementById('label-countdown-tabungan');
+        const displayLiburan = document.getElementById('display-countdown-liburan');
+        const labelLiburan = document.getElementById('label-countdown-liburan');
+
+        if (freqBtns.length > 0) {
+            freqBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.getAttribute('data-mode');
+                    
+                    // Sync active state for all frequency buttons on page
+                    freqBtns.forEach(b => {
+                        if (b.getAttribute('data-mode') === mode) {
+                            b.classList.remove('text-gray-500', 'hover:text-gray-900');
+                            b.classList.add('bg-white', 'text-blue-700', 'shadow-xs');
+                        } else {
+                            b.classList.remove('bg-white', 'text-blue-700', 'shadow-xs');
+                            b.classList.add('text-gray-500', 'hover:text-gray-900');
+                        }
+                    });
+
+                    // 1. Update Price
+                    if (displayPrice) {
+                        const daily = parseInt(displayPrice.getAttribute('data-price') || "0", 10);
+                        const weeklyAttr = displayPrice.getAttribute('data-weekly-price');
+                        const monthlyAttr = displayPrice.getAttribute('data-monthly-price');
+
+                        const weekly = (weeklyAttr && weeklyAttr !== "0") ? parseInt(weeklyAttr, 10) : Math.round(daily * 7);
+                        const monthly = (monthlyAttr && monthlyAttr !== "0") ? parseInt(monthlyAttr, 10) : Math.round(daily * 30);
+
+                        if (mode === 'harian') {
+                            displayPrice.innerHTML = `Rp ${new Intl.NumberFormat('id-ID').format(daily)}<span class="text-xs md:text-sm font-normal text-gray-500">/hari</span>`;
+                        } else if (mode === 'mingguan') {
+                            displayPrice.innerHTML = `Rp ${new Intl.NumberFormat('id-ID').format(weekly)}<span class="text-xs md:text-sm font-normal text-gray-500">/minggu</span>`;
+                        } else if (mode === 'bulanan') {
+                            displayPrice.innerHTML = `Rp ${new Intl.NumberFormat('id-ID').format(monthly)}<span class="text-xs md:text-sm font-normal text-gray-500">/bulan</span>`;
+                        }
+                    }
+
+                    // 2. Update Hitung Mundur Tabungan
+                    if (displayTabungan) {
+                        const attrTabungan = displayTabungan.getAttribute('data-days');
+                        const days = (attrTabungan !== null && attrTabungan !== "") ? parseFloat(attrTabungan) : 90;
+                        if (mode === 'harian') {
+                            displayTabungan.textContent = `${Math.round(days)} Hari`;
+                        } else if (mode === 'mingguan') {
+                            const weeks = Math.round(days / 7);
+                            displayTabungan.textContent = `${weeks} Minggu`;
+                        } else if (mode === 'bulanan') {
+                            const months = Math.round(days / 30);
+                            displayTabungan.textContent = `${months} Bulan`;
+                        }
+                    }
+
+                    // 3. Update Hitung Mundur Liburan
+                    if (displayLiburan) {
+                        const attrLiburan = displayLiburan.getAttribute('data-days');
+                        const days = (attrLiburan !== null && attrLiburan !== "") ? parseFloat(attrLiburan) : 180;
+                        if (mode === 'harian') {
+                            displayLiburan.textContent = `${Math.round(days)} Hari`;
+                        } else if (mode === 'mingguan') {
+                            const weeks = Math.round(days / 7);
+                            displayLiburan.textContent = `${weeks} Minggu`;
+                        } else if (mode === 'bulanan') {
+                            const months = Math.round(days / 30);
+                            displayLiburan.textContent = `${months} Bulan`;
+                        }
+                    }
+                });
+            });
+        }
+    });
+</script>
