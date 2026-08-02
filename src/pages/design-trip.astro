@@ -14,20 +14,6 @@ if (clerkUser) {
 
 <Layout title="Rancang Perjalanan Anda - DreamJourney">
     <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
-        <!-- Elemen Latar Belakang (Travel Theme) -->
-        <div class="absolute top-20 -left-10 text-blue-100/60 transform -rotate-12 pointer-events-none">
-            <i data-feather="compass" class="w-64 h-64 md:w-96 md:h-96"></i>
-        </div>
-        <div class="absolute bottom-20 -right-10 text-blue-100/60 transform rotate-12 pointer-events-none">
-            <i data-feather="map" class="w-64 h-64 md:w-96 md:h-96"></i>
-        </div>
-        <div class="absolute top-1/3 right-10 text-blue-100/40 transform rotate-45 pointer-events-none">
-            <i data-feather="send" class="w-32 h-32 md:w-48 md:h-48"></i>
-        </div>
-        <div class="absolute bottom-1/3 left-10 text-blue-100/40 pointer-events-none">
-            <i data-feather="sun" class="w-32 h-32 md:w-48 md:h-48"></i>
-        </div>
-
         <div class="container mx-auto px-4 w-11/12 lg:w-3/4 max-w-5xl relative z-10">
             <div class="text-center mb-6 md:mb-10">
                 <span class="inline-block px-4 py-1.5 md:px-5 md:py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-3 md:mb-4 text-[10px] md:text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>

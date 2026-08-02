@@ -1,5 +1,24 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
+import { fetchCachedCSV } from '../../../lib/fetchCache';
+
+function parseCSVRow(r: string) {
+    const result = [];
+    let curVal = '';
+    let inQuotes = false;
+    for (let i = 0; i < r.length; i++) {
+        if (r[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (r[i] === ',' && !inQuotes) {
+            result.push(curVal.trim());
+            curVal = '';
+        } else {
+            curVal += r[i];
+        }
+    }
+    result.push(curVal.trim());
+    return result;
+}
 
 export const POST: APIRoute = async ({ request }) => {
     try {
@@ -19,6 +38,48 @@ export const POST: APIRoute = async ({ request }) => {
                 success: false, 
                 error: 'Nominal setoran harus berupa angka positif yang valid.' 
             }), { status: 400 });
+        }
+
+        // 1. Verifikasi ID & PIN Mitra dari Spreadsheet Google Sheet
+        try {
+            const mitraCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1iF_gSErDUz9kMnDiSSgySE1gePeoFRmTdRffdQ4A9ys/export?format=csv');
+            const mitraRows = mitraCsvText.split('\n');
+            if (mitraRows.length > 0) {
+                const headers = parseCSVRow(mitraRows[0]);
+                const idxId = headers.findIndex(h => h.toLowerCase().includes('id'));
+                const idxPin = headers.findIndex(h => h.toLowerCase().includes('pin') || h.toLowerCase().includes('sandi') || h.toLowerCase().includes('pass'));
+                
+                let foundMitraRow: any = null;
+                mitraRows.slice(1).forEach(row => {
+                    if (!row.trim()) return;
+                    const cols = parseCSVRow(row);
+                    const mId = (cols[idxId !== -1 ? idxId : 1] || '').trim();
+                    if (mId.toLowerCase() === mitraId.trim().toLowerCase()) {
+                        foundMitraRow = {
+                            id: mId,
+                            pin: (cols[idxPin !== -1 ? idxPin : 8] || '').trim()
+                        };
+                    }
+                });
+
+                if (!foundMitraRow) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: `ID Mitra "${mitraId}" tidak terdaftar di database spreadsheet Mitra.`
+                    }), { status: 404 });
+                }
+
+                if (foundMitraRow && foundMitraRow.pin) {
+                    if (!mitraPin || mitraPin.trim() !== foundMitraRow.pin) {
+                        return new Response(JSON.stringify({
+                            success: false,
+                            error: `PIN Keamanan untuk ID Mitra "${mitraId}" salah. Mohon masukkan PIN yang sesuai.`
+                        }), { status: 401 });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Mitra PIN verification sheet check:", e);
         }
 
         // 1. Cari Target di Database Supabase
@@ -43,8 +104,7 @@ export const POST: APIRoute = async ({ request }) => {
         const { error: updateError } = await supabase
             .from('goals')
             .update({ 
-                saved_amount: newSavedAmount,
-                updated_at: new Date().toISOString()
+                saved_amount: newSavedAmount
             })
             .eq('id', goalId);
 

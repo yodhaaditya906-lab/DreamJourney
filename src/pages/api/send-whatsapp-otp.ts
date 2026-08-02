@@ -26,10 +26,15 @@ export const POST: APIRoute = async ({ request }) => {
     const FONNTE_TOKEN = import.meta.env.FONNTE_TOKEN;
     let sentRealMsg = false;
 
+    let targetPhone = cleanPhone;
+    if (targetPhone.startsWith('0')) {
+      targetPhone = '62' + targetPhone.slice(1);
+    }
+
     if (FONNTE_TOKEN) {
       try {
         const formData = new FormData();
-        formData.append('target', cleanPhone);
+        formData.append('target', targetPhone);
         formData.append('message', `[DreamJourney] Kode OTP verifikasi WhatsApp Anda adalah: ${otpCode}. Berlaku selama 5 menit. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN.`);
 
         const res = await fetch('https://api.fonnte.com/send', {
@@ -42,6 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
         const fonnteRes = await res.json();
         if (fonnteRes.status) {
           sentRealMsg = true;
+        } else {
+          console.warn("Fonnte API response false:", fonnteRes);
         }
       } catch (err) {
         console.warn("Gagal mengirim via Fonnte WA Gateway, beralih ke simulasi:", err);

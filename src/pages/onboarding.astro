@@ -28,6 +28,7 @@ if (!userId) {
                         <p class="text-xs text-gray-500 mb-2">Nama sesuai Kartu Identitas / KTP</p>
                         <input type="text" name="fullName" id="fullName" required minlength="2" placeholder="Contoh: Budi Santoso" 
                             class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">
+                        <p id="fullname-error" class="text-xs mt-2 font-medium text-red-600 hidden"></p>
                     </div>
 
                     <div>
@@ -43,6 +44,7 @@ if (!userId) {
                         <p class="text-xs text-gray-500 mb-2">Pilih kota tempat Anda tinggal saat ini</p>
                         <input type="text" name="domisili" id="domisili" required placeholder="Contoh: Jakarta Selatan" 
                             class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">
+                        <p id="domisili-error" class="text-xs mt-2 font-medium text-red-600 hidden"></p>
                     </div>
 
                     <div>
@@ -57,11 +59,11 @@ if (!userId) {
                     <div class="pt-1">
                         <label for="whatsapp" class="block text-sm font-semibold text-gray-700">Nomor WhatsApp</label>
                         <p class="text-xs text-gray-500 mb-2">Diperlukan untuk koordinasi & notifikasi rencana liburan</p>
-                        <div class="relative flex items-center">
-                            <span class="absolute left-3.5 text-gray-500 font-semibold text-sm select-none pointer-events-none">+62</span>
-                            <input type="tel" name="whatsapp" id="whatsapp" required placeholder="81234567890" 
-                                class="appearance-none block w-full pl-13 pr-28 py-3 border border-gray-300 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition">
-                            <button type="button" id="send-otp-btn" class="absolute right-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                        <div class="relative flex items-center bg-[#edf3fb] border border-[#d2def0] rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition">
+                            <span class="pl-3.5 pr-1 text-[#566882] font-semibold text-sm select-none pointer-events-none">+62</span>
+                            <input type="tel" name="whatsapp" id="whatsapp" required placeholder="85779132226" 
+                                class="appearance-none bg-transparent w-full py-2 px-1 text-gray-900 font-semibold placeholder-gray-400 focus:outline-none text-base tracking-wide">
+                            <button type="button" id="send-otp-btn" class="px-4 py-2.5 bg-[#009b67] hover:bg-[#008558] text-white font-bold text-xs sm:text-sm rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0 cursor-pointer">
                                 <span>Kirim OTP</span>
                             </button>
                         </div>
@@ -69,31 +71,31 @@ if (!userId) {
                     </div>
 
                     <!-- Container Input Kode OTP (Hidden Secara Default) -->
-                    <div id="otp-container" class="hidden bg-emerald-50/90 border border-emerald-200 rounded-xl p-4 space-y-3 transition-all">
+                    <div id="otp-container" class="hidden bg-[#eafaf1] border border-[#a8f0cc] rounded-2xl p-4 sm:p-5 space-y-3 transition-all">
                         <div class="flex items-center justify-between">
-                            <label for="otp-code" class="block text-xs font-bold text-emerald-900 uppercase tracking-wider">Masukkan Kode OTP WA</label>
+                            <label for="otp-code" class="block text-xs font-bold text-[#005c3e] uppercase tracking-wider">MASUKKAN KODE OTP WA</label>
                             <span id="otp-timer" class="text-xs font-semibold text-emerald-700"></span>
                         </div>
 
                         <!-- Banner Mode Simulasi (Muncul jika tidak ada gateway WA terpasang) -->
-                        <div id="simulated-otp-banner" class="hidden bg-amber-100/90 border border-amber-300 rounded-lg p-2.5 text-xs text-amber-900 flex items-start gap-2">
+                        <div id="simulated-otp-banner" class="hidden bg-amber-100/90 border border-amber-300 rounded-xl p-2.5 text-xs text-amber-900 flex items-start gap-2">
                             <span class="text-base leading-none">💡</span>
                             <div>
                                 <strong class="font-bold">Mode Simulasi OTP:</strong> Kode Anda adalah <span id="simulated-otp-code" class="font-mono font-bold text-amber-950 underline text-sm"></span>
                             </div>
                         </div>
 
-                        <div class="flex gap-2">
+                        <div class="flex gap-2.5 items-center">
                             <input type="text" id="otp-code" maxlength="6" placeholder="6 Digit Kode" 
-                                class="tracking-widest font-mono text-center font-bold text-lg block w-full px-3 py-2 border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                            <button type="button" id="verify-otp-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition whitespace-nowrap">
+                                class="tracking-widest font-mono text-center font-bold text-lg block w-full px-3 py-2.5 border-2 border-[#00a86b] rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-gray-900 placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-400">
+                            <button type="button" id="verify-otp-btn" class="px-5 py-3 bg-[#009b67] hover:bg-[#008558] text-white font-bold text-sm rounded-xl transition whitespace-nowrap shadow-xs cursor-pointer">
                                 Verifikasi
                             </button>
                         </div>
                     </div>
 
                     <div class="pt-3">
-                        <button type="submit" id="submit-btn" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all cursor-pointer">
+                        <button type="submit" id="submit-btn" disabled class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-2xl text-base font-bold text-[#68768a] bg-[#cbd3df] transition-all cursor-not-allowed">
                             Simpan & Mulai Menabung
                         </button>
                     </div>
@@ -268,7 +270,7 @@ if (!userId) {
             whatsappInput.disabled = true;
             sendOtpBtn.disabled = true;
             sendOtpBtn.innerHTML = '<span>Verified ✓</span>';
-            sendOtpBtn.className = 'absolute right-2 px-3 py-2 bg-green-100 text-green-700 font-bold text-xs rounded-lg flex items-center gap-1 cursor-default';
+            sendOtpBtn.className = 'px-4 py-2.5 bg-green-100 text-green-700 font-bold text-xs sm:text-sm rounded-xl flex items-center gap-1 cursor-default shrink-0';
 
             whatsappStatus.className = 'text-xs mt-2 font-bold text-emerald-600 flex items-center gap-1';
             whatsappStatus.innerText = '✅ Nomor WhatsApp telah terverifikasi!';
@@ -276,6 +278,12 @@ if (!userId) {
 
             otpContainer.classList.add('hidden');
             clearInterval(timerInterval);
+
+            // Aktifkan dan ubah warna tombol submit ke biru setelah OTP terverifikasi
+            if (btn) {
+                btn.disabled = false;
+                btn.className = 'w-full flex justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-md text-base font-bold text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all cursor-pointer';
+            }
         };
 
         const startResendTimer = (seconds: number = 60) => {
@@ -379,47 +387,126 @@ if (!userId) {
                 if (res.ok && data.success) {
                     markWhatsappVerified();
                 } else {
-                    whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600';
-                    whatsappStatus.innerText = `❌ ${data.error || 'Kode OTP salah.'}`;
+                    whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-red-50 p-2.5 rounded-lg border border-red-200';
+                    const errorMsg = data.error || 'Kode OTP tidak sesuai atau sudah kadaluwarsa.';
+                    whatsappStatus.innerHTML = `
+                        <div class="flex items-center gap-1.5 flex-1">
+                            <span>❌ ${errorMsg}</span>
+                        </div>
+                        <button type="button" id="retry-send-otp-btn" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-md transition shadow-xs whitespace-nowrap cursor-pointer">
+                            <span>🔄 Minta Kode Baru</span>
+                        </button>
+                    `;
                     whatsappStatus.classList.remove('hidden');
                     verifyOtpBtn.disabled = false;
                     verifyOtpBtn.innerText = 'Verifikasi';
+
+                    const retryBtn = document.getElementById('retry-send-otp-btn');
+                    if (retryBtn) {
+                        retryBtn.addEventListener('click', () => {
+                            sendOtpBtn.disabled = false;
+                            sendOtpBtn.click();
+                        });
+                    }
                 }
             } catch (err) {
-                whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600';
-                whatsappStatus.innerText = '❌ Terjadi kesalahan saat memverifikasi OTP.';
+                whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-red-50 p-2.5 rounded-lg border border-red-200';
+                whatsappStatus.innerHTML = `
+                    <div class="flex items-center gap-1.5 flex-1">
+                        <span>❌ Terjadi kesalahan saat memverifikasi OTP.</span>
+                    </div>
+                    <button type="button" id="retry-send-otp-btn" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-md transition shadow-xs whitespace-nowrap cursor-pointer">
+                        <span>🔄 Minta Kode Baru</span>
+                    </button>
+                `;
                 whatsappStatus.classList.remove('hidden');
                 verifyOtpBtn.disabled = false;
                 verifyOtpBtn.innerText = 'Verifikasi';
+
+                const retryBtn = document.getElementById('retry-send-otp-btn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', () => {
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.click();
+                    });
+                }
             }
         });
+
+        const fullnameError = document.getElementById('fullname-error') as HTMLParagraphElement;
+        const domisiliError = document.getElementById('domisili-error') as HTMLParagraphElement;
+        const domisiliInput = document.getElementById('domisili') as HTMLInputElement;
 
         // Form Submit
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!validateDob()) {
-                errorAlert.innerText = "Maaf, Anda harus berusia minimal 17 tahun untuk mendaftar.";
-                errorAlert.classList.remove('hidden');
+            if (fullnameError) fullnameError.classList.add('hidden');
+            if (domisiliError) domisiliError.classList.add('hidden');
+            if (errorAlert) errorAlert.classList.add('hidden');
+
+            const fullName = fullNameInput.value.trim();
+            const username = usernameInput.value.trim();
+            const domisili = domisiliInput ? domisiliInput.value.trim() : '';
+            const dob = dobInput ? dobInput.value.trim() : '';
+
+            // 1. Validasi Nama Lengkap
+            if (!fullName || fullName.length < 2) {
+                if (fullnameError) {
+                    fullnameError.innerText = "❌ Nama Lengkap wajib diisi (minimal 2 karakter).";
+                    fullnameError.classList.remove('hidden');
+                }
+                fullNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                fullNameInput.focus();
                 return;
             }
 
-            if (!isUsernameValid) {
-                errorAlert.innerText = "Silakan gunakan username yang tersedia sebelum melanjutkan.";
-                errorAlert.classList.remove('hidden');
+            // 2. Validasi Username
+            if (!username || !isUsernameValid) {
+                usernameStatus.className = 'text-xs mt-2 font-medium text-red-600';
+                usernameStatus.innerText = '❌ Silakan gunakan username yang valid & tersedia.';
+                usernameStatus.classList.remove('hidden');
+                usernameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                usernameInput.focus();
                 return;
             }
 
+            // 3. Validasi Domisili
+            if (!domisili) {
+                if (domisiliError) {
+                    domisiliError.innerText = "❌ Domisili Kota wajib diisi.";
+                    domisiliError.classList.remove('hidden');
+                }
+                if (domisiliInput) {
+                    domisiliInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    domisiliInput.focus();
+                }
+                return;
+            }
+
+            // 4. Validasi Tanggal Lahir (17 tahun)
+            if (!dob || !validateDob()) {
+                if (dobError) {
+                    dobError.innerText = "❌ Maaf, Anda harus berusia minimal 17 tahun untuk mendaftar.";
+                    dobError.classList.remove('hidden');
+                }
+                if (dobInput) {
+                    dobInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    dobInput.focus();
+                }
+                return;
+            }
+
+            // 5. Validasi WhatsApp OTP
             if (!isWhatsappVerified) {
-                errorAlert.innerText = "Silakan masukkan nomor WhatsApp dan lakukan verifikasi OTP terlebih dahulu.";
-                errorAlert.classList.remove('hidden');
+                whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600 flex items-center gap-1';
+                whatsappStatus.innerText = '❌ Silakan masukkan nomor WhatsApp dan lakukan verifikasi OTP terlebih dahulu.';
+                whatsappStatus.classList.remove('hidden');
+                whatsappInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                whatsappInput.focus();
                 return;
             }
             
-            const fullName = fullNameInput.value.trim();
-            const username = usernameInput.value.trim();
-            const domisili = (document.getElementById('domisili') as HTMLInputElement).value.trim();
-            const dob = dobInput.value.trim();
             const whatsapp = getFullWhatsappNumber();
             
             errorAlert.classList.add('hidden');

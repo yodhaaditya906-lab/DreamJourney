@@ -406,192 +406,174 @@ const redirectUrl = '/setup-saving?' + new URLSearchParams({
                 </div>
 
                 <!-- Kolom Bawah (Statistik, Deskripsi & Fasilitas) -->
-                <div class="mt-10 pt-8 border-t border-gray-100">
-                    <!-- Dynamic Package Stats Card (Sebelum Deskripsi Paket) -->
-                    <div class="mb-8 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 p-5 md:p-6 rounded-2xl border border-blue-100/80 shadow-xs">
+                <div class="mt-10 pt-8 border-t border-slate-200/60">
+                    <!-- Dynamic Package Stats (Informasi & Timeline Paket) -->
+                    <div class="mb-10">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-                            <h3 class="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <h3 class="text-lg md:text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
                                 Informasi & Timeline Paket
                             </h3>
 
                             <!-- Secondary Frequency Toggle Switcher -->
-                            <div class="freq-switcher flex items-center p-1 bg-white rounded-xl border border-gray-200/80 shadow-xs max-w-xs">
-                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all bg-white text-blue-700 shadow-xs cursor-pointer text-center" data-mode="harian">Harian</button>
-                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="mingguan">Mingguan</button>
-                                <button type="button" class="freq-btn flex-1 py-1 px-2.5 rounded-lg text-xs font-bold transition-all text-gray-500 hover:text-gray-900 cursor-pointer text-center" data-mode="bulanan">Bulanan</button>
+                            <div class="freq-switcher flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/70 max-w-xs">
+                                <button type="button" class="freq-btn flex-1 py-1 px-3 rounded-lg text-xs font-bold transition-all bg-white text-primary shadow-2xs cursor-pointer text-center" data-mode="harian">Harian</button>
+                                <button type="button" class="freq-btn flex-1 py-1 px-3 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900 cursor-pointer text-center" data-mode="mingguan">Mingguan</button>
+                                <button type="button" class="freq-btn flex-1 py-1 px-3 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900 cursor-pointer text-center" data-mode="bulanan">Bulanan</button>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 md:gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
                             <!-- 1. Hitung Mundur Tabungan -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <span id="label-countdown-tabungan" class="text-xs font-bold text-gray-500 uppercase tracking-wider">1. Hitung Mundur Tabungan</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span id="label-countdown-tabungan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">1. Hitung Mundur Tabungan</span>
                                 </div>
-                                <p id="display-countdown-tabungan" class="text-base md:text-lg font-bold text-gray-900 mt-0.5" data-days={pkg.rawTabunganNumber}>{pkg.hitungMundurTabungan}</p>
+                                <p id="display-countdown-tabungan" class="text-base md:text-lg font-bold text-slate-900 mt-0.5" data-days={pkg.rawTabunganNumber}>{pkg.hitungMundurTabungan}</p>
                             </div>
 
                             <!-- 2. Hitung Mundur Liburan -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <span id="label-countdown-liburan" class="text-xs font-bold text-gray-500 uppercase tracking-wider">2. Hitung Mundur Liburan</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span id="label-countdown-liburan" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">2. Hitung Mundur Liburan</span>
                                 </div>
-                                <p id="display-countdown-liburan" class="text-base md:text-lg font-bold text-gray-900 mt-0.5" data-days={pkg.rawLiburanNumber}>{pkg.hitungMundurLiburan}</p>
+                                <p id="display-countdown-liburan" class="text-base md:text-lg font-bold text-slate-900 mt-0.5" data-days={pkg.rawLiburanNumber}>{pkg.hitungMundurLiburan}</p>
                             </div>
 
                             <!-- 3. Tanggal Pergi -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-teal-100 text-teal-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">3. Tanggal Pergi</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">3. Tanggal Pergi</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.tanggalPergi}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.tanggalPergi}</p>
                             </div>
 
                             <!-- 4. Tanggal Pulang -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-rose-100 text-rose-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">4. Tanggal Pulang</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">4. Tanggal Pulang</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.tanggalPulang}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.tanggalPulang}</p>
                             </div>
 
                             <!-- 5. Durasi Liburan -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">5. Durasi Liburan</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">5. Durasi Liburan</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-gray-900 mt-0.5">{pkg.time}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.time}</p>
                             </div>
 
                             <!-- 6. Jumlah Penabung -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">6. Jumlah Penabung</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">6. Jumlah Penabung</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-emerald-600 mt-0.5">{pkg.jumlahMenabung}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.jumlahMenabung}</p>
                             </div>
 
                             <!-- 7. Berhasil Liburan -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-purple-100 text-purple-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">7. Berhasil Liburan</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">7. Berhasil Liburan</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-purple-600 mt-0.5">{pkg.berhasilLiburan}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.berhasilLiburan}</p>
                             </div>
 
                             <!-- 8. Jenis Liburan -->
-                            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-                                <div class="flex items-center gap-2 mb-1.5">
-                                    <div class="p-1.5 bg-orange-100 text-orange-700 rounded-lg">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-2c-.552 0-1-.448-1-1V3" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">8. Jenis Liburan</span>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-2c-.552 0-1-.448-1-1V3" />
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">8. Jenis Liburan</span>
                                 </div>
-                                <p class="text-base md:text-lg font-bold text-orange-600 mt-0.5">{pkg.jenisLiburan}</p>
+                                <p class="text-base md:text-lg font-bold text-slate-900 mt-0.5">{pkg.jenisLiburan}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Deskripsi Paket -->
-                    <div class="mb-8">
-                        <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <!-- Minimalist Deskripsi Paket (No Grey Rigid Box) -->
+                    <div class="mb-10">
+                        <h2 class="text-lg md:text-xl font-bold text-slate-900 mb-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Deskripsi Paket
                         </h2>
-                        <p class="text-gray-700 text-sm md:text-base leading-relaxed bg-gray-50/80 p-5 rounded-2xl border border-gray-200/70">
+                        <p class="text-slate-600 text-sm md:text-base leading-relaxed pl-1">
                             {pkg.desc}
                         </p>
                     </div>
 
-                    <!-- Fasilitas yang Didapat -->
+                    <!-- Minimalist Fasilitas yang Didapat -->
                     <div>
-                        <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <h2 class="text-lg md:text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Fasilitas yang Didapat
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <!-- 1. Transportasi -->
-                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-blue-300 transition-all">
-                                <div class="flex items-center gap-2.5 mb-3">
-                                    <div class="p-2 bg-blue-100 text-blue-700 rounded-xl flex-shrink-0">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                        </svg>
-                                    </div>
-                                    <span class="font-bold text-gray-900 text-base md:text-lg">1. Transportasi</span>
+                            <div class="flex flex-col bg-white p-5 rounded-xl border border-slate-200/70 shadow-2xs">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                    <span class="font-bold text-slate-900 text-base">1. Transportasi</span>
                                 </div>
 
                                 {pkg.transportPergi === '-' && pkg.transportPulang === '-' ? (
-                                    <p class="text-xs md:text-sm font-semibold text-gray-400 italic">Tidak Termasuk</p>
+                                    <p class="text-xs md:text-sm font-semibold text-slate-400 italic">Tidak Termasuk</p>
                                 ) : (
                                     <div class="space-y-3">
                                         <!-- Sub-Bagian A: Keberangkatan -->
                                         <div>
-                                            <h4 class="font-semibold text-gray-900 text-xs md:text-sm mb-0.5">A. Transportasi Keberangkatan</h4>
-                                            <p class="text-xs md:text-sm font-bold text-blue-600 mb-0.5">{pkg.origin} - {pkg.destination}</p>
+                                            <h4 class="font-semibold text-slate-800 text-xs mb-0.5">A. Transportasi Keberangkatan</h4>
+                                            <p class="text-xs font-bold text-primary mb-0.5">{pkg.origin} - {pkg.destination}</p>
                                             {pkg.transportPergiList.length > 0 ? (
                                                 pkg.transportPergiList.map(item => (
-                                                    <p class="text-xs text-gray-600 font-medium leading-relaxed">{item}</p>
+                                                    <p class="text-xs text-slate-600 font-medium leading-relaxed">{item}</p>
                                                 ))
                                             ) : (
-                                                <p class="text-xs text-gray-600 font-medium leading-relaxed">{pkg.transportPergi}</p>
+                                                <p class="text-xs text-slate-600 font-medium leading-relaxed">{pkg.transportPergi}</p>
                                             )}
                                         </div>
 
                                         <!-- Sub-Bagian B: Kepulangan -->
                                         <div>
-                                            <h4 class="font-semibold text-gray-900 text-xs md:text-sm mb-0.5">B. Transportasi Kepulangan</h4>
-                                            <p class="text-xs md:text-sm font-bold text-blue-600 mb-0.5">{pkg.destination} - {pkg.origin}</p>
+                                            <h4 class="font-semibold text-slate-800 text-xs mb-0.5">B. Transportasi Kepulangan</h4>
+                                            <p class="text-xs font-bold text-primary mb-0.5">{pkg.destination} - {pkg.origin}</p>
                                             {pkg.transportPulangList.length > 0 ? (
                                                 pkg.transportPulangList.map(item => (
-                                                    <p class="text-xs text-gray-600 font-medium leading-relaxed">{item}</p>
+                                                    <p class="text-xs text-slate-600 font-medium leading-relaxed">{item}</p>
                                                 ))
                                             ) : (
-                                                <p class="text-xs text-gray-600 font-medium leading-relaxed">{pkg.transportPulang}</p>
+                                                <p class="text-xs text-slate-600 font-medium leading-relaxed">{pkg.transportPulang}</p>
                                             )}
                                         </div>
                                     </div>
@@ -599,31 +581,27 @@ const redirectUrl = '/setup-saving?' + new URLSearchParams({
                             </div>
 
                             <!-- 2. Penginapan -->
-                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-indigo-300 transition-all">
-                                <div class="flex items-center gap-2.5 mb-2.5">
-                                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl flex-shrink-0">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                    </div>
-                                    <span class="font-bold text-gray-900 text-base md:text-lg">2. Penginapan</span>
+                            <div class="flex flex-col bg-white p-5 rounded-xl border border-slate-200/70 shadow-2xs">
+                                <div class="flex items-center gap-2 mb-2.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    <span class="font-bold text-slate-900 text-base">2. Penginapan</span>
                                 </div>
-                                <p class={`text-xs md:text-sm font-medium ${pkg.penginapan === '-' || !pkg.penginapan ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                <p class={`text-xs md:text-sm font-medium ${pkg.penginapan === '-' || !pkg.penginapan ? 'text-slate-400 italic' : 'text-slate-600'}`}>
                                     {pkg.penginapan === '-' || !pkg.penginapan ? 'Tidak Termasuk' : pkg.penginapan}
                                 </p>
                             </div>
 
                             <!-- 3. Wahana -->
-                            <div class="flex flex-col bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs hover:border-emerald-300 transition-all">
-                                <div class="flex items-center gap-2.5 mb-2.5">
-                                    <div class="p-2 bg-emerald-100 text-emerald-700 rounded-xl flex-shrink-0">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <span class="font-bold text-gray-900 text-base md:text-lg">3. Wahana</span>
+                            <div class="flex flex-col bg-white p-5 rounded-xl border border-slate-200/70 shadow-2xs">
+                                <div class="flex items-center gap-2 mb-2.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-bold text-slate-900 text-base">3. Wahana</span>
                                 </div>
-                                <p class={`text-xs md:text-sm font-medium ${pkg.wahana === '-' || !pkg.wahana ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                <p class={`text-xs md:text-sm font-medium ${pkg.wahana === '-' || !pkg.wahana ? 'text-slate-400 italic' : 'text-slate-600'}`}>
                                     {pkg.wahana === '-' || !pkg.wahana ? 'Tidak Termasuk' : pkg.wahana}
                                 </p>
                             </div>

@@ -125,6 +125,57 @@ const wallet = {
     }))
 };
 
+// --- GOAL SUMMARY STATS & COUNTS ---
+const activeGoalsCount = wallet.goals.length;
+const soloGoalsCount = wallet.goals.filter((g: any) => g.tripType === 'Solo' || !g.groupMembers || g.groupMembers.length === 0).length;
+const groupGoalsCount = wallet.goals.filter((g: any) => g.tripType === 'Group' || g.tripType === 'Couple' || (g.groupMembers && g.groupMembers.length > 0)).length;
+const completedGoalsCount = wallet.goals.filter((g: any) => g.savedAmount >= g.targetAmount).length;
+
+// --- FETCH GROUP MEMBERS PROFILES & PROGRESS ---
+let groupMemberProfilesMap = new Map<string, { username: string; fullName: string; avatarUrl: string | null; userGoals: any[] }>();
+const allGroupUsernames = Array.from(new Set(wallet.goals.flatMap((g: any) => g.groupMembers || [])));
+
+if (allGroupUsernames.length > 0) {
+    const { data: dbMembers } = await supabase.from('users').select('id, username, full_name').in('username', allGroupUsernames);
+    if (dbMembers && dbMembers.length > 0) {
+        const memberIds = dbMembers.map(m => m.id);
+        const { data: dbMemberGoals } = await supabase.from('goals').select('user_id, title, saved_amount, target_amount').in('user_id', memberIds);
+
+        const clerkSecretKey = import.meta.env.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY;
+
+        await Promise.all(dbMembers.map(async (m) => {
+            let avatarUrl: string | null = null;
+            let fullName = m.full_name || m.username;
+
+            if (clerkSecretKey && m.id) {
+                try {
+                    const cRes = await fetch(`https://api.clerk.com/v1/users/${m.id}`, {
+                        headers: { 'Authorization': `Bearer ${clerkSecretKey}` }
+                    });
+                    if (cRes.ok) {
+                        const cData = await cRes.json();
+                        avatarUrl = cData.image_url || cData.profile_image_url || null;
+                        if (!fullName || fullName === m.username) {
+                            const combined = `${cData.first_name || ''} ${cData.last_name || ''}`.trim();
+                            if (combined) fullName = combined;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Clerk fetch error for member:", e);
+                }
+            }
+
+            const uGoals = (dbMemberGoals || []).filter(g => g.user_id === m.id);
+            groupMemberProfilesMap.set(m.username.toLowerCase(), {
+                username: m.username,
+                fullName: fullName,
+                avatarUrl: avatarUrl,
+                userGoals: uGoals
+            });
+        }));
+    }
+}
+
 // Calculate total saved amount across all goals
 const totalSaved = wallet.goals.reduce((acc: number, goal: any) => acc + (goal.savedAmount || 0), 0);
 const displayBalance = totalSaved; // Balance reflects total saved
@@ -166,18 +217,25 @@ const activeLentera = lenteras.find(l => l.id === wallet.lenteraId);
 let mitraMap = new Map();
 try {
   const mitraCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1iF_gSErDUz9kMnDiSSgySE1gePeoFRmTdRffdQ4A9ys/export?format=csv');
-  const mitraRows = mitraCsvText.split('\n').slice(1);
-  mitraRows.forEach(row => {
-      if (!row.trim() || row.startsWith(',')) return;
-      const cols = parseCSVRow(row);
-      const id = (cols[1] || '').trim();
-      const name = (cols[2] || '').trim();
-      const waRaw = (cols[4] || '').trim().replace(/[^\d]/g, '');
-      const wa = waRaw.startsWith('0') ? '62' + waRaw.slice(1) : waRaw;
-      if (id) {
-          mitraMap.set(id.toLowerCase(), { id, name, wa });
-      }
-  });
+  const mitraRows = mitraCsvText.split('\n');
+  if (mitraRows.length > 0) {
+      const headers = parseCSVRow(mitraRows[0]);
+      const idxId = headers.findIndex(h => h.toLowerCase().includes('id'));
+      const idxName = headers.findIndex(h => h.toLowerCase().includes('nama'));
+      const idxWa = headers.findIndex(h => h.toLowerCase().includes('wa') || h.toLowerCase().includes('whatsapp') || h.toLowerCase().includes('hp') || h.toLowerCase().includes('telepon'));
+
+      mitraRows.slice(1).forEach(row => {
+          if (!row.trim() || row.startsWith(',')) return;
+          const cols = parseCSVRow(row);
+          const id = (cols[idxId !== -1 ? idxId : 1] || '').trim();
+          const name = (cols[idxName !== -1 ? idxName : 2] || '').trim();
+          const waRaw = (cols[idxWa !== -1 ? idxWa : 4] || '').trim().replace(/[^\d]/g, '');
+          const wa = waRaw.startsWith('0') ? '62' + waRaw.slice(1) : waRaw;
+          if (id) {
+              mitraMap.set(id.toLowerCase(), { id, name, wa });
+          }
+      });
+  }
 } catch (error) {
   console.error("Failed to fetch mitra data:", error);
 }
@@ -207,46 +265,80 @@ try {
 } catch (e) {
   console.error("Failed to fetch package data for departure estimation:", e);
 }
-
 ---
 
 <Layout title="Savings Dashboard - DreamJourney">
-    <main class="pt-20">
-        <section class="py-16 bg-gray-50 min-h-screen">
-            <div class="container mx-auto px-4">
-                <h2 class="text-3xl font-bold mb-10 text-center">📊 Dashboard Tabungan Anda</h2>
+    <main class="pt-20 bg-slate-50/50 min-h-screen">
+        <section class="py-10">
+            <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+                <!-- Dashboard Header Title -->
+                <div class="mb-8 text-center md:text-left">
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard Tabungan</h1>
+                    <p class="text-xs md:text-sm text-slate-500 mt-1">Pantau perkembangan tabungan & rencana perjalanan impian Anda secara real-time.</p>
+                </div>
                 
-                <!-- Balance Card -->
-                <div class="max-w-4xl mx-auto bg-gradient-to-r from-primary to-secondary text-white p-8 rounded-xl shadow-lg mb-8">
-                    <div class="flex flex-col md:flex-row justify-between items-center">
-                        <div class="mb-4 md:mb-0">
-                            <h3 class="font-bold text-xl opacity-90">TOTAL TABUNGAN</h3>
-                            <div class="text-4xl font-bold mt-2">{formatRp(displayBalance)}</div>
+                <!-- Financial Summary Balance Card & Sub-Stats -->
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-sm mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Tabungan Tersimpan</span>
+                            <div class="text-3xl md:text-4xl font-black text-primary tracking-tight">{formatRp(displayBalance)}</div>
+                        </div>
+                        <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-primary px-4 py-2 rounded-xl text-xs font-bold shadow-2xs">
+                            <i data-feather="shield-check" class="w-4 h-4"></i>
+                            <span>Dana Tersimpan Aman & Terverifikasi</span>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Detail Perjalanan (Sub-Stats Grid) -->
+                    <div class="pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Aktif</span>
+                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{activeGoalsCount} Perjalanan</span>
+                        </div>
+                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Solo Trip</span>
+                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{soloGoalsCount} Target</span>
+                        </div>
+                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tim / Group</span>
+                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{groupGoalsCount} Target</span>
+                        </div>
+                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tercapai 100%</span>
+                            <span class="text-sm md:text-base font-extrabold text-emerald-600 mt-0.5 block">{completedGoalsCount} Target</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    <!-- Active Savings -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                        <h3 class="font-bold text-xl mb-6 flex items-center">
-                            <i data-feather="target" class="mr-2 text-primary"></i> Target Aktif
-                        </h3>
+                <!-- Main Content Grid (70% Target Aktif / 30% Riwayat Aktivitas) -->
+                <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 lg:gap-8 mb-12">
+                    
+                    <!-- LEFT COLUMN: Target Aktif (70% Width) -->
+                    <div class="lg:col-span-7 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                            <h3 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2.5">
+                                <i data-feather="target" class="w-5 h-5 text-primary"></i> Target Aktif
+                            </h3>
+                            
+                            <!-- Filter Buttons for Target Aktif -->
+                            <div id="goal-filter-switcher" class="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/70 text-xs font-semibold">
+                                <button type="button" class="goal-filter-btn flex-1 px-2.5 py-1 rounded-lg transition-all bg-white text-primary font-bold shadow-2xs cursor-pointer text-center" data-filter="all">Semua ({activeGoalsCount})</button>
+                                <button type="button" class="goal-filter-btn flex-1 px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-900 cursor-pointer text-center" data-filter="solo">Solo ({soloGoalsCount})</button>
+                                <button type="button" class="goal-filter-btn flex-1 px-2.5 py-1 rounded-lg transition-all text-slate-500 hover:text-slate-900 cursor-pointer text-center" data-filter="group">Tim ({groupGoalsCount})</button>
+                            </div>
+                        </div>
                         
-                        <div class="space-y-6">
+                        <div id="goals-list-container" class="space-y-6">
                             {wallet.goals.length === 0 ? (
-                                <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                                    <i data-feather="flag" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                                    <p>Belum ada target liburan.</p>
-                                    <a href="/packages" class="text-primary font-semibold hover:underline mt-2 inline-block">Cari Paket Liburan!</a>
+                                <div class="text-center py-10 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                    <i data-feather="flag" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
+                                    <p class="text-sm font-semibold">Belum ada target liburan aktif.</p>
+                                    <a href="/packages" class="text-xs text-primary font-bold hover:underline mt-2 inline-block">Mulai Rencanakan Liburan Sekarang →</a>
                                 </div>
                             ) : (
                                 wallet.goals.map((goal: any, index: number) => {
                                     const percentage = Math.min(100, Math.round((goal.savedAmount / goal.targetAmount) * 100));
-                                    const colors = ['bg-primary text-primary', 'bg-secondary text-secondary', 'bg-accent text-accent', 'bg-green-500 text-green-500'];
-                                    const colorPair = colors[index % colors.length].split(' ');
-                                    const bgClass = colorPair[0];
-                                    const textClass = colorPair[1];
 
                                     // --- ESTIMATION CALCULATION ---
                                     const remainingAmount = Math.max(0, goal.targetAmount - goal.savedAmount);
@@ -315,14 +407,14 @@ try {
                                         if (hasSavedToday) {
                                             depositStatusBadge = {
                                                 text: 'Sudah Menabung Hari Ini',
-                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
                                                 icon: 'check-circle',
                                                 isWarning: false
                                             };
                                         } else {
                                             depositStatusBadge = {
                                                 text: 'Belum Menabung Hari Ini',
-                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
                                                 icon: 'alert-circle',
                                                 isWarning: true
                                             };
@@ -343,14 +435,14 @@ try {
                                         if (hasSavedThisWeek) {
                                             depositStatusBadge = {
                                                 text: 'Sudah Menabung Minggu Ini',
-                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
                                                 icon: 'check-circle',
                                                 isWarning: false
                                             };
                                         } else {
                                             depositStatusBadge = {
                                                 text: 'Belum Menabung Minggu Ini',
-                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
                                                 icon: 'alert-circle',
                                                 isWarning: true
                                             };
@@ -364,20 +456,19 @@ try {
                                         if (hasSavedThisMonth) {
                                             depositStatusBadge = {
                                                 text: 'Sudah Menabung Bulan Ini',
-                                                colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
                                                 icon: 'check-circle',
                                                 isWarning: false
                                             };
                                         } else {
                                             depositStatusBadge = {
                                                 text: 'Belum Menabung Bulan Ini',
-                                                colorClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
                                                 icon: 'alert-circle',
                                                 isWarning: true
                                             };
                                         }
                                     } else {
-                                        // Acak (Sesuka Hati)
                                         if (lastDepositDate) {
                                             const diffMs = now.getTime() - lastDepositDate.getTime();
                                             const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -389,36 +480,51 @@ try {
 
                                             depositStatusBadge = {
                                                 text: `Terakhir Menabung: ${dateFormatted}`,
-                                                colorClass: 'bg-blue-50 text-blue-700 border-blue-200',
+                                                colorClass: 'bg-slate-50 text-slate-700 border-slate-200',
                                                 icon: 'clock',
                                                 isWarning: false
                                             };
                                         } else {
                                             depositStatusBadge = {
                                                 text: 'Terakhir Menabung: Belum ada setoran',
-                                                colorClass: 'bg-slate-100 text-slate-600 border-slate-200',
+                                                colorClass: 'bg-slate-50 text-slate-600 border-slate-200',
                                                 icon: 'clock',
                                                 isWarning: false
                                             };
                                         }
                                     }
 
+                                    const isGroupTrip = goal.tripType === 'Group' || goal.tripType === 'Couple' || (goal.groupMembers && goal.groupMembers.length > 0);
+
                                     return (
-                                        <div class="group relative">
-                                            <div class="flex justify-between mb-2">
-                                                <span class="font-semibold text-gray-800">{goal.title}</span>
-                                                <span class={`${textClass} font-bold`}>{percentage}%</span>
+                                        <div class="goal-item-card" data-trip-type={isGroupTrip ? 'group' : 'solo'}>
+                                            {index > 0 && (
+                                                <div class="my-8 relative flex items-center justify-center">
+                                                    <div class="w-full border-t-2 border-dashed border-slate-200"></div>
+                                                    <div class="absolute bg-white px-3 py-0.5 text-slate-400 text-xs font-semibold flex items-center gap-1.5 rounded-full border border-slate-200/80 shadow-2xs">
+                                                        <i data-feather="scissors" class="w-3.5 h-3.5 transform -rotate-90 text-slate-400"></i>
+                                                        <span class="text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">Potong Di Sini</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div class="flex justify-between items-baseline mb-2">
+                                                <h4 class="font-bold text-slate-900 text-base">{goal.title}</h4>
+                                                <span class="text-sm font-extrabold text-primary">{percentage}%</span>
                                             </div>
-                                            <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
-                                                <div class={`${bgClass} h-3 rounded-full transition-all duration-1000`} style={`width: ${percentage}%`}></div>
+
+                                            <div class="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden">
+                                                <div class="bg-primary h-2.5 rounded-full transition-all duration-700" style={`width: ${percentage}%`}></div>
                                             </div>
-                                            <div class="flex justify-between mt-1 text-sm text-gray-500">
+
+                                            <div class="flex justify-between items-center text-xs text-slate-500 mb-3">
                                                 <span>{formatRp(goal.savedAmount)} / {formatRp(goal.targetAmount)}</span>
-                                                <span class="bg-gray-100 px-2 py-0.5 rounded text-xs">{freqBadgeText}</span>
+                                                <span class="font-semibold text-slate-600">{freqBadgeText}</span>
                                             </div>
                                             
-                                            <div class="mt-2 bg-blue-50 text-blue-800 text-xs px-3 py-2 rounded-lg flex items-center border border-blue-100">
-                                                <i data-feather="calendar" class="w-3.5 h-3.5 mr-2"></i>
+                                            <!-- Estimasi Keberangkatan Box -->
+                                            <div class="mt-2 bg-slate-50 text-slate-700 text-xs px-3.5 py-2.5 rounded-xl flex items-center border border-slate-200/70 font-medium">
+                                                <i data-feather="calendar" class="w-3.5 h-3.5 mr-2 text-primary"></i>
                                                 {hasSheetDeparture ? (
                                                     <span>Estimasi Keberangkatan: <strong>{sheetDisplayDate}</strong> ({pkgInfo.hitungMundur} hari lagi)</span>
                                                 ) : percentage >= 100 ? (
@@ -431,58 +537,132 @@ try {
                                             </div>
                                             
                                             <!-- Status Menabung Indicator Badge -->
-                                            <div class={`mt-2 text-xs px-3 py-2 rounded-lg flex items-center justify-between border font-bold ${depositStatusBadge.colorClass}`}>
-                                                <div class="flex items-center gap-1.5">
-                                                    <i data-feather={depositStatusBadge.icon} class="w-3.5 h-3.5"></i>
-                                                    <span>Status Tabungan: <strong>{depositStatusBadge.text}</strong></span>
+                                            <div class={`mt-2 text-xs px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 border font-bold whitespace-nowrap overflow-hidden ${depositStatusBadge.colorClass}`}>
+                                                <div class="flex items-center gap-1.5 min-w-0 truncate whitespace-nowrap">
+                                                    <i data-feather={depositStatusBadge.icon} class="w-4 h-4 shrink-0"></i>
+                                                    <span class="truncate whitespace-nowrap">Status Tabungan: <strong>{depositStatusBadge.text}</strong></span>
                                                 </div>
                                                 {depositStatusBadge.isWarning && (
-                                                    <span class="text-[10px] uppercase tracking-wider bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded font-extrabold">Waktunya Setor!</span>
+                                                    <span class="shrink-0 text-[10px] uppercase tracking-wider bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-extrabold whitespace-nowrap">Waktunya Setor</span>
                                                 )}
                                             </div>
                                             
+                                            <!-- Clean Neutral Tags for Trip Details -->
                                             <div class="flex flex-wrap gap-2 mt-3">
-                                                {goal.tripType === 'Group' || goal.tripType === 'Couple' ? (
-                                                    <span class="bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
-                                                        <i data-feather="users" class="w-3 h-3 mr-1"></i> {goal.tripType} Trip
-                                                    </span>
-                                                ) : (
-                                                    <span class="bg-gray-100 text-gray-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
-                                                        <i data-feather="user" class="w-3 h-3 mr-1"></i> {goal.tripType === 'Solo' ? 'Solo' : goal.tripType} Trip
-                                                    </span>
-                                                )}
+                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
+                                                    <i data-feather={goal.tripType === 'Solo' ? 'user' : 'users'} class="w-3 h-3 mr-1 text-slate-500"></i>
+                                                    {goal.tripType === 'Solo' ? 'Solo' : goal.tripType} Trip
+                                                </span>
                                                 
-                                                {goal.savingType?.toLowerCase().includes('investasi') ? (
-                                                    <span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
-                                                        <i data-feather="trending-up" class="w-3 h-3 mr-1"></i> {goal.savingType}
-                                                    </span>
-                                                ) : (
-                                                    <span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
-                                                        <i data-feather="box" class="w-3 h-3 mr-1"></i> {goal.savingType || 'Konvensional'}
-                                                    </span>
-                                                )}
+                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
+                                                    <i data-feather="box" class="w-3 h-3 mr-1 text-slate-500"></i>
+                                                    {goal.savingType || 'Konvensional'}
+                                                </span>
                                                 
-                                                <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded-full font-bold flex items-center">
-                                                    <i data-feather={goal.paymentMethod === 'Cash' ? 'briefcase' : 'credit-card'} class="w-3 h-3 mr-1"></i> 
+                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
+                                                    <i data-feather={goal.paymentMethod === 'Cash' ? 'briefcase' : 'credit-card'} class="w-3 h-3 mr-1 text-slate-500"></i> 
                                                     {goal.paymentMethod === 'Cash' ? 'Mitra' : 'Cashless'}: {goal.paymentDetail ? goal.paymentDetail.split('|||')[0] : '-'}
                                                 </span>
                                             </div>
 
+                                            <!-- Group Members Section (Vertical List) -->
                                             {goal.groupMembers && goal.groupMembers.length > 0 && (
-                                                <div class="mt-3 text-xs text-gray-600 bg-gray-50/80 px-3 py-2 rounded-lg border border-gray-100">
-                                                    <span class="font-bold text-gray-800">Anggota Grup:</span> {goal.groupMembers.map((m: string) => `@${m}`).join(', ')}
+                                                <div class="mt-4 bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/70 space-y-3">
+                                                    <div class="flex items-center justify-between">
+                                                        <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                                                            <i data-feather="users" class="w-3.5 h-3.5 text-primary"></i>
+                                                            Anggota Tim ({goal.groupMembers.length + 1} Orang)
+                                                        </h4>
+                                                        <span class="text-[10px] font-bold text-slate-400">Progress Tabungan</span>
+                                                    </div>
+
+                                                    <div class="space-y-2 divide-y divide-slate-200/60">
+                                                        {/* Render Current Logged-in User First */}
+                                                        {(() => {
+                                                            const currentUserSaved = goal.savedAmount || 0;
+                                                            const target = goal.targetAmount || 1;
+                                                            const currentPct = Math.min(100, Math.round((currentUserSaved / target) * 100));
+                                                            const userFullName = clerkUser?.fullName || user?.full_name || 'Saya';
+                                                            const userAvatar = clerkUser?.imageUrl || null;
+                                                            const userHandle = `@${user?.username || clerkUser?.username || 'saya'}`;
+
+                                                            return (
+                                                                <div class="flex items-center justify-between gap-3 pt-1">
+                                                                    <div class="flex items-center gap-2.5 min-w-0">
+                                                                        {userAvatar ? (
+                                                                            <img src={userAvatar} alt={userFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
+                                                                        ) : (
+                                                                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                                                                {userFullName.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                        )}
+                                                                        <div class="min-w-0">
+                                                                            <p class="text-xs font-bold text-slate-900 truncate flex items-center gap-1">
+                                                                                <span>{userFullName}</span>
+                                                                                <span class="bg-blue-50 text-primary text-[9px] px-1.5 py-0.2 rounded font-extrabold border border-blue-100">Saya</span>
+                                                                            </p>
+                                                                            <p class="text-[10px] text-slate-400 truncate">{userHandle}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-right shrink-0">
+                                                                        <span class="text-xs font-extrabold text-primary">{currentPct}%</span>
+                                                                        <p class="text-[10px] text-slate-500 font-medium">{formatRp(currentUserSaved)}</p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {/* Render Other Group Members Vertically */}
+                                                        {goal.groupMembers.map((memberUsername: string) => {
+                                                            const profile = groupMemberProfilesMap.get(memberUsername.toLowerCase());
+                                                            const mFullName = profile?.fullName || `@${memberUsername}`;
+                                                            const mAvatar = profile?.avatarUrl || null;
+                                                            
+                                                            let mSaved = 0;
+                                                            if (profile && profile.userGoals) {
+                                                                const matched = profile.userGoals.find((g: any) => g.title === goal.title);
+                                                                if (matched) mSaved = matched.saved_amount || 0;
+                                                            }
+                                                            const target = goal.targetAmount || 1;
+                                                            const mPct = Math.min(100, Math.round((mSaved / target) * 100));
+
+                                                            return (
+                                                                <div class="flex items-center justify-between gap-3 pt-2">
+                                                                    <div class="flex items-center gap-2.5 min-w-0">
+                                                                        {mAvatar ? (
+                                                                            <img src={mAvatar} alt={mFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
+                                                                        ) : (
+                                                                            <div class="w-8 h-8 rounded-full bg-slate-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                                                                {memberUsername.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                        )}
+                                                                        <div class="min-w-0">
+                                                                            <p class="text-xs font-bold text-slate-900 truncate">{mFullName}</p>
+                                                                            <p class="text-[10px] text-slate-400 truncate">@{memberUsername}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-right shrink-0">
+                                                                        <span class="text-xs font-extrabold text-slate-700">{mPct}%</span>
+                                                                        <p class="text-[10px] text-slate-500 font-medium">{formatRp(mSaved)}</p>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
                                             
-                                            <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-                                                <a href={`/goal-detail/${goal.id}`} class="text-xs font-semibold text-primary hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition border border-transparent hover:border-blue-100 flex items-center">
-                                                    <i data-feather="file-text" class="w-3 h-3 mr-1"></i> Rincian Biaya
+                                            <!-- Action Links -->
+                                            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-semibold">
+                                                <a href={`/goal-detail/${goal.id}`} class="text-primary hover:text-blue-700 transition flex items-center gap-1">
+                                                    <i data-feather="file-text" class="w-3.5 h-3.5"></i> Rincian Biaya
                                                 </a>
-                                                <a href={`/cancel-trip/${goal.id}`} class="text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition border border-transparent hover:border-red-100 flex items-center">
-                                                    <i data-feather="x-circle" class="w-3 h-3 mr-1"></i> Batalkan
+                                                <a href={`/cancel-trip/${goal.id}`} class="text-red-600 hover:text-red-800 transition flex items-center gap-1">
+                                                    <i data-feather="x-circle" class="w-3.5 h-3.5"></i> Batalkan Target
                                                 </a>
                                             </div>
                                             
+                                            <!-- Main Action Button -->
                                             {(() => {
                                                 const isMitra = goal.paymentMethod === 'Cash' || (goal.paymentDetail && goal.paymentDetail.toLowerCase().includes('mitra'));
                                                 let waNumber = '6287896108664';
@@ -491,7 +671,6 @@ try {
                                                 let waText = `Halo Admin DreamJourney! Saya ingin setor tabungan untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon info QRIS-nya ya, terima kasih!`;
 
                                                 if (isMitra) {
-                                                    waButtonText = 'Hubungi mitra via WA';
                                                     let mitraId: string | null = null;
                                                     if (goal.paymentDetail) {
                                                         const match = goal.paymentDetail.match(/Mitra ID:\s*([A-Za-z0-9]+)/i);
@@ -505,8 +684,9 @@ try {
                                                     if (mitraObj && mitraObj.wa) {
                                                         waNumber = mitraObj.wa;
                                                     }
-                                                    const mitraNameText = mitraObj ? ` (${mitraObj.name})` : '';
-                                                    waText = `Halo Mitra DreamJourney${mitraNameText}! Saya ingin setor tabungan tunai untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon bantuannya untuk proses setoran tunai ini ya, terima kasih!`;
+                                                    const mitraNameText = mitraObj ? `${mitraObj.name}` : 'Mitra';
+                                                    waButtonText = `Chat Mitra (${mitraNameText}) via WhatsApp`;
+                                                    waText = `Halo Mitra DreamJourney (${mitraNameText})!\n\nSaya ingin melakukan setoran tunai untuk target tabungan saya:\n• Destinasi: ${goal.title}\n• ID Target: ${goal.id}\n• Nominal Setoran: ${nominalText}\n\nMohon bantuannya untuk proses setoran tunai ini ya. Terima kasih!`;
                                                 }
 
                                                 const hasAlreadySavedCycle = !depositStatusBadge.isWarning && !isAcakFreq && goal.autoDebitFrequency !== 'Acak (Sesuka Hati)';
@@ -516,27 +696,37 @@ try {
                                                 else if (isBulanan) cyclePeriodText = 'Bulan Ini';
 
                                                 return (
-                                                    <div class="mt-3 space-y-2">
-                                                        {hasAlreadySavedCycle ? (
-                                                            <div class="bg-emerald-50 text-emerald-700 font-extrabold text-xs text-center py-3 px-4 rounded-xl border border-emerald-200/80 shadow-sm flex items-center justify-center gap-2 cursor-not-allowed">
-                                                                <i data-feather="check-circle" class="w-4 h-4 text-emerald-600"></i>
-                                                                <span>Anda Sudah Menabung {cyclePeriodText}</span>
-                                                            </div>
+                                                    <div class="mt-3">
+                                                        {isMitra ? (
+                                                            <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
+                                                                <i data-feather="message-circle" class="w-4 h-4"></i>
+                                                                <span>{waButtonText}</span>
+                                                            </a>
                                                         ) : (
-                                                            <>
-                                                                {!isMitra && (
-                                                                    <button type="button" 
-                                                                        class="btn-midtrans-pay w-full bg-primary hover:bg-blue-700 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-sm cursor-pointer"
-                                                                        data-goal-id={goal.id}
-                                                                        data-amount={goal.autoDebitAmount > 0 ? goal.autoDebitAmount : (goal.targetAmount - goal.savedAmount)}
-                                                                        data-title={goal.title}>
-                                                                        <i data-feather="qr-code" class="w-4 h-4 mr-2"></i> Bayar Setoran (Midtrans QRIS)
-                                                                    </button>
-                                                                )}
-                                                                <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg flex items-center justify-center transition shadow-sm">
-                                                                    <i data-feather="message-circle" class="w-4 h-4 mr-2"></i> {waButtonText}
-                                                                </a>
-                                                            </>
+                                                            hasAlreadySavedCycle ? (
+                                                                <div class="bg-emerald-50 text-emerald-800 font-bold text-xs text-center py-3 px-4 rounded-xl border border-emerald-200/80 flex items-center justify-center gap-2 cursor-not-allowed">
+                                                                    <i data-feather="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                                                                    <span>Anda Sudah Menabung {cyclePeriodText}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div class="space-y-2">
+                                                                    {(() => {
+                                                                        const payAmount = goal.autoDebitAmount > 0 ? goal.autoDebitAmount : (goal.targetAmount - goal.savedAmount);
+                                                                        const qrisUrl = `/payment/qris?goalId=${encodeURIComponent(goal.id)}&amount=${payAmount}&title=${encodeURIComponent(goal.title)}&image=${encodeURIComponent(goal.packageImage || '')}&frequency=${encodeURIComponent(goal.autoDebitFrequency || 'Mingguan')}`;
+                                                                        return (
+                                                                            <a href={qrisUrl}
+                                                                               target="_blank"
+                                                                               rel="noopener noreferrer"
+                                                                               class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
+                                                                                <i data-feather="qr-code" class="w-4 h-4"></i> Bayar Setoran (Bayar QRIS)
+                                                                            </a>
+                                                                        );
+                                                                    })()}
+                                                                    <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl flex items-center justify-center gap-2 transition border border-slate-200 text-xs">
+                                                                        <i data-feather="message-circle" class="w-3.5 h-3.5"></i> Setor via WA Admin
+                                                                    </a>
+                                                                </div>
+                                                            )
                                                         )}
                                                     </div>
                                                 );
@@ -548,50 +738,46 @@ try {
                         </div>
                     </div>
 
-                    <!-- Recent Transactions -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col h-full">
-                        <h3 class="font-bold text-xl mb-6 flex items-center">
-                            <i data-feather="clock" class="mr-2 text-primary"></i> Riwayat Aktivitas
+                    <!-- RIGHT COLUMN: Riwayat Aktivitas (30% Width) -->
+                    <div class="lg:col-span-3 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col h-full">
+                        <h3 class="text-base md:text-lg font-black text-slate-900 mb-6 flex items-center gap-2.5">
+                            <i data-feather="clock" class="w-4.5 h-4.5 text-primary shrink-0"></i>
+                            <span>Riwayat Aktivitas</span>
                         </h3>
                         
-                        <div class="space-y-4 flex-1 overflow-y-auto pr-2 max-h-[350px]">
+                        <div class="space-y-3.5 flex-1 overflow-y-auto pr-1 max-h-[650px]">
                             {wallet.transactions.length === 0 ? (
-                                <p class="text-center text-gray-500 italic py-4">Belum ada riwayat aktivitas.</p>
+                                <p class="text-center text-slate-400 italic py-8 text-xs">Belum ada riwayat aktivitas transaksi.</p>
                             ) : (
                                 wallet.transactions.map((trx: any) => {
                                     let icon = "activity";
-                                    let iconColor = "bg-gray-100 text-gray-600";
-                                    let amountColor = "text-gray-800";
-                                    let prefix = "";
-
-                                    const isDepositType = trx.type === 'AUTO_DEBIT' || trx.type === 'SETORAN' || trx.type === 'SETORAN_MITRA' || trx.type === 'SETORAN_QRIS' || trx.desc?.toLowerCase().includes('berhasil menabung');
-                                    
-                                    if (isDepositType) {
+                                    let iconColor = "bg-slate-100 text-slate-600";
+                                    if (trx.type === 'DEPOSIT' || trx.type === 'SETORAN' || trx.type === 'SETORAN_MITRA') {
                                         icon = "arrow-up-right";
-                                        iconColor = "bg-emerald-100 text-emerald-600";
-                                        amountColor = "text-emerald-600";
-                                        prefix = "+ ";
-                                    } else if (trx.type === 'SYSTEM') {
-                                        icon = "link";
-                                        iconColor = "bg-blue-100 text-blue-600";
+                                        iconColor = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                                    } else if (trx.type === 'WITHDRAWAL' || trx.type === 'PENARIKAN') {
+                                        icon = "arrow-down-left";
+                                        iconColor = "bg-amber-50 text-amber-600 border border-amber-100";
                                     } else if (trx.type === 'GOAL_CREATED') {
                                         icon = "flag";
-                                        iconColor = "bg-yellow-100 text-yellow-600";
+                                        iconColor = "bg-blue-50 text-primary border border-blue-100";
                                     }
 
                                     return (
-                                        <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition border border-transparent hover:border-gray-100">
-                                            <div class="flex items-center">
-                                                <div class={`${iconColor} p-2.5 rounded-full mr-3 shadow-sm`}>
+                                        <div class="flex items-center justify-between p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/60 hover:bg-slate-50 transition gap-2">
+                                            <div class="flex items-center gap-3 min-w-0 pr-1">
+                                                <div class={`p-2 rounded-lg ${iconColor} shrink-0`}>
                                                     <i data-feather={icon} class="w-4 h-4"></i>
                                                 </div>
-                                                <div>
-                                                    <p class="font-semibold text-gray-800 text-sm">{trx.desc}</p>
-                                                    <p class="text-xs text-gray-500 mt-0.5">{formatDate(trx.date)}</p>
+                                                <div class="min-w-0">
+                                                    <p class="text-xs font-bold text-slate-900 leading-snug truncate">{trx.desc || 'Transaksi Tabungan'}</p>
+                                                    <p class="text-[10px] text-slate-400 mt-0.5">{formatDate(trx.date)}</p>
                                                 </div>
                                             </div>
                                             {trx.amount > 0 && (
-                                                <span class={`${amountColor} font-bold text-sm whitespace-nowrap ml-2`}>{prefix}{formatRp(trx.amount)}</span>
+                                                <span class="text-xs font-extrabold text-emerald-600 shrink-0">
+                                                    + {formatRp(trx.amount)}
+                                                </span>
                                             )}
                                         </div>
                                     );
@@ -599,6 +785,7 @@ try {
                             )}
                         </div>
                     </div>
+
                 </div>
 
                 <!-- LENTERA SECTION -->
@@ -712,6 +899,33 @@ try {
                 }
             });
         }
+
+        // --- GOAL FILTER TAB SWITCHER ---
+        const goalFilterBtns = document.querySelectorAll('.goal-filter-btn');
+        const goalCards = document.querySelectorAll('.goal-item-card');
+
+        goalFilterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.getAttribute('data-filter');
+
+                goalFilterBtns.forEach(b => {
+                    b.classList.remove('bg-white', 'text-primary', 'font-bold', 'shadow-2xs');
+                    b.classList.add('text-slate-500');
+                });
+
+                btn.classList.add('bg-white', 'text-primary', 'font-bold', 'shadow-2xs');
+                btn.classList.remove('text-slate-500');
+
+                goalCards.forEach(card => {
+                    const cardType = card.getAttribute('data-trip-type');
+                    if (filter === 'all' || cardType === filter) {
+                        (card as HTMLElement).style.display = 'block';
+                    } else {
+                        (card as HTMLElement).style.display = 'none';
+                    }
+                });
+            });
+        });
 
         // --- MIDTRANS SNAP PAY BUTTON LISTENER ---
         const payBtns = document.querySelectorAll('.btn-midtrans-pay');

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { fetchCachedCSV } from '../lib/fetchCache';
+import { supabase } from '../lib/supabase';
 
 const { userId, sessionClaims } = Astro.locals.auth();
 
@@ -17,6 +18,12 @@ if (!hasDomisili || !hasDob) {
     const currentUrl = Astro.url.pathname + Astro.url.search;
     return Astro.redirect('/onboarding?redirect_url=' + encodeURIComponent(currentUrl));
 }
+
+// Ambil data username & email user dari Supabase / Clerk
+const { data: dbUser } = await supabase.from('users').select('username').eq('id', userId).maybeSingle();
+const currentUsername = (dbUser?.username || unsafeMeta?.username || clerkUser?.username || '').toLowerCase();
+const currentEmail = (clerkUser?.emailAddresses?.[0]?.emailAddress || '').toLowerCase();
+
 
 const title = Astro.url.searchParams.get('title') || 'Liburan Impian';
 const priceStr = Astro.url.searchParams.get('price') || '0';
@@ -144,21 +151,7 @@ try {
 ---
 
 <Layout title="Setup Tabungan - DreamJourney">
-    <main class="pt-24 pb-16 bg-blue-50/30 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
-        <!-- Elemen Latar Belakang -->
-        <div class="absolute top-10 -right-10 text-blue-200/40 transform rotate-12 pointer-events-none">
-            <i data-feather="briefcase" class="w-64 h-64 md:w-80 md:h-80"></i>
-        </div>
-        <div class="absolute bottom-10 -left-10 text-blue-200/40 transform -rotate-12 pointer-events-none">
-            <i data-feather="camera" class="w-64 h-64 md:w-80 md:h-80"></i>
-        </div>
-        <div class="absolute top-1/2 left-10 text-blue-100/50 transform -rotate-45 pointer-events-none">
-            <i data-feather="star" class="w-32 h-32 md:w-40 md:h-40"></i>
-        </div>
-        <div class="absolute bottom-1/4 right-20 text-blue-100/50 pointer-events-none">
-            <i data-feather="heart" class="w-24 h-24 md:w-32 md:h-32"></i>
-        </div>
-
+    <main class="pt-24 pb-16 bg-blue-50/30 min-h-screen relative overflow-hidden" data-current-username={currentUsername} data-current-email={currentEmail}>
         <div class="container mx-auto px-4 w-full max-w-6xl relative z-10 space-y-6">
             <!-- Back Navigation & Title Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -228,26 +221,38 @@ try {
                                 </label>
                             </div>
 
-                            <!-- Dynamic Group Detail -->
-                            <div id="container-group" class="hidden bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 mt-3">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="block text-xs font-bold text-amber-900"><i data-feather="users" class="w-4 h-4 inline-block mr-1"></i> Anggota Grup</label>
-                                    <span class="text-[11px] font-bold text-amber-800 bg-amber-200/70 px-2.5 py-0.5 rounded-full" id="group-counter">0 Teman Ditambahkan</span>
-                                </div>
-                                
-                                <div class="bg-white p-2.5 rounded-xl border border-amber-300/80 mb-2 focus-within:ring-2 ring-amber-400 transition shadow-sm">
-                                    <!-- Chips Container -->
-                                    <div id="friend-chips-container" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
-                                    
-                                    <div class="flex gap-2">
-                                        <input type="text" id="input-friend" placeholder="Ketik username / email teman disini..." class="flex-1 bg-transparent border-none outline-none text-xs px-1 placeholder-gray-400">
-                                        <button type="button" id="btn-add-friend" class="bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 transition flex items-center shadow-sm">
-                                            <i data-feather="plus" class="w-3.5 h-3.5 mr-1"></i> Tambah
-                                        </button>
+                             <!-- Dynamic Group Detail -->
+                            <div id="container-group" class="hidden bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200/80 mt-3 space-y-3.5 transition-all">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <i data-feather="users" class="w-4 h-4 text-blue-700"></i>
+                                        <label class="block text-sm font-bold text-blue-950">Anggota Grup</label>
                                     </div>
+                                    <p class="text-xs font-semibold text-blue-800/80 mt-0.5">Ajak Teman Menabung Bersama</p>
                                 </div>
                                 
-                                <p class="text-[11px] text-amber-800 leading-relaxed"><i data-feather="info" class="w-3 h-3 inline-block"></i> Anda dapat menambahkan beberapa orang sekaligus. Teman Anda akan menerima notifikasi di dashboard mereka.</p>
+                                <div class="bg-white p-1.5 pl-3 rounded-xl border border-blue-200 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition flex items-center shadow-xs">
+                                    <input type="text" id="input-friend" placeholder="Ketik username / email teman disini..." class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-gray-800 placeholder-gray-400 py-1">
+                                    <button type="button" id="btn-add-friend" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs shrink-0 cursor-pointer">
+                                        <i data-feather="plus" class="w-3.5 h-3.5"></i> Undang
+                                    </button>
+                                </div>
+                                <p id="friend-validation-msg" class="text-xs font-semibold text-red-600 hidden"></p>
+
+                                <!-- Header Jumlah & Daftar Anggota yang Ditambahkan (Di bawah search bar) -->
+                                <div id="friend-list-section" class="hidden space-y-2 pt-1">
+                                    <div class="flex justify-between items-center text-xs font-bold text-blue-950">
+                                        <span id="group-counter">Anggota yang Ditambahkan (0)</span>
+                                    </div>
+                                    
+                                    <!-- Container Daftar Teman (Lebar Penuh Menyesuaikan Kolom) -->
+                                    <div id="friend-chips-container" class="space-y-2"></div>
+                                </div>
+                                
+                                <p class="text-xs text-blue-800/80 leading-relaxed flex items-center gap-1.5 pt-1 border-t border-blue-100/80">
+                                    <i data-feather="info" class="w-3.5 h-3.5 text-blue-600 shrink-0"></i> 
+                                    <span>Undang teman Anda untuk menabung bersama. Mereka akan menerima undangan di dashboard mereka.</span>
+                                </p>
                             </div>
                         </div>
 
@@ -414,11 +419,6 @@ try {
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4 text-white">
                                 <span class="inline-block bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full w-max mb-1 uppercase tracking-wider">Destinasi Pilihan</span>
                                 <h2 class="text-xl font-extrabold leading-tight text-white drop-shadow" id="goal-title">{title}</h2>
-                                {time && (
-                                    <p class="text-xs text-blue-100 mt-1 flex items-center gap-1 font-medium">
-                                        <i data-feather="calendar" class="w-3.5 h-3.5 text-blue-300"></i> Durasi Target: {time}
-                                    </p>
-                                )}
                             </div>
                         </div>
 
@@ -619,6 +619,14 @@ try {
         // Toggle Trip Type (Group)
         const tripRadios = document.querySelectorAll('input[name="trip_type"]');
         const containerGroup = document.getElementById('container-group');
+        
+        interface GroupMemberData {
+            username: string;
+            fullName: string;
+            avatarUrl?: string | null;
+        }
+
+        let groupMembersData: GroupMemberData[] = [];
         let groupMembers: string[] = [];
         
         tripRadios.forEach(radio => {
@@ -637,19 +645,58 @@ try {
         const inputFriend = document.getElementById('input-friend') as HTMLInputElement;
         const friendListEl = document.getElementById('friend-chips-container');
 
+        const avatarColors = [
+            'bg-cyan-500', 'bg-pink-500', 'bg-amber-500', 'bg-blue-500',
+            'bg-purple-500', 'bg-emerald-500', 'bg-rose-500', 'bg-[#009b67]'
+        ];
+
+        function getAvatarBg(str: string): string {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % avatarColors.length;
+            return avatarColors[index];
+        }
+
         function renderFriends() {
             if (!friendListEl) return;
             friendListEl.innerHTML = '';
-            groupMembers.forEach((friend, idx) => {
-                const chip = document.createElement('div');
-                chip.className = 'flex items-center bg-yellow-100 text-yellow-800 text-sm px-3 py-1.5 rounded-full border border-yellow-200 shadow-sm';
-                chip.innerHTML = `
-                    <span class="font-medium mr-2">${friend}</span>
-                    <button type="button" class="text-yellow-600 hover:text-red-500 transition btn-remove-friend" data-idx="${idx}">
-                        <i data-feather="x" class="w-3 h-3"></i>
+            
+            const friendListSection = document.getElementById('friend-list-section');
+            if (friendListSection) {
+                if (groupMembersData.length > 0) {
+                    friendListSection.classList.remove('hidden');
+                } else {
+                    friendListSection.classList.add('hidden');
+                }
+            }
+
+            groupMembersData.forEach((friend, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-2.5 px-3.5 bg-white rounded-xl border border-blue-100 shadow-2xs hover:border-blue-200 transition w-full';
+                
+                const displayName = friend.fullName || friend.username;
+                const firstLetter = displayName.charAt(0).toUpperCase();
+                const bgColor = getAvatarBg(displayName);
+
+                const avatarHtml = friend.avatarUrl 
+                    ? `<img src="${friend.avatarUrl}" alt="${displayName}" class="w-9 h-9 rounded-full object-cover border border-blue-100 shadow-2xs shrink-0">`
+                    : `<div class="w-9 h-9 rounded-full ${bgColor} text-white font-bold text-sm flex items-center justify-center uppercase shadow-2xs shrink-0">${firstLetter}</div>`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        ${avatarHtml}
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-bold text-xs sm:text-sm text-gray-900 truncate">${displayName}</span>
+                            <span class="text-[11px] text-gray-500 font-medium truncate">@${friend.username}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition btn-remove-friend cursor-pointer shrink-0 ml-2" data-idx="${idx}" title="Hapus">
+                        <i data-feather="x" class="w-4 h-4"></i>
                     </button>
                 `;
-                friendListEl.appendChild(chip);
+                friendListEl.appendChild(item);
             });
 
             // Re-initialize feather icons for the new 'x' icons
@@ -663,7 +710,9 @@ try {
                 btn.addEventListener('click', (e) => {
                     const idxStr = (e.currentTarget as HTMLElement).getAttribute('data-idx');
                     if (idxStr !== null) {
-                        groupMembers.splice(parseInt(idxStr, 10), 1);
+                        const i = parseInt(idxStr, 10);
+                        groupMembersData.splice(i, 1);
+                        groupMembers = groupMembersData.map(m => m.username);
                         renderFriends();
                     }
                 });
@@ -671,29 +720,46 @@ try {
 
             const counter = document.getElementById('group-counter');
             if (counter) {
-                counter.innerText = `${groupMembers.length} Teman Ditambahkan`;
+                counter.innerText = `Anggota yang Ditambahkan (${groupMembersData.length})`;
             }
         }
 
         btnAddFriend?.addEventListener('click', async () => {
-            const val = inputFriend.value.trim();
-            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+            const friendMsg = document.getElementById('friend-validation-msg');
+            if (friendMsg) {
+                friendMsg.classList.add('hidden');
+                friendMsg.innerText = '';
+            }
 
-            if (!val || groupMembers.includes(val)) return;
+            const rawVal = inputFriend.value.trim();
+            if (!rawVal) return;
 
-            if (val.toLowerCase() === currentUsername) {
-                const modal = document.getElementById('user-not-found-modal');
-                const msg = document.getElementById('user-not-found-msg');
-                const title = document.getElementById('warning-modal-title');
-                if (modal && msg && title) {
-                    title.innerText = "Tindakan Ditolak";
-                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
-                    modal.classList.remove('hidden');
-                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
-                        modal.classList.add('hidden');
-                    }, { once: true });
+            const val = rawVal.startsWith('@') ? rawVal.substring(1) : rawVal;
+            const lowerVal = val.toLowerCase();
+
+            const mainEl = document.querySelector('main');
+            const currentUsername = (mainEl?.getAttribute('data-current-username') || '').toLowerCase();
+            const currentEmail = (mainEl?.getAttribute('data-current-email') || '').toLowerCase();
+
+            // Cek jika sudah ditambahkan di daftar grup
+            if (groupMembersData.some(m => m.username.toLowerCase() === lowerVal)) {
+                if (friendMsg) {
+                    friendMsg.innerText = `⚠️ Username "${val}" sudah ada dalam daftar grup.`;
+                    friendMsg.classList.remove('hidden');
+                }
+                return;
+            }
+
+            // Cek jika mencoba menambahkan username atau email diri sendiri
+            if (
+                (currentUsername && lowerVal === currentUsername) ||
+                (currentEmail && lowerVal === currentEmail)
+            ) {
+                if (friendMsg) {
+                    friendMsg.innerText = `❌ Anda tidak bisa menambahkan username/email Anda sendiri ke dalam daftar teman.`;
+                    friendMsg.classList.remove('hidden');
                 } else {
-                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+                    alert("Anda tidak bisa menambahkan username/email Anda sendiri ke dalam daftar teman.");
                 }
                 inputFriend.value = '';
                 return;
@@ -709,29 +775,33 @@ try {
 
                 // isAvailable = true artinya username BELUM DIPAKAI (belum terdaftar)
                 if (res.ok && data.isAvailable) {
-                    const modal = document.getElementById('user-not-found-modal');
-                    const msg = document.getElementById('user-not-found-msg');
-                    const title = document.getElementById('warning-modal-title');
-                    if (modal && msg && title) {
-                        title.innerText = "Pengguna Tidak Ditemukan";
-                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
-                        modal.classList.remove('hidden');
-                        
-                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
-                            modal.classList.add('hidden');
-                        }, { once: true });
+                    if (friendMsg) {
+                        friendMsg.innerText = `❌ Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
+                        friendMsg.classList.remove('hidden');
                     } else {
                         alert(`Teman dengan username/email "${val}" tidak ditemukan di database kami.`);
                     }
                 } else if (res.ok && !data.isAvailable) {
-                    groupMembers.push(val);
+                    const userObj = data.user || { username: val, fullName: val, avatarUrl: null };
+                    groupMembersData.push({
+                        username: userObj.username || val,
+                        fullName: userObj.fullName || val,
+                        avatarUrl: userObj.avatarUrl || null
+                    });
+                    groupMembers = groupMembersData.map(m => m.username);
                     inputFriend.value = '';
                     renderFriends();
                 } else {
-                    alert("Gagal memvalidasi pengguna.");
+                    if (friendMsg) {
+                        friendMsg.innerText = `❌ Gagal memvalidasi pengguna.`;
+                        friendMsg.classList.remove('hidden');
+                    }
                 }
             } catch (err) {
-                alert("Terjadi kesalahan jaringan saat mengecek pengguna.");
+                if (friendMsg) {
+                    friendMsg.innerText = `❌ Terjadi kesalahan jaringan saat mengecek pengguna.`;
+                    friendMsg.classList.remove('hidden');
+                }
             } finally {
                 btnAddFriend.innerHTML = originalText;
                 (btnAddFriend as HTMLButtonElement).disabled = false;
@@ -783,17 +853,32 @@ try {
             
             if (paymentMethod === 'Cash') {
                 const mitraInput = (document.getElementById('input-mitra') as HTMLInputElement).value.trim();
+                const mitraMsg = document.getElementById('mitra-validation-msg');
+                const inputMtr = document.getElementById('input-mitra');
+
                 if (!mitraInput) {
-                    alert('Mohon masukkan Nomor ID Mitra Terdaftar.');
-                    const inputMtr = document.getElementById('input-mitra');
-                    if (inputMtr) inputMtr.focus();
+                    if (mitraMsg) {
+                        mitraMsg.innerHTML = '✕ <strong>ID Mitra Wajib Diisi:</strong> Mohon masukkan Nomor ID Mitra Terdaftar.';
+                        mitraMsg.classList.remove('hidden', 'text-emerald-600');
+                        mitraMsg.classList.add('text-red-600');
+                    }
+                    if (inputMtr) {
+                        inputMtr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        inputMtr.focus();
+                    }
                     return;
                 }
                 const foundMitra = validMitras.find((m: any) => m.id.toLowerCase() === mitraInput.toLowerCase());
                 if (!foundMitra) {
-                    alert(`Nomor ID Mitra "${mitraInput}" tidak terdaftar di database spreadsheet Mitra. Mohon periksa kembali ID Mitra Anda.`);
-                    const inputMtr = document.getElementById('input-mitra');
-                    if (inputMtr) inputMtr.focus();
+                    if (mitraMsg) {
+                        mitraMsg.innerHTML = `✕ <strong>ID Mitra Tidak Terdaftar:</strong> Nomor ID "${mitraInput}" tidak terdaftar di database Mitra. Mohon periksa kembali ID Mitra Anda.`;
+                        mitraMsg.classList.remove('hidden', 'text-emerald-600');
+                        mitraMsg.classList.add('text-red-600');
+                    }
+                    if (inputMtr) {
+                        inputMtr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        inputMtr.focus();
+                    }
                     return;
                 }
                 paymentDetail = `(Mitra ID: ${foundMitra.id} - ${foundMitra.name})`;
@@ -805,9 +890,16 @@ try {
             const savingType = (document.querySelector('input[name="saving_type"]:checked') as HTMLInputElement).value;
 
             if (tripType === 'Group' && groupMembers.length === 0) {
-                alert('Silakan tambahkan minimal 1 anggota grup untuk Group Trip.');
+                const friendMsg = document.getElementById('friend-validation-msg');
+                if (friendMsg) {
+                    friendMsg.innerText = '❌ Silakan tambahkan minimal 1 anggota grup untuk Group Trip.';
+                    friendMsg.classList.remove('hidden');
+                }
                 const inputFriend = document.getElementById('input-friend');
-                if (inputFriend) inputFriend.focus();
+                if (inputFriend) {
+                    inputFriend.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    inputFriend.focus();
+                }
                 return;
             }
 

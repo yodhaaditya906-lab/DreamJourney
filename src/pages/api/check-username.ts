@@ -13,21 +13,57 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    // Periksa apakah username sudah ada di tabel users
+    // 1. Periksa apakah username sudah ada di tabel users Supabase (case-insensitive)
     const { data, error } = await supabase
       .from('users')
-      .select('username')
-      .eq('username', username)
+      .select('id, username, full_name')
+      .ilike('username', username)
       .maybeSingle();
 
     if (error) {
       throw error;
     }
 
-    // Jika data ada, berarti username sudah dipakai (isAvailable = false)
+    let avatarUrl: string | null = null;
+    let fullName = data?.full_name || data?.username || null;
+
+    // 2. Ambil foto profil asli user dari Clerk Backend API
+    const clerkSecretKey = import.meta.env.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY;
+    
+    if (data && data.id && clerkSecretKey) {
+      try {
+        const clerkRes = await fetch(`https://api.clerk.com/v1/users/${data.id}`, {
+          headers: {
+            'Authorization': `Bearer ${clerkSecretKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (clerkRes.ok) {
+          const clerkUserData = await clerkRes.json();
+          avatarUrl = clerkUserData.image_url || clerkUserData.profile_image_url || null;
+          if (!fullName || fullName === data.username) {
+            const firstName = clerkUserData.first_name || '';
+            const lastName = clerkUserData.last_name || '';
+            const combinedName = `${firstName} ${lastName}`.trim();
+            if (combinedName) fullName = combinedName;
+          }
+        }
+      } catch (clerkErr) {
+        console.warn("Could not fetch user avatar from Clerk API:", clerkErr);
+      }
+    }
+
+    // Jika data ada, berarti username sudah dipakai (isAvailable = false) -> user ditemukan!
     const isAvailable = !data;
 
-    return new Response(JSON.stringify({ isAvailable }), {
+    return new Response(JSON.stringify({
+      isAvailable,
+      user: data ? {
+        username: data.username,
+        fullName: fullName || data.username,
+        avatarUrl: avatarUrl
+      } : null
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
