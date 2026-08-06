@@ -1,10 +1,20 @@
 ---
 import { Show, UserButton, SignInButton, SignUpButton } from '@clerk/astro/components';
+import { supabase } from '../lib/supabase';
+
 const currentPath = Astro.url.pathname;
-const clerkUser = await Astro.locals.currentUser();
+const { userId } = Astro.locals.auth();
+
+let mobileUserAvatar = '';
+if (userId) {
+    const user = await Astro.locals.currentUser();
+    const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    mobileUserAvatar = dbUser?.avatar_url || dbUser?.image_url || user?.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}&background=random&color=fff&bold=true`;
+}
 ---
+
 <header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 z-50">
-    <div class="w-full lg:w-[85%] mx-auto px-4 h-16 lg:h-20 flex justify-between items-center">
+    <div class="w-full lg:w-[85%] mx-auto px-3 sm:px-4 h-14 sm:h-16 lg:h-20 flex justify-between items-center">
         
         <!-- Toggle Button for Mobile Menu (Hamburger) - Left on Mobile -->
         <button class="lg:hidden text-gray-600 cursor-pointer p-2 order-1 lg:order-none" id="mobile-menu-btn" aria-label="Toggle Menu">
@@ -21,22 +31,46 @@ const clerkUser = await Astro.locals.currentUser();
             </form>
         </div>
 
-        <!-- Logo - Right on Mobile, Left on Desktop -->
-        <a href="/" class="flex items-center gap-2 tap-active order-3 lg:order-1">
-            <img src="/images/logo.png" alt="DreamJourney Logo" class="h-8 lg:h-10 w-auto object-contain" />
-            <span class="text-xl lg:text-2xl font-bold text-primary hidden sm:block tracking-tight">DreamJourney</span>
+        <!-- Mobile User Profile Icon / Avatar - Right on Mobile Only -->
+        <div class="lg:hidden order-3 flex items-center pl-1">
+            <Show when="signed-in">
+                <a href="/profile" class="block relative flex-shrink-0 cursor-pointer" title="Profil Saya">
+                    <img 
+                        id="header-mobile-avatar-img"
+                        src={mobileUserAvatar} 
+                        alt="Profil Saya" 
+                        class="w-9 h-9 rounded-full object-cover ring-2 ring-primary/40 shadow-2xs bg-slate-100"
+                    />
+                </a>
+            </Show>
+            <Show when="signed-out">
+                <button 
+                    type="button" 
+                    class="btn-require-auth w-9 h-9 rounded-full bg-indigo-50 text-primary flex items-center justify-center cursor-pointer shadow-2xs border border-indigo-100/80"
+                    title="Masuk Akun"
+                >
+                    <i data-feather="user" class="w-4.5 h-4.5"></i>
+                </button>
+            </Show>
+        </div>
+
+        <!-- Desktop Logo - Hidden on Mobile, Left on Desktop -->
+        <a href="/" class="hidden lg:flex items-center gap-2 tap-active order-1">
+            <img src="/images/logo.png" alt="DreamJourney Logo" class="h-10 w-auto object-contain" />
+            <span class="text-2xl font-bold text-primary tracking-tight">DreamJourney</span>
         </a>
         
         <!-- Desktop Nav - Center on Desktop, Hidden on Mobile -->
-        <nav class="hidden lg:flex items-center gap-8 order-4 lg:order-2">
+        <nav class="hidden lg:flex items-center gap-8 order-2">
             <a href="/" class={`font-medium transition ${currentPath === '/' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Beranda</a>
             <a href="/packages" class={`font-medium transition ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Paket Liburan</a>
             <a href="/planner" class={`font-medium transition ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Rencana Perjalanan</a>
+            <a href="/team-calendar" class={`font-medium transition ${currentPath === '/team-calendar' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Kalender Tim</a>
             <a href="/community" class={`font-medium transition ${currentPath === '/community' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`}>Komunitas</a>
         </nav>
 
         <!-- Desktop Auth & Profile - Right on Desktop, Hidden on Mobile -->
-        <div class="hidden lg:flex items-center gap-4 order-5 lg:order-3">
+        <div class="hidden lg:flex items-center gap-4 order-3">
             <Show when="signed-out">
                 <SignInButton mode="modal" class="text-gray-600 hover:text-primary font-medium transition cursor-pointer">
                     Masuk
@@ -70,19 +104,21 @@ const clerkUser = await Astro.locals.currentUser();
     <div class="hidden lg:hidden bg-white border-t border-gray-100 shadow-inner px-4 py-6" id="mobile-menu-drawer">
         <Show when="signed-in">
             <div class="flex items-center gap-3 mb-5">
-                <UserButton 
-                    userProfileMode="navigation" 
-                    userProfileUrl="/profile" 
-                    appearance={{
-                        elements: {
-                            userPreviewSecondaryIdentifier: "capitalize"
-                        }
-                    }}
-                />
-                <div class="text-left">
-                    <p class="font-bold text-gray-800 text-sm">{clerkUser?.fullName || clerkUser?.firstName || 'Pengguna'}</p>
-                    <p class="text-xs text-gray-500">@{clerkUser?.username || 'username'}</p>
-                </div>
+                <a href="/profile" class="flex items-center gap-3 group">
+                    <UserButton 
+                        userProfileMode="navigation" 
+                        userProfileUrl="/profile" 
+                        appearance={{
+                            elements: {
+                                userPreviewSecondaryIdentifier: "capitalize"
+                            }
+                        }}
+                    />
+                    <div class="text-left">
+                        <p id="header-mobile-fullname" class="font-bold text-gray-800 text-sm group-hover:text-primary transition">Profil Akun Saya</p>
+                        <p id="header-mobile-username" class="text-xs text-gray-500">Lihat profil & opsi keluar</p>
+                    </div>
+                </a>
             </div>
             <hr class="border-gray-100 mb-5">
         </Show>
@@ -90,6 +126,7 @@ const clerkUser = await Astro.locals.currentUser();
             <a href="/" class={`font-medium transition py-2 ${currentPath === '/' ? 'text-primary' : 'text-gray-600'}`}>Beranda</a>
             <a href="/packages" class={`font-medium transition py-2 ${currentPath === '/packages' ? 'text-primary' : 'text-gray-600'}`}>Paket Liburan</a>
             <a href="/planner" class={`font-medium transition py-2 ${currentPath === '/planner' ? 'text-primary' : 'text-gray-600'}`}>Rencana Perjalanan</a>
+            <a href="/team-calendar" class={`font-medium transition py-2 ${currentPath === '/team-calendar' ? 'text-primary' : 'text-gray-600'}`}>Kalender Tim</a>
             <a href="/community" class={`font-medium transition py-2 ${currentPath === '/community' ? 'text-primary' : 'text-gray-600'}`}>Komunitas</a>
             <hr class="border-gray-100 my-2">
             <div class="flex flex-col gap-3">
@@ -106,13 +143,29 @@ const clerkUser = await Astro.locals.currentUser();
     </div>
 </header>
 
-<script>
-    // Toggle mobile menu drawer
-    const btn = document.getElementById('mobile-menu-btn');
-    const drawer = document.getElementById('mobile-menu-drawer');
-    if (btn && drawer) {
-        btn.addEventListener('click', () => {
-            drawer.classList.toggle('hidden');
-        });
-    }
+<script is:inline>
+    // Toggle Mobile Drawer Menu
+    document.addEventListener("DOMContentLoaded", function() {
+        const btn = document.getElementById('mobile-menu-btn');
+        const drawer = document.getElementById('mobile-menu-drawer');
+        if (btn && drawer) {
+            btn.addEventListener('click', function() {
+                drawer.classList.toggle('hidden');
+            });
+        }
+
+        // Sync cached avatar for mobile header avatar
+        const mobileAvatarImg = document.getElementById('header-mobile-avatar-img');
+        if (mobileAvatarImg && window.Clerk && window.Clerk.user) {
+            const username = (window.Clerk.user.username || '').toLowerCase();
+            if (username) {
+                const cached = localStorage.getItem('dream_user_avatar_' + username);
+                if (cached) {
+                    mobileAvatarImg.src = cached;
+                } else if (window.Clerk.user.imageUrl) {
+                    mobileAvatarImg.src = window.Clerk.user.imageUrl;
+                }
+            }
+        }
+    });
 </script>

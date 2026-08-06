@@ -1,0 +1,2130 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+
+const { userId, sessionClaims } = Astro.locals.auth();
+
+if (!userId) {
+    return Astro.redirect('/?openLogin=true');
+}
+
+// Fast query to Supabase
+const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+
+const currentUsername = (dbUser?.username || (sessionClaims?.username as string) || 'user').toLowerCase();
+const currentUserFullName = dbUser?.full_name || (sessionClaims?.fullName as string) || 'Anda';
+const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionClaims?.imageUrl as string) || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserFullName)}&background=random&color=fff&bold=true`;
+---
+
+<Layout title="Kalender Tim - DreamJourney">
+    <main class="pt-24 pb-20 min-h-screen bg-slate-50/70">
+        <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Minimal Page Header (Matching Dashboard) -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-1">Kalender & Tim Liburan</h1>
+                    <p class="text-slate-500 text-xs sm:text-sm font-medium leading-relaxed">Kelola kelompok liburan dan temukan jadwal kosong bersama tanpa bentrok.</p>
+                </div>
+
+                <div class="flex-shrink-0 flex items-center gap-2 sm:gap-3 relative">
+                    
+                    <!-- Inbox Bell Button -->
+                    <div class="relative">
+                        <button 
+                            id="inbox-toggle-btn"
+                            class="relative bg-white hover:bg-slate-100 border border-slate-200/80 text-slate-700 font-bold p-2 sm:p-2.5 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center justify-center"
+                            title="Inbox Notifikasi Tim"
+                        >
+                            <i data-feather="bell" class="w-4 h-4 text-slate-700"></i>
+                            <span id="inbox-badge-count" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full hidden">0</span>
+                        </button>
+
+                        <!-- Inbox Dropdown Panel -->
+                        <div id="inbox-dropdown-panel" class="fixed inset-x-3 top-20 sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-80 md:w-96 bg-white rounded-3xl shadow-2xl border border-slate-100 p-4 z-[100] hidden animate-in fade-in zoom-in-95 duration-150">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-feather="inbox" class="w-4 h-4 text-primary"></i>
+                                    Inbox Notifikasi
+                                </h3>
+                                <button id="mark-all-read-btn" class="text-[11px] font-semibold text-primary hover:underline cursor-pointer">
+                                    Tandai Dibaca
+                                </button>
+                            </div>
+
+                            <div id="inbox-items-container" class="mt-3 space-y-2 max-h-80 overflow-y-auto pr-1">
+                                <!-- Dynamic Notifications List -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        id="open-create-team-modal-btn"
+                        class="bg-primary hover:bg-primary-dark text-white font-bold px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs transition-all shadow-sm hover:shadow flex items-center gap-1.5 cursor-pointer"
+                    >
+                        <i data-feather="plus" class="w-4 h-4"></i>
+                        <span>Buat Tim Baru</span>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- VIEW 1: DAFTAR TIM SAYA (TEAMS OVERVIEW GRID) -->
+            <div id="teams-overview-view" class="space-y-4 sm:space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                <i data-feather="users" class="w-4 h-4"></i>
+                            </div>
+                            Daftar Tim Saya
+                        </h2>
+                        <p class="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Pilih tim untuk melihat dan mengatur kalender kegiatan bersama</p>
+                    </div>
+                    <span id="teams-count-badge" class="bg-blue-50 text-blue-700 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border border-blue-100 whitespace-nowrap flex-shrink-0">
+                        0 Tim
+                    </span>
+                </div>
+
+                <!-- Teams Cards Grid -->
+                <div id="teams-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- VIEW 2: KALENDER TIM AKTIF (ACTIVE TEAM DETAIL VIEW) -->
+            <div id="team-calendar-detail-view" class="space-y-4 sm:space-y-6 hidden">
+                
+                <!-- Active Team Navigation Bar -->
+                <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <button 
+                            id="back-to-teams-btn" 
+                            class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 sm:py-2 rounded-xl text-xs transition flex items-center gap-1 cursor-pointer"
+                        >
+                            <i data-feather="arrow-left" class="w-3.5 h-3.5"></i>
+                            <span>Semua Tim</span>
+                        </button>
+                        <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <h2 id="active-team-name-title" class="text-sm sm:text-lg font-black text-slate-900">Nama Tim</h2>
+                                <span id="active-team-category-badge" class="bg-blue-50 text-blue-700 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100 whitespace-nowrap flex-shrink-0">Keluarga</span>
+                            </div>
+                            <p class="text-[10px] sm:text-[11px] text-slate-500 font-medium">Kalender & Detektor Slot Kosong Tim</p>
+                        </div>
+                    </div>
+
+                    <!-- Switch Team Dropdown & Leave Team Button -->
+                    <div class="flex items-center justify-between sm:justify-end gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] sm:text-xs text-slate-400 font-semibold hidden sm:inline">Pindah Tim:</span>
+                            <select id="switch-team-select" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-slate-800 outline-none focus:border-primary">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <button id="active-team-leave-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs transition flex items-center gap-1 cursor-pointer hidden" title="Keluar dari Tim Ini">
+                            <i data-feather="log-out" class="w-3.5 h-3.5"></i>
+                            <span>Keluar Tim</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8">
+                    
+                    <!-- Left Sidebar: Anggota Tim & Free Time Detector -->
+                    <div class="lg:col-span-4 space-y-4 sm:space-y-6">
+                        
+                        <!-- Anggota Tim Card -->
+                        <div class="bg-white rounded-3xl p-3.5 sm:p-6 shadow-sm border border-slate-200/80">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                        <i data-feather="user-check" class="w-3.5 h-3.5"></i>
+                                    </div>
+                                    Anggota Tim Ini
+                                </h3>
+                                <span id="active-team-member-count" class="bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">1 Orang</span>
+                            </div>
+
+                            <!-- Search Member Input -->
+                            <div class="relative mb-4">
+                                <div class="flex gap-1.5">
+                                    <div class="relative flex-1">
+                                        <input 
+                                            type="text" 
+                                            id="search-username-input"
+                                            placeholder="Undang @username..." 
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] sm:text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                        />
+                                    </div>
+                                    <button 
+                                        id="add-member-btn"
+                                        class="bg-primary hover:bg-primary-dark text-white px-3 py-2 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1 cursor-pointer flex-shrink-0"
+                                    >
+                                        <i data-feather="send" class="w-3 h-3"></i>
+                                        <span>Undang</span>
+                                    </button>
+                                </div>
+                                <div id="username-search-feedback" class="text-[10px] font-semibold mt-1 hidden"></div>
+                            </div>
+
+                            <!-- Member List Container -->
+                            <div id="team-members-list" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+
+                        <!-- Free Time Summary Card -->
+                        <div class="bg-gradient-to-br from-emerald-50 to-teal-50/60 rounded-3xl p-3.5 sm:p-6 border border-emerald-100">
+                            <div class="flex items-center gap-2 mb-2.5">
+                                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                                    <i data-feather="check-circle" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs sm:text-sm font-bold text-slate-900">Rekomendasi Waktu Kosong</h3>
+                                    <p class="text-[10px] sm:text-[11px] text-slate-500 font-medium">Slot jam bebas tim tanpa bentrok</p>
+                                </div>
+                            </div>
+
+                            <div id="free-slots-summary-container" class="space-y-2 mt-3">
+                                <div class="p-2.5 sm:p-3 bg-white rounded-2xl border border-emerald-100/80 text-[11px] sm:text-xs text-slate-600">
+                                    <span class="font-bold text-emerald-700 block mb-0.5">Pilih tanggal di kalender</span>
+                                    Klik tanggal pada kalender untuk melihat jam bebas kegiatan semua anggota tim.
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 mt-3">
+                                <button 
+                                    id="open-group-event-modal-from-summary-btn"
+                                    class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                >
+                                    <i data-feather="users" class="w-3.5 h-3.5"></i>
+                                    <span>🤝 Buat Jadwal Bersama Tim</span>
+                                </button>
+                                
+                                <a href="/planner" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                                    <span>Susun Rencana di Planner</span>
+                                    <i data-feather="arrow-right" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Main Area: Interactive Calendar Grid & Day Details -->
+                    <div class="lg:col-span-8 space-y-4 sm:space-y-6">
+                        
+                        <!-- Calendar Card -->
+                        <div class="bg-white rounded-3xl p-3.5 sm:p-6 md:p-8 shadow-sm border border-slate-200/80">
+                            
+                            <!-- Month Navigation Header -->
+                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                                <div class="flex items-center gap-2 sm:gap-3">
+                                    <h2 id="calendar-month-year" class="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight">Agustus 2026</h2>
+                                    <button id="today-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-lg transition cursor-pointer">
+                                        Hari Ini
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button id="prev-month-btn" class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Bulan Sebelumnya">
+                                        <i data-feather="chevron-left" class="w-4 h-4"></i>
+                                    </button>
+                                    <button id="next-month-btn" class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Bulan Berikutnya">
+                                        <i data-feather="chevron-right" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Days of Week Header -->
+                            <div class="grid grid-cols-7 gap-1 md:gap-2 mb-1.5 text-center">
+                                <span class="text-[10px] sm:text-xs font-bold text-rose-500 uppercase tracking-wider py-1">Min</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Sen</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Sel</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Rab</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Kam</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Jum</span>
+                                <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider py-1">Sab</span>
+                            </div>
+
+                            <!-- Days Grid -->
+                            <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 md:gap-2">
+                                <!-- Dynamic Day Cells -->
+                            </div>
+
+                        </div>
+
+                        <!-- Selected Day Schedule Panel -->
+                        <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200/80">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                                <div>
+                                    <h3 id="selected-date-title" class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                                        <i data-feather="clock" class="w-5 h-5 text-primary"></i>
+                                        <span>Jadwal Harian: 6 Agustus 2026</span>
+                                    </h3>
+                                    <p class="text-xs text-slate-500 font-medium mt-0.5">Daftar kesibukan anggota tim pada tanggal ini</p>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        id="open-group-event-modal-btn"
+                                        class="inline-flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition shadow-sm hover:shadow cursor-pointer"
+                                    >
+                                        <i data-feather="users" class="w-4 h-4"></i>
+                                        <span>🤝 Jadwal Bersama</span>
+                                    </button>
+
+                                    <button 
+                                        id="open-add-event-modal-btn"
+                                        class="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm hover:shadow cursor-pointer"
+                                    >
+                                        <i data-feather="plus" class="w-4 h-4"></i>
+                                        <span>+ Kesibukan Saya</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Schedule Items List -->
+                            <div id="selected-date-events-list" class="space-y-3 mt-6">
+                                <!-- Dynamic Events List -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL 1: BUAT TIM BARU -->
+    <div id="create-team-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold">Buat Tim Liburan Baru</h3>
+                    <p class="text-xs text-white/80">Kelompokkan teman/keluarga dengan kalender khusus</p>
+                </div>
+                <button id="close-create-team-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="create-team-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nama Tim <span class="text-rose-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="new-team-name-input" 
+                        required 
+                        placeholder="Contoh: Keluarga Inti, Alumni SMA, Tim Kantor" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kategori Tim</label>
+                    <select 
+                        id="new-team-category-select" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    >
+                        <option value="Keluarga">Keluarga</option>
+                        <option value="Teman">Teman / Sahabat</option>
+                        <option value="Pekerjaan">Pekerjaan / Kantor</option>
+                        <option value="Komunitas">Komunitas / Komunitas Hobi</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+
+                <!-- Input Anggota Awal -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Undang Anggota Awal (Opsional)</label>
+                    <div class="flex gap-2 mb-2">
+                        <input 
+                            type="text" 
+                            id="initial-member-input"
+                            placeholder="Masukkan @username teman..." 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-primary"
+                        />
+                        <button 
+                            type="button" 
+                            id="add-initial-member-btn" 
+                            class="bg-slate-900 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer flex-shrink-0"
+                        >
+                            + Undang
+                        </button>
+                    </div>
+                    <div id="initial-member-feedback" class="text-[11px] font-semibold mb-2 hidden"></div>
+
+                    <!-- Temporary Initial Members Container -->
+                    <div id="initial-members-list" class="flex flex-wrap gap-2 pt-1">
+                        <!-- Owner badge by default -->
+                    </div>
+                </div>
+
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <button 
+                        type="button" 
+                        id="cancel-create-team-btn" 
+                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="save-team-submit-btn" 
+                        class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer"
+                    >
+                        Buat Tim Baru
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: TAMBAH KESIBUKAN PRIBADI SAYA -->
+    <div id="add-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold">Tambah Kesibukan Pribadi</h3>
+                    <p class="text-xs text-white/80">Tandai jam sibuk pribadi Anda di kalender tim</p>
+                </div>
+                <button id="close-add-event-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="add-event-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Judul Kesibukan <span class="text-rose-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="event-title-input" 
+                        required 
+                        placeholder="Contoh: Rapat Kantor, Acara Keluarga, Kuliah" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pemilik Jadwal</label>
+                    <div class="w-full bg-blue-50/70 border border-blue-100 rounded-xl px-4 py-2.5 text-xs text-blue-900 font-bold flex items-center gap-2">
+                        <i data-feather="user-check" class="w-4 h-4 text-blue-600"></i>
+                        <span id="event-owner-display">Akun Anda (@user)</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tanggal <span class="text-rose-500">*</span></label>
+                    <input 
+                        type="date" 
+                        id="event-date-input" 
+                        required 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Jam Mulai <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="time" 
+                            id="event-start-time-input" 
+                            required 
+                            value="08:00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Jam Selesai <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="time" 
+                            id="event-end-time-input" 
+                            required 
+                            value="12:00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Catatan Tambahan (Opsional)</label>
+                    <textarea 
+                        id="event-desc-input" 
+                        rows="2" 
+                        placeholder="Detail lokasi atau informasi penting..." 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                    ></textarea>
+                </div>
+
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <button 
+                        type="button" 
+                        id="cancel-add-event-btn" 
+                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="save-event-submit-btn" 
+                        class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer"
+                    >
+                        Simpan Kesibukan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: BUAT JADWAL BERSAMA TIM -->
+    <div id="group-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <span>🤝 Buat Jadwal Bersama Tim</span>
+                    </h3>
+                    <p class="text-xs text-white/80">Meeting pembahasan liburan, main bareng, atau gathering</p>
+                </div>
+                <button id="close-group-event-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="group-event-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Judul Agenda Bersama <span class="text-rose-500">*</span></label>
+                    <input 
+                        type="text" 
+                        id="group-event-title-input" 
+                        required 
+                        placeholder="Contoh: Meeting Trip Liburan & Booking Tiket, Main Bareng" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kategori Agenda</label>
+                    <select 
+                        id="group-event-category-select" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                    >
+                        <option value="Diskusi Liburan">💬 Diskusi Liburan & Meeting</option>
+                        <option value="Gathering">🎉 Gathering & Main Bareng</option>
+                        <option value="Makan Bersama">🍽️ Makan Bersama / Kulineran</option>
+                        <option value="Perjalanan Bersama">🚗 Perjalanan / Liburan Bersama</option>
+                        <option value="Lainnya">📌 Agenda Lainnya</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tanggal <span class="text-rose-500">*</span></label>
+                    <input 
+                        type="date" 
+                        id="group-event-date-input" 
+                        required 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                    />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Jam Mulai <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="time" 
+                            id="group-event-start-time-input" 
+                            required 
+                            value="19:00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Jam Selesai <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="time" 
+                            id="group-event-end-time-input" 
+                            required 
+                            value="21:00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Lokasi / Link Meeting (Opsional)</label>
+                    <input 
+                        type="text"
+                        id="group-event-desc-input" 
+                        placeholder="Contoh: Google Meet link atau Cafe Kopi Kenangan" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                    />
+                </div>
+
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <button 
+                        type="button" 
+                        id="cancel-group-event-btn" 
+                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="save-group-event-submit-btn" 
+                        class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer flex items-center gap-1.5"
+                    >
+                        <span>Simpan Jadwal Bersama</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM CONFIRMATION (CENTERED - MATCHING USER DESIGN) -->
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="p-6 border-b border-slate-100 flex items-start justify-between">
+                <h3 id="confirm-modal-title" class="text-xl font-bold text-slate-800 tracking-tight">Confirmation</h3>
+                <button id="confirm-modal-close-btn" class="text-slate-400 hover:text-slate-600 transition cursor-pointer p-1">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p id="confirm-modal-message" class="text-sm text-slate-600 leading-relaxed font-medium">
+                    Are you sure you want to delete this item?
+                </p>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button id="confirm-modal-cancel-btn" class="px-5 py-2.5 bg-slate-300 hover:bg-slate-400/80 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer">
+                    Cancel
+                </button>
+                <button id="confirm-modal-btn" class="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer">
+                    Yes, delete it!
+                </button>
+            </div>
+        </div>
+    </div>
+</Layout>
+
+<script is:inline define:vars={{ currentUsername, currentUserFullName, currentUserAvatar }}>
+    document.addEventListener("DOMContentLoaded", function () {
+        const currentUser = {
+            username: currentUsername,
+            fullName: currentUserFullName,
+            avatarUrl: currentUserAvatar,
+            isOwner: true
+        };
+
+        if (window.Clerk && window.Clerk.user) {
+            currentUser.fullName = window.Clerk.user.fullName || window.Clerk.user.firstName || currentUser.fullName;
+            if (window.Clerk.user.imageUrl) {
+                currentUser.avatarUrl = window.Clerk.user.imageUrl;
+            }
+            if (window.Clerk.user.username) {
+                currentUser.username = window.Clerk.user.username.toLowerCase();
+            }
+        }
+
+        const cachedAvatar = localStorage.getItem('dream_user_avatar_' + currentUser.username.toLowerCase());
+        if (cachedAvatar) {
+            currentUser.avatarUrl = cachedAvatar;
+        }
+
+        // Dynamic Avatar Generator per User
+        function getAvatarUrl(m) {
+            if (m && m.avatarUrl && !m.avatarUrl.includes('unsplash.com/photo-1534528741775')) {
+                return m.avatarUrl;
+            }
+            const name = m?.fullName || m?.username || 'User';
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true`;
+        }
+
+        const ownerDisplayEl = document.getElementById('event-owner-display');
+        if (ownerDisplayEl) {
+            ownerDisplayEl.textContent = `Jadwal ini untuk akun Anda (${currentUser.fullName} - @${currentUser.username})`;
+        }
+
+        // Custom Centered Confirmation Modal Helper
+        function customConfirm({ title = "Confirmation", message = "Are you sure you want to delete this?", confirmText = "Yes, delete it!" } = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-confirm-modal');
+                const titleEl = document.getElementById('confirm-modal-title');
+                const msgEl = document.getElementById('confirm-modal-message');
+                const confirmBtn = document.getElementById('confirm-modal-btn');
+                const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+                const closeBtn = document.getElementById('confirm-modal-close-btn');
+
+                if (!modal || !titleEl || !msgEl || !confirmBtn || !cancelBtn) {
+                    resolve(confirm(message));
+                    return;
+                }
+
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                confirmBtn.textContent = confirmText;
+
+                modal.classList.remove('hidden');
+                if (window.feather) window.feather.replace();
+
+                function cleanup(result) {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    closeBtn?.removeEventListener('click', onCancel);
+                    resolve(result);
+                }
+
+                function onConfirm() {
+                    cleanup(true);
+                }
+
+                function onCancel() {
+                    cleanup(false);
+                }
+
+                confirmBtn.addEventListener('click', onConfirm, { once: true });
+                cancelBtn.addEventListener('click', onCancel, { once: true });
+                if (closeBtn) closeBtn.addEventListener('click', onCancel, { once: true });
+            });
+        }
+
+        // Multi-Team State
+        let teams = [];
+        let allEvents = [];
+        let notifications = [];
+        let activeTeamId = null;
+        let currentDate = new Date();
+        let selectedDateStr = formatDateKey(new Date());
+
+        let tempCreateMembers = [];
+
+        const memberColors = [
+            { bg: 'bg-blue-500', text: 'text-blue-600', badge: 'bg-blue-50 text-blue-700 border-blue-100' },
+            { bg: 'bg-purple-500', text: 'text-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-100' },
+            { bg: 'bg-emerald-500', text: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+            { bg: 'bg-amber-500', text: 'text-amber-600', badge: 'bg-amber-50 text-amber-700 border-amber-100' },
+            { bg: 'bg-rose-500', text: 'text-rose-600', badge: 'bg-rose-50 text-rose-700 border-rose-100' },
+        ];
+
+        function getMemberColor(username) {
+            const idx = Math.abs(hashCode(username || 'user')) % memberColors.length;
+            return memberColors[idx];
+        }
+
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return hash;
+        }
+
+        function formatDateKey(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Init & Data Loading
+        async function initData() {
+            const localTeams = localStorage.getItem('dream_multi_teams');
+            if (localTeams) {
+                try { 
+                    teams = JSON.parse(localTeams);
+                    teams = teams.filter(t => t.id !== 'team_default_1');
+                } catch (e) {}
+            }
+            const localEvents = localStorage.getItem('dream_multi_team_events');
+            if (localEvents) {
+                try { allEvents = JSON.parse(localEvents); } catch (e) {}
+            }
+            
+            loadNotificationsCache();
+
+            // Sync from API
+            try {
+                const res = await fetch(`/api/team-calendar?username=${encodeURIComponent(currentUser.username)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.teams && data.teams.length > 0) {
+                        const mergedMap = new Map();
+                        [...teams, ...data.teams.filter(t => t.id !== 'team_default_1')].forEach(t => mergedMap.set(t.id, t));
+                        teams = Array.from(mergedMap.values());
+                        saveLocalTeams();
+                    }
+                    if (data.events && data.events.length > 0) {
+                        const mergedEvtMap = new Map();
+                        [...allEvents, ...data.events].forEach(e => mergedEvtMap.set(e.id, e));
+                        allEvents = Array.from(mergedEvtMap.values());
+                        saveLocalEvents();
+                    }
+                    if (data.notifications && data.notifications.length > 0) {
+                        const mergedNotifMap = new Map();
+                        data.notifications.forEach(n => mergedNotifMap.set(n.id, n));
+                        notifications.forEach(n => {
+                            const existing = mergedNotifMap.get(n.id);
+                            if (!existing || n.status === 'READ' || n.status === 'ACCEPTED' || n.status === 'REJECTED') {
+                                mergedNotifMap.set(n.id, n);
+                            }
+                        });
+                        notifications = Array.from(mergedNotifMap.values());
+                        saveLocalNotifs();
+                    }
+                }
+            } catch (err) {
+                console.warn("Server sync notice:", err);
+            }
+
+            renderTeamsOverview();
+            renderNotifications();
+        }
+
+        function loadNotificationsCache() {
+            notifications = [];
+            const localNotifs = localStorage.getItem('dream_team_notifications');
+            if (localNotifs) {
+                try { notifications = JSON.parse(localNotifs); } catch (e) {}
+            }
+            const globalNotifsStr = localStorage.getItem('dream_global_team_notifications');
+            if (globalNotifsStr) {
+                try {
+                    const globalNotifs = JSON.parse(globalNotifsStr);
+                    const myGlobalNotifs = globalNotifs.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase());
+                    const mergedMap = new Map();
+                    myGlobalNotifs.forEach(n => mergedMap.set(n.id, n));
+                    notifications.forEach(n => {
+                        const existing = mergedMap.get(n.id);
+                        if (!existing || n.status === 'READ' || n.status === 'ACCEPTED' || n.status === 'REJECTED') {
+                            mergedMap.set(n.id, n);
+                        }
+                    });
+                    notifications = Array.from(mergedMap.values());
+                } catch (e) {}
+            }
+        }
+
+        function pushGlobalNotification(notifObj) {
+            let globalNotifs = [];
+            const str = localStorage.getItem('dream_global_team_notifications');
+            if (str) {
+                try { globalNotifs = JSON.parse(str); } catch (e) {}
+            }
+            globalNotifs.unshift(notifObj);
+            localStorage.setItem('dream_global_team_notifications', JSON.stringify(globalNotifs));
+        }
+
+        function saveLocalTeams() {
+            localStorage.setItem('dream_multi_teams', JSON.stringify(teams));
+        }
+
+        function saveLocalEvents() {
+            localStorage.setItem('dream_multi_team_events', JSON.stringify(allEvents));
+        }
+
+        function saveLocalNotifs() {
+            localStorage.setItem('dream_team_notifications', JSON.stringify(notifications));
+
+            // Sync with dream_global_team_notifications so refresh never restores old unread status
+            const globalStr = localStorage.getItem('dream_global_team_notifications');
+            if (globalStr) {
+                try {
+                    const globalNotifs = JSON.parse(globalStr);
+                    globalNotifs.forEach(gn => {
+                        if (gn.recipient_username.toLowerCase() === currentUser.username.toLowerCase()) {
+                            const localMatch = notifications.find(n => n.id === gn.id);
+                            if (localMatch) {
+                                gn.status = localMatch.status;
+                            }
+                        }
+                    });
+                    localStorage.setItem('dream_global_team_notifications', JSON.stringify(globalNotifs));
+                } catch (e) {}
+            }
+        }
+
+        // Leave Team Logic
+        async function leaveTeam(teamId) {
+            const targetTeam = teams.find(t => t.id === teamId);
+            if (!targetTeam) return;
+
+            const isConfirmed = await customConfirm({
+                title: "Konfirmasi Keluar Tim",
+                message: `Apakah Anda yakin ingin keluar dari tim "${targetTeam.name}"?`,
+                confirmText: "Ya, Keluar Tim"
+            });
+
+            if (isConfirmed) {
+                targetTeam.members = (targetTeam.members || []).filter(m => m.username.toLowerCase() !== currentUser.username.toLowerCase());
+                saveLocalTeams();
+
+                const notifObj = {
+                    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    recipient_username: targetTeam.owner_username.toLowerCase(),
+                    sender_username: currentUser.username.toLowerCase(),
+                    type: 'REMOVED_FROM_TEAM',
+                    team_name: targetTeam.name,
+                    title: `Anggota Keluar Tim: ${targetTeam.name}`,
+                    message: `@${currentUser.username} telah keluar dari tim "${targetTeam.name}".`,
+                    status: 'UNREAD',
+                    created_at: new Date().toISOString()
+                };
+                pushGlobalNotification(notifObj);
+
+                try {
+                    await fetch('/api/team-calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'UPDATE_MEMBERS', teamId: teamId, members: targetTeam.members })
+                    });
+                } catch (err) {}
+
+                renderTeamsOverview();
+            }
+        }
+
+        // RENDER INBOX NOTIFICATIONS
+        function renderNotifications() {
+            const container = document.getElementById('inbox-items-container');
+            const countBadge = document.getElementById('inbox-badge-count');
+            if (!container || !countBadge) return;
+
+            const unreadNotifs = notifications.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase() && n.status === 'UNREAD');
+            if (unreadNotifs.length > 0) {
+                countBadge.textContent = unreadNotifs.length;
+                countBadge.classList.remove('hidden');
+            } else {
+                countBadge.classList.add('hidden');
+            }
+
+            container.innerHTML = '';
+            const myNotifs = notifications.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase());
+
+            if (myNotifs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-slate-400">
+                        <i data-feather="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-xs font-semibold">Belum Ada Notifikasi</p>
+                        <p class="text-[10px] mt-0.5">Semua info tim dan undangan akan muncul di sini.</p>
+                    </div>
+                `;
+                if (window.feather) window.feather.replace();
+                return;
+            }
+
+            myNotifs.forEach(notif => {
+                const itemEl = document.createElement('div');
+                itemEl.className = `p-3 rounded-2xl border text-xs transition ${notif.status === 'PENDING' ? 'bg-blue-50/90 border-blue-200' : 'bg-slate-50/60 border-slate-100'}`;
+                
+                let actionsHtml = '';
+                if (notif.type === 'TEAM_INVITE' && notif.status === 'PENDING') {
+                    actionsHtml = `
+                        <div class="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100">
+                            <button class="btn-process-invite px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white font-bold text-[11px] rounded-xl transition cursor-pointer shadow-xs" data-id="${notif.id}" data-team-id="${notif.team_id}" data-accept="true">
+                                Setuju & Gabung
+                            </button>
+                            <button class="btn-process-invite px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-[11px] rounded-xl transition cursor-pointer" data-id="${notif.id}" data-team-id="${notif.team_id}" data-accept="false">
+                                Tolak
+                            </button>
+                        </div>
+                    `;
+                } else if (notif.status === 'ACCEPTED') {
+                    actionsHtml = `<span class="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg mt-1.5 border border-emerald-100">✓ Sudah Bergabung</span>`;
+                } else if (notif.status === 'REJECTED') {
+                    actionsHtml = `<span class="inline-block text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg mt-1.5">Undangan Ditolak</span>`;
+                }
+
+                itemEl.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-bold text-slate-900 text-xs">${notif.title || 'Notifikasi Tim'}</h4>
+                        <span class="text-[9px] text-slate-400 font-medium">${notif.created_at ? new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Baru'}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">${notif.message}</p>
+                    ${actionsHtml}
+                `;
+
+                container.appendChild(itemEl);
+            });
+
+            container.querySelectorAll('.btn-process-invite').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const notifId = e.currentTarget.getAttribute('data-id');
+                    const teamId = e.currentTarget.getAttribute('data-team-id');
+                    const isAccept = e.currentTarget.getAttribute('data-accept') === 'true';
+
+                    const notif = notifications.find(n => n.id === notifId);
+                    if (notif) {
+                        notif.status = isAccept ? 'ACCEPTED' : 'REJECTED';
+                        saveLocalNotifs();
+                        renderNotifications();
+
+                        if (isAccept) {
+                            try {
+                                const res = await fetch(`/api/team-calendar?teamId=${teamId}`);
+                                const data = await res.json();
+                                let targetTeam = data.teams?.find(t => t.id === teamId);
+                                
+                                if (!targetTeam) {
+                                    targetTeam = teams.find(t => t.id === teamId);
+                                }
+
+                                if (targetTeam) {
+                                    const members = targetTeam.members || [];
+                                    if (!members.some(m => m.username.toLowerCase() === currentUser.username.toLowerCase())) {
+                                        members.push(currentUser);
+                                        targetTeam.members = members;
+                                    }
+                                    if (!teams.some(t => t.id === targetTeam.id)) {
+                                        teams.push(targetTeam);
+                                    }
+                                    saveLocalTeams();
+                                    renderTeamsOverview();
+                                }
+                            } catch (err) {}
+                        }
+
+                        try {
+                            await fetch('/api/team-calendar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    action: 'PROCESS_TEAM_INVITATION',
+                                    notifId,
+                                    teamId,
+                                    accept: isAccept,
+                                    username: currentUser.username,
+                                    userObj: currentUser
+                                })
+                            });
+                        } catch (err) {}
+                    }
+                });
+            });
+
+            if (window.feather) window.feather.replace();
+        }
+
+        // Toggle Inbox Panel
+        const inboxToggleBtn = document.getElementById('inbox-toggle-btn');
+        const inboxDropdown = document.getElementById('inbox-dropdown-panel');
+        const markAllReadBtn = document.getElementById('mark-all-read-btn');
+
+        if (inboxToggleBtn && inboxDropdown) {
+            inboxToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                inboxDropdown.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!inboxDropdown.contains(e.target) && !inboxToggleBtn.contains(e.target)) {
+                    inboxDropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        if (markAllReadBtn) {
+            markAllReadBtn.addEventListener('click', async () => {
+                notifications.forEach(n => {
+                    if (n.recipient_username.toLowerCase() === currentUser.username.toLowerCase()) {
+                        if (n.status === 'UNREAD' || n.status === 'PENDING') {
+                            n.status = 'READ';
+                        }
+                    }
+                });
+                saveLocalNotifs();
+                renderNotifications();
+
+                try {
+                    await fetch('/api/team-calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'MARK_NOTIF_READ', username: currentUser.username })
+                    });
+                } catch (err) {}
+            });
+        }
+
+        // RENDER VIEW 1: DAFTAR TIM SAYA
+        function renderTeamsOverview() {
+            const overviewView = document.getElementById('teams-overview-view');
+            const detailView = document.getElementById('team-calendar-detail-view');
+            const gridContainer = document.getElementById('teams-grid-container');
+            const badgeCount = document.getElementById('teams-count-badge');
+
+            if (!overviewView || !detailView || !gridContainer || !badgeCount) return;
+
+            overviewView.classList.remove('hidden');
+            detailView.classList.add('hidden');
+            activeTeamId = null;
+
+            const myTeams = teams.filter(t => {
+                const isOwner = (t.owner_username || '').toLowerCase() === currentUser.username.toLowerCase();
+                const isMember = (t.members || []).some(m => (m.username || '').toLowerCase() === currentUser.username.toLowerCase());
+                return isOwner || isMember;
+            });
+
+            badgeCount.textContent = `${myTeams.length} Tim`;
+            gridContainer.innerHTML = '';
+
+            if (myTeams.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full text-center py-16 px-6 bg-white rounded-3xl border border-dashed border-slate-200/90 shadow-2xs my-4 max-w-lg mx-auto">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-feather="users" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-slate-900 mb-1.5">Belum Ada Tim</h3>
+                        <p class="text-xs md:text-sm text-slate-500 font-medium leading-relaxed mb-6">
+                            Anda belum memiliki tim liburan. Buat tim pertama Anda (seperti Keluarga, Teman Kerja, atau Komunitas) atau tunggu undangan dari teman.
+                        </p>
+                        <button id="btn-create-first-team" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer">
+                            <i data-feather="plus" class="w-4 h-4"></i>
+                            <span>Buat Tim Baru</span>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-create-first-team')?.addEventListener('click', openCreateTeamModal);
+                if (window.feather) window.feather.replace();
+                return;
+            }
+
+            myTeams.forEach(team => {
+                const members = team.members || [currentUser];
+                const teamEvents = allEvents.filter(e => e.team_id === team.id);
+                const isOwner = team.owner_username.toLowerCase() === currentUser.username.toLowerCase();
+                
+                const categoryIconMap = {
+                    'Keluarga': 'heart',
+                    'Teman': 'smile',
+                    'Pekerjaan': 'briefcase',
+                    'Komunitas': 'compass',
+                    'Lainnya': 'users'
+                };
+                const iconName = categoryIconMap[team.category] || 'users';
+
+                const cardEl = document.createElement('div');
+                cardEl.className = "bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between group";
+
+                let avatarsHtml = `<div class="flex items-center -space-x-2 overflow-hidden">`;
+                members.slice(0, 4).forEach(m => {
+                    const avatar = getAvatarUrl(m);
+                    avatarsHtml += `<img src="${avatar}" title="${m.fullName || m.username}" class="w-8 h-8 rounded-xl object-cover ring-2 ring-white" />`;
+                });
+                if (members.length > 4) {
+                    avatarsHtml += `<span class="w-8 h-8 rounded-xl bg-slate-100 text-[10px] font-extrabold text-slate-600 flex items-center justify-center ring-2 ring-white">+${members.length - 4}</span>`;
+                }
+                avatarsHtml += `</div>`;
+
+                cardEl.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-100">
+                                <i data-feather="${iconName}" class="w-3.5 h-3.5"></i>
+                                ${team.category || 'Keluarga'}
+                            </span>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[11px] font-bold text-slate-400">${teamEvents.length} Jadwal</span>
+                                ${isOwner ? `
+                                    <button class="btn-delete-team p-1 text-slate-300 hover:text-rose-500 transition cursor-pointer" data-id="${team.id}" title="Hapus Tim">
+                                        <i data-feather="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                ` : `
+                                    <button class="btn-leave-team p-1 text-slate-300 hover:text-rose-500 transition cursor-pointer" data-id="${team.id}" title="Keluar dari Tim Ini">
+                                        <i data-feather="log-out" class="w-4 h-4"></i>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+
+                        <h3 class="text-xl font-extrabold text-slate-900 group-hover:text-primary transition-colors mb-2">${team.name}</h3>
+                        <p class="text-xs text-slate-500 font-medium mb-5">${members.length} Anggota terdaftar di tim ini</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                        ${avatarsHtml}
+                        <button class="btn-open-team-calendar inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer shadow-xs" data-id="${team.id}">
+                            <span>Buka Kalender</span>
+                            <i data-feather="arrow-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+
+                gridContainer.appendChild(cardEl);
+            });
+
+            gridContainer.querySelectorAll('.btn-open-team-calendar').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (id) openTeamCalendarView(id);
+                });
+            });
+
+            gridContainer.querySelectorAll('.btn-delete-team').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const targetTeam = teams.find(t => t.id === id);
+                    const teamName = targetTeam ? targetTeam.name : 'tim ini';
+
+                    const isConfirmed = await customConfirm({
+                        title: "Confirmation",
+                        message: `Are you sure you want to delete team "${teamName}"? This action cannot be undone and will delete all team schedules.`,
+                        confirmText: "Yes, delete it!"
+                    });
+
+                    if (id && isConfirmed) {
+                        teams = teams.filter(t => t.id !== id);
+                        allEvents = allEvents.filter(evt => evt.team_id !== id);
+                        saveLocalTeams();
+                        saveLocalEvents();
+                        renderTeamsOverview();
+
+                        try {
+                            await fetch('/api/team-calendar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'DELETE_TEAM', teamId: id })
+                            });
+                        } catch (err) {}
+                    }
+                });
+            });
+
+            gridContainer.querySelectorAll('.btn-leave-team').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (id) leaveTeam(id);
+                });
+            });
+
+            if (window.feather) window.feather.replace();
+        }
+
+        // RENDER VIEW 2: ACTIVE TEAM CALENDAR VIEW
+        function openTeamCalendarView(teamId) {
+            const overviewView = document.getElementById('teams-overview-view');
+            const detailView = document.getElementById('team-calendar-detail-view');
+            const teamNameTitle = document.getElementById('active-team-name-title');
+            const teamCatBadge = document.getElementById('active-team-category-badge');
+            const switchSelect = document.getElementById('switch-team-select');
+            const leaveBtn = document.getElementById('active-team-leave-btn');
+
+            if (!overviewView || !detailView) return;
+
+            const activeTeam = teams.find(t => t.id === teamId);
+            if (!activeTeam) return;
+
+            activeTeamId = teamId;
+            overviewView.classList.add('hidden');
+            detailView.classList.remove('hidden');
+
+            if (teamNameTitle) teamNameTitle.textContent = activeTeam.name;
+            if (teamCatBadge) teamCatBadge.textContent = activeTeam.category || 'Tim';
+
+            const isOwner = activeTeam.owner_username.toLowerCase() === currentUser.username.toLowerCase();
+            if (leaveBtn) {
+                if (!isOwner) {
+                    leaveBtn.classList.remove('hidden');
+                    leaveBtn.onclick = () => leaveTeam(activeTeamId);
+                } else {
+                    leaveBtn.classList.add('hidden');
+                }
+            }
+
+            if (switchSelect) {
+                switchSelect.innerHTML = '';
+                const myTeams = teams.filter(t => {
+                    const isOwner = (t.owner_username || '').toLowerCase() === currentUser.username.toLowerCase();
+                    const isMember = (t.members || []).some(m => (m.username || '').toLowerCase() === currentUser.username.toLowerCase());
+                    return isOwner || isMember;
+                });
+                myTeams.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `${t.name} (${t.category})`;
+                    if (t.id === activeTeamId) opt.selected = true;
+                    switchSelect.appendChild(opt);
+                });
+            }
+
+            renderActiveTeamMembers();
+            renderCalendar();
+            renderSelectedDayEvents();
+        }
+
+        // Active Team Members Manager
+        function renderActiveTeamMembers() {
+            const container = document.getElementById('team-members-list');
+            const countBadge = document.getElementById('active-team-member-count');
+            const activeTeam = teams.find(t => t.id === activeTeamId);
+            if (!activeTeam || !container || !countBadge) return;
+
+            const members = activeTeam.members || [currentUser];
+            countBadge.textContent = `${members.length} Orang`;
+
+            container.innerHTML = '';
+
+            members.forEach(member => {
+                const isOwner = member.username.toLowerCase() === (activeTeam.owner_username || '').toLowerCase();
+                const isMe = member.username.toLowerCase() === currentUser.username.toLowerCase();
+
+                const memberEl = document.createElement('div');
+                memberEl.className = `flex items-center justify-between p-3 rounded-2xl transition border ${isOwner ? 'bg-blue-50/70 border-blue-100/80' : 'bg-white border-slate-100 hover:bg-slate-50'}`;
+                
+                memberEl.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <img src="${getAvatarUrl(member)}" alt="${member.fullName}" class="w-9 h-9 rounded-xl object-cover ring-2 ring-white flex-shrink-0" />
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-slate-900 truncate">${member.fullName} ${isMe ? '(Anda)' : ''}</h4>
+                            <p class="text-[10px] font-medium text-slate-500">@${member.username}</p>
+                        </div>
+                    </div>
+                    ${isOwner 
+                        ? `<span class="bg-blue-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase">Pemilik</span>`
+                        : (activeTeam.owner_username.toLowerCase() === currentUser.username.toLowerCase() ? `
+                            <button class="btn-remove-active-member text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer" data-username="${member.username}" title="Keluarkan Anggota">
+                                <i data-feather="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        ` : (isMe ? `
+                            <button class="btn-leave-sidebar-team bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-2.5 py-1 rounded-xl text-[10px] flex items-center gap-1 transition cursor-pointer" title="Keluar dari Tim Ini">
+                                <i data-feather="log-out" class="w-3 h-3"></i>
+                                <span>Keluar</span>
+                            </button>
+                        ` : ''))
+                    }
+                `;
+                container.appendChild(memberEl);
+            });
+
+            container.querySelectorAll('.btn-leave-sidebar-team').forEach(btn => {
+                btn.addEventListener('click', () => leaveTeam(activeTeamId));
+            });
+
+            container.querySelectorAll('.btn-remove-active-member').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const username = e.currentTarget.getAttribute('data-username');
+                    if (username) {
+                        const isConfirmed = await customConfirm({
+                            title: "Confirmation",
+                            message: `Are you sure you want to remove @${username} from this team?`,
+                            confirmText: "Yes, delete it!"
+                        });
+
+                        if (!isConfirmed) return;
+
+                        activeTeam.members = activeTeam.members.filter(m => m.username.toLowerCase() !== username.toLowerCase());
+                        saveLocalTeams();
+                        renderActiveTeamMembers();
+                        renderCalendar();
+                        renderSelectedDayEvents();
+
+                        const notifObj = {
+                            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            recipient_username: username.toLowerCase(),
+                            sender_username: currentUser.username.toLowerCase(),
+                            type: 'REMOVED_FROM_TEAM',
+                            team_name: activeTeam.name,
+                            title: `Status Keanggotaan Tim: ${activeTeam.name}`,
+                            message: `@${currentUser.username} telah mengeluarkan Anda dari tim "${activeTeam.name}".`,
+                            status: 'UNREAD',
+                            created_at: new Date().toISOString()
+                        };
+                        pushGlobalNotification(notifObj);
+
+                        fetch('/api/team-calendar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'NOTIFY_REMOVED',
+                                recipient_username: username,
+                                sender_username: currentUser.username,
+                                team_name: activeTeam.name
+                            })
+                        }).catch(() => {});
+
+                        fetch('/api/team-calendar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'UPDATE_MEMBERS', teamId: activeTeamId, members: activeTeam.members })
+                        }).catch(() => {});
+                    }
+                });
+            });
+
+            if (window.feather) window.feather.replace();
+        }
+
+        // Invite Member to Active Team
+        const searchInput = document.getElementById('search-username-input');
+        const addBtn = document.getElementById('add-member-btn');
+        const feedback = document.getElementById('username-search-feedback');
+
+        if (addBtn && searchInput && feedback) {
+            addBtn.addEventListener('click', async () => {
+                const activeTeam = teams.find(t => t.id === activeTeamId);
+                if (!activeTeam) return;
+
+                let usernameVal = searchInput.value.trim();
+                if (usernameVal.startsWith('@')) usernameVal = usernameVal.substring(1);
+                
+                if (!usernameVal) {
+                    showFeedback("Masukkan @username terlebih dahulu.", "text-rose-500");
+                    return;
+                }
+
+                if ((activeTeam.members || []).some(m => m.username.toLowerCase() === usernameVal.toLowerCase())) {
+                    showFeedback("Username ini sudah ada di tim ini.", "text-amber-600");
+                    return;
+                }
+
+                addBtn.disabled = true;
+                addBtn.innerHTML = `<i data-feather="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Cari...</span>`;
+                if (window.feather) window.feather.replace();
+
+                try {
+                    const res = await fetch(`/api/check-username?username=${encodeURIComponent(usernameVal)}`);
+                    const data = await res.json();
+
+                    if (res.ok && data.user) {
+                        const invitedUser = {
+                            username: data.user.username,
+                            fullName: data.user.fullName || data.user.username,
+                            avatarUrl: data.user.avatarUrl,
+                            isOwner: false
+                        };
+
+                        const notifObj = {
+                            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            recipient_username: invitedUser.username.toLowerCase(),
+                            sender_username: currentUser.username.toLowerCase(),
+                            type: 'TEAM_INVITE',
+                            team_id: activeTeamId,
+                            team_name: activeTeam.name,
+                            team_category: activeTeam.category || 'Lainnya',
+                            title: `Undangan Tim: ${activeTeam.name}`,
+                            message: `@${currentUser.username} mengundang Anda bergabung ke tim "${activeTeam.name}".`,
+                            status: 'PENDING',
+                            created_at: new Date().toISOString()
+                        };
+                        pushGlobalNotification(notifObj);
+
+                        fetch('/api/team-calendar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'SEND_INVITE_NOTIF',
+                                recipient_username: invitedUser.username,
+                                sender_username: currentUser.username,
+                                sender_fullname: currentUser.fullName,
+                                team_id: activeTeamId,
+                                team_name: activeTeam.name,
+                                team_category: activeTeam.category
+                            })
+                        }).catch(() => {});
+
+                        searchInput.value = '';
+                        showFeedback(`Undangan telah dikirim ke Inbox @${invitedUser.username}`, "text-emerald-600");
+                    } else {
+                        showFeedback(`Username @${usernameVal} tidak ditemukan di database.`, "text-rose-500");
+                    }
+                } catch (err) {
+                    showFeedback("Kesalahan koneksi.", "text-rose-500");
+                } finally {
+                    addBtn.disabled = false;
+                    addBtn.innerHTML = `<i data-feather="send" class="w-3.5 h-3.5"></i><span>Undang</span>`;
+                    if (window.feather) window.feather.replace();
+                }
+            });
+        }
+
+        function showFeedback(msg, colorClass) {
+            if (!feedback) return;
+            feedback.textContent = msg;
+            feedback.className = `text-[11px] font-semibold mt-1.5 ${colorClass}`;
+            feedback.classList.remove('hidden');
+            setTimeout(() => feedback.classList.add('hidden'), 4000);
+        }
+
+        // Render Calendar Grid for Active Team
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-days-grid');
+            const monthYearTitle = document.getElementById('calendar-month-year');
+            if (!grid || !monthYearTitle || !activeTeamId) return;
+
+            const activeTeamEvents = allEvents.filter(e => e.team_id === activeTeamId);
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            monthYearTitle.textContent = `${monthNames[month]} ${year}`;
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const todayStr = formatDateKey(new Date());
+
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "h-20 md:h-24 bg-slate-50/50 rounded-2xl border border-dashed border-slate-100 opacity-40";
+                grid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                const dateKey = formatDateKey(dayDate);
+
+                const dayEvents = activeTeamEvents.filter(e => e.event_date === dateKey);
+                const isSelected = dateKey === selectedDateStr;
+                const isToday = dateKey === todayStr;
+
+                const dayCell = document.createElement('div');
+                dayCell.className = `h-16 sm:h-20 md:h-24 p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative group overflow-hidden ${
+                    isSelected 
+                        ? 'bg-blue-50/80 border-primary ring-2 ring-primary/30 shadow-sm' 
+                        : (isToday ? 'bg-amber-50/40 border-amber-200' : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-xs')
+                }`;
+
+                let badgeHtml = '';
+                const hasGroupEvt = dayEvents.some(e => e.is_group_event);
+                if (dayEvents.length > 0) {
+                    if (hasGroupEvt) {
+                        badgeHtml = `
+                            <span class="hidden md:inline-block bg-purple-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-2xs">🤝 Bersama</span>
+                            <span class="inline-block md:hidden bg-purple-600 text-white text-[8px] font-extrabold px-1 py-0.5 rounded-md shadow-2xs leading-none" title="Agenda Bersama">🤝</span>
+                        `;
+                    } else {
+                        badgeHtml = `
+                            <span class="hidden md:inline-block bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-2xs">${dayEvents.length} Busy</span>
+                            <span class="inline-block md:hidden bg-rose-500 text-white text-[8px] font-extrabold px-1 py-0.5 rounded-md shadow-2xs leading-none" title="${dayEvents.length} Kesibukan">${dayEvents.length}B</span>
+                        `;
+                    }
+                } else {
+                    badgeHtml = `<span class="bg-emerald-50 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden md:inline">Free</span>`;
+                }
+
+                let memberAvatarsHtml = '';
+                if (dayEvents.length > 0) {
+                    const uniqueUsernames = [...new Set(dayEvents.map(e => e.is_group_event ? 'ALL' : (e.member_username || e.owner_username).toLowerCase()))];
+                    const activeTeam = teams.find(t => t.id === activeTeamId);
+                    const membersList = activeTeam?.members || [currentUser];
+
+                    memberAvatarsHtml = `<div class="flex items-center -space-x-1 sm:-space-x-1.5 overflow-hidden pt-0.5 sm:pt-1">`;
+                    if (uniqueUsernames.includes('ALL')) {
+                        membersList.slice(0, 3).forEach(m => {
+                            memberAvatarsHtml += `<img src="${getAvatarUrl(m)}" title="${m.fullName}" class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full object-cover ring-1 sm:ring-2 ring-white flex-shrink-0" />`;
+                        });
+                    } else {
+                        uniqueUsernames.slice(0, 3).forEach(uname => {
+                            const m = membersList.find(tm => tm.username.toLowerCase() === uname);
+                            const avatar = getAvatarUrl(m || { username: uname, fullName: uname });
+                            memberAvatarsHtml += `<img src="${avatar}" title="${m?.fullName || uname}" class="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full object-cover ring-1 sm:ring-2 ring-white flex-shrink-0" />`;
+                        });
+                    }
+                    if (membersList.length > 3) {
+                        memberAvatarsHtml += `<span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-200 text-[7px] sm:text-[8px] font-bold text-slate-600 flex items-center justify-center ring-1 sm:ring-2 ring-white">+${membersList.length - 3}</span>`;
+                    }
+                    memberAvatarsHtml += `</div>`;
+                }
+
+                dayCell.innerHTML = `
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[11px] sm:text-xs font-black ${isToday ? 'bg-primary text-white w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center shadow-xs' : (isSelected ? 'text-primary' : 'text-slate-800')}">${day}</span>
+                        ${badgeHtml}
+                    </div>
+                    <div class="truncate w-full mt-auto">
+                        ${memberAvatarsHtml}
+                        ${dayEvents.length > 0 ? `<p class="text-[10px] font-bold ${dayEvents[0].is_group_event ? 'text-purple-700 font-extrabold' : 'text-slate-700'} truncate hidden md:block mt-0.5">${dayEvents[0].title}</p>` : ''}
+                    </div>
+                `;
+
+                dayCell.addEventListener('click', () => {
+                    selectedDateStr = dateKey;
+                    renderCalendar();
+                    renderSelectedDayEvents();
+                });
+
+                grid.appendChild(dayCell);
+            }
+
+            document.getElementById('prev-month-btn')?.replaceWith(document.getElementById('prev-month-btn').cloneNode(true));
+            document.getElementById('next-month-btn')?.replaceWith(document.getElementById('next-month-btn').cloneNode(true));
+            document.getElementById('today-btn')?.replaceWith(document.getElementById('today-btn').cloneNode(true));
+
+            document.getElementById('prev-month-btn')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+            document.getElementById('next-month-btn')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+            document.getElementById('today-btn')?.addEventListener('click', () => {
+                currentDate = new Date();
+                selectedDateStr = formatDateKey(currentDate);
+                renderCalendar();
+                renderSelectedDayEvents();
+            });
+
+            if (window.feather) window.feather.replace();
+        }
+
+        // Render Selected Date Events & Free Time Slots Detector
+        function renderSelectedDayEvents() {
+            const titleEl = document.getElementById('selected-date-title');
+            const listEl = document.getElementById('selected-date-events-list');
+            if (!titleEl || !listEl || !activeTeamId) return;
+
+            const [y, m, d] = selectedDateStr.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            const formattedDateStr = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+            titleEl.querySelector('span').textContent = `Jadwal Harian: ${formattedDateStr}`;
+
+            const activeTeamEvents = allEvents.filter(e => e.team_id === activeTeamId);
+            const dayEvents = activeTeamEvents.filter(e => e.event_date === selectedDateStr);
+            const activeTeam = teams.find(t => t.id === activeTeamId);
+            const membersList = activeTeam?.members || [currentUser];
+            const isTeamOwner = activeTeam?.owner_username.toLowerCase() === currentUser.username.toLowerCase();
+
+            listEl.innerHTML = '';
+            if (dayEvents.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i data-feather="check-circle" class="w-5 h-5"></i>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800">Semua Anggota Tim 100% Free!</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Tidak ada jadwal kesibukan yang diinput untuk tim ini pada tanggal ini.</p>
+                    </div>
+                `;
+            } else {
+                dayEvents.forEach(evt => {
+                    const isGroupEvt = !!evt.is_group_event;
+                    const memberUname = (evt.member_username || evt.owner_username).toLowerCase();
+                    const creatorUname = (evt.owner_username || '').toLowerCase();
+                    
+                    const isMyEvent = isGroupEvt 
+                        ? (creatorUname === currentUser.username.toLowerCase() || isTeamOwner)
+                        : (memberUname === currentUser.username.toLowerCase());
+
+                    const color = isGroupEvt 
+                        ? { badge: 'bg-purple-100 text-purple-800 border-purple-200' }
+                        : getMemberColor(memberUname);
+
+                    const evtCard = document.createElement('div');
+                    evtCard.className = `flex items-center justify-between p-4 rounded-2xl transition border ${isGroupEvt ? 'bg-gradient-to-r from-purple-50 to-indigo-50/70 border-purple-200 shadow-2xs' : 'bg-slate-50/80 border-slate-100 hover:bg-white hover:shadow-xs'}`;
+                    
+                    let avatarSec = '';
+                    let subText = '';
+                    if (isGroupEvt) {
+                        avatarSec = `<div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-2xs">🤝</div>`;
+                        subText = `Kegiatan Bersama Tim (${evt.group_category || 'Agenda'}) • Dibuat oleh @${creatorUname}`;
+                    } else {
+                        const memberInfo = membersList.find(m => m.username.toLowerCase() === memberUname) || {
+                            username: memberUname,
+                            fullName: evt.member_username || memberUname
+                        };
+                        avatarSec = `<img src="${getAvatarUrl(memberInfo)}" alt="${memberInfo.fullName}" class="w-10 h-10 rounded-xl object-cover border border-slate-100 flex-shrink-0" />`;
+                        subText = `Jadwal: <span class="font-bold text-slate-700">${memberInfo.fullName}</span> (@${memberUname}) ${memberUname === currentUser.username.toLowerCase() ? '<span class="text-primary font-bold">(Anda)</span>' : ''}`;
+                    }
+
+                    evtCard.innerHTML = `
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            ${avatarSec}
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <h4 class="text-xs font-extrabold ${isGroupEvt ? 'text-purple-950' : 'text-slate-900'} truncate">${evt.title}</h4>
+                                    ${isGroupEvt ? `<span class="bg-purple-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">🤝 BERSAMA</span>` : ''}
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold ${color.badge} px-2 py-0.5 rounded-md">
+                                        <i data-feather="clock" class="w-3 h-3"></i> ${evt.start_time} - ${evt.end_time}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 font-medium">${subText}</p>
+                                ${evt.description ? `<p class="text-[11px] ${isGroupEvt ? 'text-purple-700' : 'text-slate-400'} italic mt-0.5">${evt.description}</p>` : ''}
+                            </div>
+                        </div>
+
+                        ${isMyEvent ? `
+                            <button class="btn-delete-event text-slate-400 hover:text-rose-600 p-2 transition cursor-pointer" data-id="${evt.id}" title="Hapus Kegiatan">
+                                <i data-feather="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        ` : ''}
+                    `;
+
+                    listEl.appendChild(evtCard);
+                });
+
+                listEl.querySelectorAll('.btn-delete-event').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const eventId = e.currentTarget.getAttribute('data-id');
+                        const targetEvt = allEvents.find(evt => evt.id === eventId);
+                        if (targetEvt) {
+                            const isGroupEvt = !!targetEvt.is_group_event;
+                            const ownerUname = (targetEvt.member_username || targetEvt.owner_username).toLowerCase();
+                            const creatorUname = (targetEvt.owner_username || '').toLowerCase();
+                            const isCreator = creatorUname === currentUser.username.toLowerCase();
+
+                            if (!isGroupEvt && ownerUname !== currentUser.username.toLowerCase()) {
+                                alert("Anda hanya dapat menghapus jadwal milik Anda sendiri.");
+                                return;
+                            }
+                            if (isGroupEvt && !isCreator && !isTeamOwner) {
+                                alert("Jadwal bersama hanya dapat dihapus oleh pembuat agenda atau pemilik tim.");
+                                return;
+                            }
+
+                            const isConfirmed = await customConfirm({
+                                title: "Confirmation",
+                                message: `Apakah Anda yakin ingin menghapus jadwal "${targetEvt.title}" ini?`,
+                                confirmText: "Yes, delete it!"
+                            });
+
+                            if (!isConfirmed) return;
+
+                            allEvents = allEvents.filter(evt => evt.id !== eventId);
+                            saveLocalEvents();
+                            renderCalendar();
+                            renderSelectedDayEvents();
+
+                            fetch('/api/team-calendar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'DELETE_EVENT', eventId, username: currentUser.username, teamOwnerUsername: activeTeam.owner_username })
+                            }).catch(() => {});
+                        }
+                    });
+                });
+            }
+
+            calculateFreeTimeSlots(dayEvents, formattedDateStr);
+            if (window.feather) window.feather.replace();
+        }
+
+        // Free Time Slot Detector (08:00 to 22:00)
+        function calculateFreeTimeSlots(dayEvents, formattedDateStr) {
+            const freeSlotsContainer = document.getElementById('free-slots-summary-container');
+            if (!freeSlotsContainer) return;
+
+            freeSlotsContainer.innerHTML = '';
+
+            if (dayEvents.length === 0) {
+                freeSlotsContainer.innerHTML = `
+                    <div class="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-200 text-xs text-emerald-900">
+                        <span class="font-black text-emerald-800 block mb-0.5">🌟 Full Free 1 Hari Full!</span>
+                        Tanggal <strong>${formattedDateStr}</strong> tidak ada kegiatan tim sama sekali (08:00 - 22:00 WIB).
+                    </div>
+                `;
+                return;
+            }
+
+            const busyIntervals = dayEvents.map(e => {
+                const [h1, m1] = e.start_time.split(':').map(Number);
+                const [h2, m2] = e.end_time.split(':').map(Number);
+                return { start: h1 * 60 + m1, end: h2 * 60 + m2 };
+            }).sort((a, b) => a.start - b.start);
+
+            const mergedBusy = [];
+            busyIntervals.forEach(curr => {
+                if (mergedBusy.length === 0) {
+                    mergedBusy.push(curr);
+                } else {
+                    const prev = mergedBusy[mergedBusy.length - 1];
+                    if (curr.start <= prev.end) {
+                        prev.end = Math.max(prev.end, curr.end);
+                    } else {
+                        mergedBusy.push(curr);
+                    }
+                }
+            });
+
+            const dayStart = 8 * 60;
+            const dayEnd = 22 * 60;
+            const freeGaps = [];
+            let lastEnd = dayStart;
+
+            mergedBusy.forEach(b => {
+                if (b.start > lastEnd) {
+                    freeGaps.push({ start: lastEnd, end: b.start });
+                }
+                lastEnd = Math.max(lastEnd, b.end);
+            });
+
+            if (lastEnd < dayEnd) {
+                freeGaps.push({ start: lastEnd, end: dayEnd });
+            }
+
+            function minsToTimeStr(mins) {
+                const h = String(Math.floor(mins / 60)).padStart(2, '0');
+                const m = String(mins % 60).padStart(2, '0');
+                return `${h}:${m}`;
+            }
+
+            if (freeGaps.length === 0) {
+                freeSlotsContainer.innerHTML = `
+                    <div class="p-3 bg-rose-50 rounded-2xl border border-rose-100 text-xs text-rose-800">
+                        <span class="font-bold block mb-0.5">⚠️ Jadwal Padat</span>
+                        Pada tanggal ini kegiatan anggota tim penuh dari jam 08:00 hingga 22:00.
+                    </div>
+                `;
+            } else {
+                freeGaps.forEach(gap => {
+                    const durationMins = gap.end - gap.start;
+                    if (durationMins >= 60) {
+                        const gapEl = document.createElement('div');
+                        gapEl.className = "p-3 bg-white rounded-2xl border border-emerald-100 text-xs text-slate-800 flex items-center justify-between";
+                        gapEl.innerHTML = `
+                            <div>
+                                <span class="font-extrabold text-emerald-600 text-xs block">🕒 ${minsToTimeStr(gap.start)} - ${minsToTimeStr(gap.end)} WIB</span>
+                                <span class="text-[11px] text-slate-500">Durasi: ${Math.floor(durationMins/60)} jam ${durationMins%60} mnt</span>
+                            </div>
+                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-lg">Bisa Dipakai</span>
+                        `;
+                        freeSlotsContainer.appendChild(gapEl);
+                    }
+                });
+            }
+        }
+
+        // Navigation Actions
+        document.getElementById('back-to-teams-btn')?.addEventListener('click', renderTeamsOverview);
+        document.getElementById('switch-team-select')?.addEventListener('change', (e) => {
+            const teamId = e.target.value;
+            if (teamId) openTeamCalendarView(teamId);
+        });
+
+        // MODAL 1: CREATE TEAM
+        const createTeamModal = document.getElementById('create-team-modal');
+        const openCreateTeamBtn = document.getElementById('open-create-team-modal-btn');
+        const closeCreateTeamBtn = document.getElementById('close-create-team-modal-btn');
+        const cancelCreateTeamBtn = document.getElementById('cancel-create-team-btn');
+        const createTeamForm = document.getElementById('create-team-form');
+
+        function openCreateTeamModal() {
+            tempCreateMembers = [];
+            renderTempInitialMembers();
+            if (createTeamModal) createTeamModal.classList.remove('hidden');
+        }
+
+        function closeCreateTeamModal() {
+            if (createTeamModal) createTeamModal.classList.add('hidden');
+        }
+
+        if (openCreateTeamBtn) openCreateTeamBtn.addEventListener('click', openCreateTeamModal);
+        if (closeCreateTeamBtn) closeCreateTeamBtn.addEventListener('click', closeCreateTeamModal);
+        if (cancelCreateTeamBtn) cancelCreateTeamBtn.addEventListener('click', closeCreateTeamModal);
+
+        // Add Initial Member in Modal
+        const initMemberInput = document.getElementById('initial-member-input');
+        const addInitMemberBtn = document.getElementById('add-initial-member-btn');
+        const initFeedback = document.getElementById('initial-member-feedback');
+
+        function renderTempInitialMembers() {
+            const listEl = document.getElementById('initial-members-list');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            const ownerBadge = document.createElement('span');
+            ownerBadge.className = 'inline-flex items-center gap-1.5 bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1.5 rounded-full';
+            ownerBadge.innerHTML = `
+                <img src="${getAvatarUrl(currentUser)}" class="w-4 h-4 rounded-full object-cover" />
+                <span>@${currentUser.username} (Pemilik)</span>
+            `;
+            listEl.appendChild(ownerBadge);
+
+            tempCreateMembers.forEach(m => {
+                const badge = document.createElement('span');
+                badge.className = 'inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold px-3 py-1.5 rounded-full';
+                badge.innerHTML = `
+                    <img src="${getAvatarUrl(m)}" class="w-4 h-4 rounded-full object-cover" />
+                    <span>@${m.username} (Diundang)</span>
+                    <button type="button" class="btn-remove-temp text-amber-400 hover:text-rose-600 ml-1 cursor-pointer" data-username="${m.username}">×</button>
+                `;
+                listEl.appendChild(badge);
+            });
+
+            listEl.querySelectorAll('.btn-remove-temp').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const uname = e.currentTarget.getAttribute('data-username');
+                    tempCreateMembers = tempCreateMembers.filter(m => m.username.toLowerCase() !== uname.toLowerCase());
+                    renderTempInitialMembers();
+                });
+            });
+        }
+
+        if (addInitMemberBtn && initMemberInput) {
+            addInitMemberBtn.addEventListener('click', async () => {
+                let uname = initMemberInput.value.trim();
+                if (uname.startsWith('@')) uname = uname.substring(1);
+                if (!uname) return;
+
+                if (uname.toLowerCase() === currentUser.username.toLowerCase()) {
+                    showInitFeedback("Anda adalah pemilik tim.", "text-amber-600");
+                    return;
+                }
+
+                if (tempCreateMembers.some(m => m.username.toLowerCase() === uname.toLowerCase())) {
+                    showInitFeedback("Username sudah ada dalam daftar undangan.", "text-amber-600");
+                    return;
+                }
+
+                addInitMemberBtn.disabled = true;
+                addInitMemberBtn.textContent = '...';
+
+                try {
+                    const res = await fetch(`/api/check-username?username=${encodeURIComponent(uname)}`);
+                    const data = await res.json();
+                    if (res.ok && data.user) {
+                        tempCreateMembers.push({
+                            username: data.user.username,
+                            fullName: data.user.fullName || data.user.username,
+                            avatarUrl: data.user.avatarUrl,
+                            isOwner: false
+                        });
+                        initMemberInput.value = '';
+                        renderTempInitialMembers();
+                        showInitFeedback(`Berhasil menambahkan @${data.user.username} ke daftar undangan`, "text-emerald-600");
+                    } else {
+                        showInitFeedback(`Username @${uname} tidak ditemukan.`, "text-rose-500");
+                    }
+                } catch (e) {
+                    showInitFeedback("Kesalahan koneksi.", "text-rose-500");
+                } finally {
+                    addInitMemberBtn.disabled = false;
+                    addInitMemberBtn.textContent = '+ Undang';
+                }
+            });
+        }
+
+        function showInitFeedback(msg, colorClass) {
+            if (!initFeedback) return;
+            initFeedback.textContent = msg;
+            initFeedback.className = `text-[11px] font-semibold mb-2 ${colorClass}`;
+            initFeedback.classList.remove('hidden');
+            setTimeout(() => initFeedback.classList.add('hidden'), 3500);
+        }
+
+        // Submit Create Team Form
+        if (createTeamForm) {
+            createTeamForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const name = document.getElementById('new-team-name-input').value.trim();
+                const category = document.getElementById('new-team-category-select').value;
+                if (!name) return;
+
+                const submitBtn = document.getElementById('save-team-submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Membuat...';
+
+                const newTeamId = 'team_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+                const newTeam = {
+                    id: newTeamId,
+                    name: name,
+                    category: category,
+                    owner_username: currentUser.username,
+                    members: [currentUser]
+                };
+
+                teams.unshift(newTeam);
+                saveLocalTeams();
+
+                tempCreateMembers.forEach(m => {
+                    const notifObj = {
+                        id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                        recipient_username: m.username.toLowerCase(),
+                        sender_username: currentUser.username.toLowerCase(),
+                        type: 'TEAM_INVITE',
+                        team_id: newTeamId,
+                        team_name: name,
+                        team_category: category,
+                        title: `Undangan Tim: ${name}`,
+                        message: `@${currentUser.username} mengundang Anda bergabung ke tim "${name}" (${category}).`,
+                        status: 'PENDING',
+                        created_at: new Date().toISOString()
+                    };
+                    pushGlobalNotification(notifObj);
+                });
+
+                closeCreateTeamModal();
+                createTeamForm.reset();
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Buat Tim Baru';
+
+                try {
+                    await fetch('/api/team-calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'CREATE_TEAM',
+                            name: newTeam.name,
+                            category: newTeam.category,
+                            members: tempCreateMembers,
+                            owner_username: currentUser.username,
+                            owner_user_obj: currentUser
+                        })
+                    });
+                } catch (err) {}
+
+                openTeamCalendarView(newTeam.id);
+            });
+        }
+
+        // MODAL 2: ADD PERSONAL EVENT
+        const addEventModal = document.getElementById('add-event-modal');
+        const openAddEventBtn = document.getElementById('open-add-event-modal-btn');
+        const closeAddEventBtn = document.getElementById('close-add-event-modal-btn');
+        const cancelAddEventBtn = document.getElementById('cancel-add-event-btn');
+        const addEventForm = document.getElementById('add-event-form');
+
+        if (openAddEventBtn && addEventModal) {
+            openAddEventBtn.addEventListener('click', () => {
+                document.getElementById('event-date-input').value = selectedDateStr;
+                addEventModal.classList.remove('hidden');
+            });
+        }
+
+        function closeAddEventModal() {
+            if (addEventModal) addEventModal.classList.add('hidden');
+        }
+
+        if (closeAddEventBtn) closeAddEventBtn.addEventListener('click', closeAddEventModal);
+        if (cancelAddEventBtn) cancelAddEventBtn.addEventListener('click', closeAddEventModal);
+
+        if (addEventForm) {
+            addEventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!activeTeamId) return;
+
+                const title = document.getElementById('event-title-input').value.trim();
+                const event_date = document.getElementById('event-date-input').value;
+                const start_time = document.getElementById('event-start-time-input').value;
+                const end_time = document.getElementById('event-end-time-input').value;
+                const description = document.getElementById('event-desc-input').value.trim();
+
+                if (!title || !event_date || !start_time || !end_time) return;
+
+                const submitBtn = document.getElementById('save-event-submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Menyimpan...';
+
+                const myUsername = currentUser.username.toLowerCase();
+                const newEvt = {
+                    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    team_id: activeTeamId,
+                    user_id: myUsername,
+                    owner_username: myUsername,
+                    member_username: myUsername,
+                    title: title,
+                    event_date: event_date,
+                    start_time: start_time,
+                    end_time: end_time,
+                    description: description,
+                    is_group_event: false
+                };
+
+                allEvents.push(newEvt);
+                saveLocalEvents();
+                selectedDateStr = event_date;
+                renderCalendar();
+                renderSelectedDayEvents();
+                closeAddEventModal();
+                addEventForm.reset();
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Simpan Kesibukan';
+
+                try {
+                    await fetch('/api/team-calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'ADD_EVENT', ...newEvt })
+                    });
+                } catch (err) {}
+            });
+        }
+
+        // MODAL 3: ADD GROUP EVENT (JADWAL BERSAMA TIM)
+        const groupEventModal = document.getElementById('group-event-modal');
+        const openGroupEventBtn = document.getElementById('open-group-event-modal-btn');
+        const openGroupEventFromSummaryBtn = document.getElementById('open-group-event-modal-from-summary-btn');
+        const closeGroupEventBtn = document.getElementById('close-group-event-modal-btn');
+        const cancelGroupEventBtn = document.getElementById('cancel-group-event-btn');
+        const groupEventForm = document.getElementById('group-event-form');
+
+        function openGroupEventModalHandler() {
+            if (groupEventModal) {
+                document.getElementById('group-event-date-input').value = selectedDateStr;
+                groupEventModal.classList.remove('hidden');
+            }
+        }
+
+        if (openGroupEventBtn) openGroupEventBtn.addEventListener('click', openGroupEventModalHandler);
+        if (openGroupEventFromSummaryBtn) openGroupEventFromSummaryBtn.addEventListener('click', openGroupEventModalHandler);
+
+        function closeGroupEventModal() {
+            if (groupEventModal) groupEventModal.classList.add('hidden');
+        }
+
+        if (closeGroupEventBtn) closeGroupEventBtn.addEventListener('click', closeGroupEventModal);
+        if (cancelGroupEventBtn) cancelGroupEventBtn.addEventListener('click', closeGroupEventModal);
+
+        if (groupEventForm) {
+            groupEventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!activeTeamId) return;
+
+                const title = document.getElementById('group-event-title-input').value.trim();
+                const category = document.getElementById('group-event-category-select').value;
+                const event_date = document.getElementById('group-event-date-input').value;
+                const start_time = document.getElementById('group-event-start-time-input').value;
+                const end_time = document.getElementById('group-event-end-time-input').value;
+                const description = document.getElementById('group-event-desc-input').value.trim();
+
+                if (!title || !event_date || !start_time || !end_time) return;
+
+                const submitBtn = document.getElementById('save-group-event-submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Menyimpan Agenda...';
+
+                const myUsername = currentUser.username.toLowerCase();
+                const newGroupEvt = {
+                    id: 'evt_group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    team_id: activeTeamId,
+                    user_id: myUsername,
+                    owner_username: myUsername,
+                    member_username: 'ALL',
+                    title: title,
+                    event_date: event_date,
+                    start_time: start_time,
+                    end_time: end_time,
+                    description: description,
+                    is_group_event: true,
+                    group_category: category
+                };
+
+                allEvents.push(newGroupEvt);
+                saveLocalEvents();
+                selectedDateStr = event_date;
+                renderCalendar();
+                renderSelectedDayEvents();
+                closeGroupEventModal();
+                groupEventForm.reset();
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Simpan Jadwal Bersama';
+
+                try {
+                    await fetch('/api/team-calendar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'ADD_EVENT', ...newGroupEvt })
+                    });
+                } catch (err) {}
+            });
+        }
+
+        // Init App
+        initData();
+    });
+</script>

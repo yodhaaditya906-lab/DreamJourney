@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../lib/supabase';
+import { fetchCachedCSV } from '../../lib/fetchCache';
 
 const { id } = Astro.params;
 const { userId } = Astro.locals.auth();
@@ -17,14 +18,145 @@ if (error || !goal || goal.user_id !== userId) {
 }
 
 // Parse details
-let tripDetails = null;
+let tripDetails: any = null;
 
 if (goal.payment_detail && goal.payment_detail.includes('|||')) {
     try {
         const parts = goal.payment_detail.split('|||');
         tripDetails = JSON.parse(parts[1]);
     } catch(e) {
-        console.error('Failed to parse trip details:', e, 'Raw parts:', parts);
+        console.error('Failed to parse trip details:', e);
+    }
+}
+
+// Fallback: If tripDetails is not stored in payment_detail, look up the package in Google Sheets!
+if (!tripDetails) {
+    try {
+        const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
+        
+        function parseCSVRow(row: string) {
+            const result = [];
+            let curVal = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                if (row[i] === '"') {
+                    inQuotes = !inQuotes;
+                } else if (row[i] === ',' && !inQuotes) {
+                    result.push(curVal.trim());
+                    curVal = '';
+                } else {
+                    curVal += row[i];
+                }
+            }
+            result.push(curVal.trim());
+            return result;
+        }
+
+        const allRows = csvText.split('\n');
+        if (allRows.length > 0) {
+            const headerCols = parseCSVRow(allRows[0]);
+            
+            const findHeaderIdx = (keywords: string[], defaultIdx: number) => {
+                const found = headerCols.findIndex(h => keywords.some(k => h.toLowerCase().trim().includes(k.toLowerCase())));
+                return found !== -1 ? found : defaultIdx;
+            };
+
+            const idxTitle = findHeaderIdx(['title'], 0);
+            const idxTransKeberangkatan = findHeaderIdx(['transportasi keberangkatan', 'keberangkatan'], 11);
+            const idxTransKepulangan = findHeaderIdx(['transportasi kepulangan', 'kepulangan'], 12);
+            const idxTransTambahan = findHeaderIdx(['transportasi_tambahan', 'transportasi tambahan'], 13);
+            const idxPenginapan = findHeaderIdx(['penginapan'], 10);
+            const idxWahana = findHeaderIdx(['wahana'], 9);
+
+            const idxAkomodasi = findHeaderIdx(['harga_penginapan', 'harga_akomodasi'], 20);
+            const idxHargaTransKeberangkatan = findHeaderIdx(['harga_transport_keberangkatan', 'harga_transportasi_keberangkatan', 'harga_transport'], 21);
+            const idxHargaTransKepulangan = findHeaderIdx(['harga_transport_kepulangan', 'harga_transportasi_kepulangan'], 22);
+            const idxHargaTransTambahan = findHeaderIdx(['harga_transportasi_tambahan', 'harga_transport_tambahan'], 23);
+            const idxHargaWahana = findHeaderIdx(['harga_wahana'], 24);
+            const idxHargaLainnya = findHeaderIdx(['harga_lainnya'], 25);
+
+            // Clean title string for matching
+            const goalTitleClean = goal.title.toLowerCase().trim();
+
+            const rows = allRows.slice(1);
+            const matchedRow = rows.find(row => {
+                if (!row.trim() || row.startsWith(',')) return false;
+                const cols = parseCSVRow(row);
+                const title = (cols[idxTitle] || '').toLowerCase().trim();
+                return title === goalTitleClean || goalTitleClean.includes(title) || title.includes(goalTitleClean);
+            });
+
+            if (matchedRow) {
+                const cols = parseCSVRow(matchedRow);
+                
+                const transKeberangkatan = cols[idxTransKeberangkatan] || "";
+                const transKepulangan = cols[idxTransKepulangan] || "";
+                const transTambahan = cols[idxTransTambahan] || "";
+                const penginapanName = cols[idxPenginapan] || "Penginapan & Hotel";
+                const wahanaName = cols[idxWahana] || "Tiket Masuk & Wahana";
+
+                const priceAkomodasi = parseInt((cols[idxAkomodasi] || "0").replace(/[^\d]/g, ''), 10) || 0;
+                const priceTransKeberangkatan = parseInt((cols[idxHargaTransKeberangkatan] || "0").replace(/[^\d]/g, ''), 10) || 0;
+                const priceTransKepulangan = parseInt((cols[idxHargaTransKepulangan] || "0").replace(/[^\d]/g, ''), 10) || 0;
+                const priceTransTambahan = parseInt((cols[idxHargaTransTambahan] || "0").replace(/[^\d]/g, ''), 10) || 0;
+                const priceWahana = parseInt((cols[idxHargaWahana] || "0").replace(/[^\d]/g, ''), 10) || 0;
+                const priceLainnya = parseInt((cols[idxHargaLainnya] || "0").replace(/[^\d]/g, ''), 10) || 0;
+
+                const transportsList: any[] = [];
+                if (transKeberangkatan && transKeberangkatan !== "-") {
+                    transportsList.push({
+                        name: `A) Transportasi Keberangkatan: ${transKeberangkatan}`,
+                        price: priceTransKeberangkatan
+                    });
+                }
+                if (transKepulangan && transKepulangan !== "-") {
+                    transportsList.push({
+                        name: `B) Transportasi Kepulangan: ${transKepulangan}`,
+                        price: priceTransKepulangan
+                    });
+                }
+                if (transTambahan && transTambahan !== "-") {
+                    transportsList.push({
+                        name: `C) Transportasi Tambahan: ${transTambahan}`,
+                        price: priceTransTambahan
+                    });
+                }
+
+                const accommodationsList: any[] = [];
+                if (penginapanName && penginapanName !== "-") {
+                    accommodationsList.push({
+                        name: penginapanName,
+                        price: priceAkomodasi
+                    });
+                }
+
+                const activitiesList: any[] = [];
+                if (wahanaName && wahanaName !== "-") {
+                    activitiesList.push({
+                        name: wahanaName,
+                        price: priceWahana
+                    });
+                }
+
+                const othersList: any[] = [];
+                if (priceLainnya > 0) {
+                    othersList.push({
+                        name: "Pengeluaran Lainnya & Biaya Layanan",
+                        price: priceLainnya
+                    });
+                }
+
+                tripDetails = {
+                    accommodations: accommodationsList,
+                    transports: transportsList,
+                    activities: activitiesList,
+                    others: othersList,
+                    buffer: 0
+                };
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch fallback package data from Google Sheet:", e);
     }
 }
 
@@ -33,60 +165,77 @@ const formatRp = (num: number) => `Rp ${num.toLocaleString('id-ID')}`;
 let grandTotal = 0;
 if (tripDetails) {
     [...(tripDetails.accommodations||[]), ...(tripDetails.transports||[]), ...(tripDetails.activities||[]), ...(tripDetails.others||[])].forEach((item: any) => {
-        grandTotal += item.price;
+        grandTotal += item.price || 0;
     });
     grandTotal += (tripDetails.buffer || 0);
+} else {
+    grandTotal = goal.target_amount || 0;
 }
-
 ---
+
 <Layout title={`Rincian Biaya: ${goal.title} - DreamJourney`}>
-    <main class="pt-24 pb-16 min-h-screen bg-gray-50">
+    <main class="pt-24 pb-16 min-h-screen bg-slate-50/70">
         <div class="container mx-auto px-4 max-w-3xl">
-            <a href="/dashboard" class="inline-flex items-center text-gray-600 hover:text-primary mb-6 transition font-medium">
-                <i data-feather="arrow-left" class="w-5 h-5 mr-2"></i>
-                Kembali ke Dashboard
+            <a href="/profile" class="inline-flex items-center text-slate-600 hover:text-primary mb-6 transition font-semibold text-sm">
+                <i data-feather="arrow-left" class="w-4 h-4 mr-2"></i>
+                Kembali ke Profil Saya
             </a>
 
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
-                    <h1 class="text-3xl font-black mb-2">Struk Perjalanan</h1>
-                    <p class="opacity-90 text-lg">{goal.title}</p>
+            <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 text-white">
+                    <span class="inline-block bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full mb-3">Rincian Komponen Biaya</span>
+                    <h1 class="text-3xl font-black tracking-tight mb-1">{goal.title}</h1>
+                    <p class="opacity-90 text-sm">Target Tabungan: <span class="font-bold">{formatRp(goal.target_amount)}</span></p>
                 </div>
 
-                <div class="p-8">
+                <div class="p-6 md:p-8">
                     {!tripDetails ? (
-                        <div class="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <i data-feather="file-minus" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
-                            <h3 class="text-xl font-bold text-gray-700 mb-2">Rincian Tidak Tersedia</h3>
-                            <p>Target ini tidak memiliki rincian biaya yang tersimpan.</p>
+                        <div class="text-center py-10 px-4 text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <div class="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i data-feather="file-text" class="w-6 h-6"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-1">Rincian Biaya Paket</h3>
+                            <p class="text-sm max-w-md mx-auto mb-4">Total target tabungan untuk destinasi ini adalah <strong>{formatRp(goal.target_amount)}</strong>.</p>
+                            <a href="/packages" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold text-xs rounded-xl shadow-sm hover:shadow transition">
+                                Lihat Semua Paket
+                            </a>
                         </div>
                     ) : (
                         <div class="space-y-8">
-
-                            {/* Section: Akomodasi */}
-                            {tripDetails.accommodations && tripDetails.accommodations.length > 0 && (
+                            {/* Section: Transportasi */}
+                            {tripDetails.transports && tripDetails.transports.length > 0 && (
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Akomodasi Penginapan</h4>
-                                    <div class="space-y-3">
-                                        {tripDetails.accommodations.map((item: any) => (
-                                            <div class="flex justify-between items-start text-gray-800">
-                                                <span class="flex-1 font-medium">{item.name}</span>
-                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                            <i data-feather="navigation" class="w-4 h-4"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">1. Transportasi</h4>
+                                    </div>
+                                    <div class="space-y-3 pl-2">
+                                        {tripDetails.transports.map((item: any) => (
+                                            <div class="flex justify-between items-center text-slate-800 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                                                <span class="font-medium text-sm text-slate-700">{item.name}</span>
+                                                <span class="font-bold text-sm text-slate-900">{formatRp(item.price)}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Section: Transportasi */}
-                            {tripDetails.transports && tripDetails.transports.length > 0 && (
+                            {/* Section: Akomodasi */}
+                            {tripDetails.accommodations && tripDetails.accommodations.length > 0 && (
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Transportasi</h4>
-                                    <div class="space-y-3">
-                                        {tripDetails.transports.map((item: any) => (
-                                            <div class="flex justify-between items-start text-gray-800">
-                                                <span class="flex-1 font-medium">{item.name}</span>
-                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                            <i data-feather="home" class="w-4 h-4"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">2. Akomodasi & Penginapan</h4>
+                                    </div>
+                                    <div class="space-y-3 pl-2">
+                                        {tripDetails.accommodations.map((item: any) => (
+                                            <div class="flex justify-between items-center text-slate-800 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                                                <span class="font-medium text-sm text-slate-700">{item.name}</span>
+                                                <span class="font-bold text-sm text-slate-900">{formatRp(item.price)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -96,12 +245,17 @@ if (tripDetails) {
                             {/* Section: Wahana */}
                             {tripDetails.activities && tripDetails.activities.length > 0 && (
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Aktivitas & Wahana</h4>
-                                    <div class="space-y-3">
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                                            <i data-feather="ticket" class="w-4 h-4"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">3. Aktivitas & Tiket Wahana</h4>
+                                    </div>
+                                    <div class="space-y-3 pl-2">
                                         {tripDetails.activities.map((item: any) => (
-                                            <div class="flex justify-between items-start text-gray-800">
-                                                <span class="flex-1 font-medium">{item.name}</span>
-                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            <div class="flex justify-between items-center text-slate-800 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                                                <span class="font-medium text-sm text-slate-700">{item.name}</span>
+                                                <span class="font-bold text-sm text-slate-900">{formatRp(item.price)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -111,12 +265,17 @@ if (tripDetails) {
                             {/* Section: Lainnya */}
                             {tripDetails.others && tripDetails.others.length > 0 && (
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Pengeluaran Lain-lain</h4>
-                                    <div class="space-y-3">
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                                            <i data-feather="box" class="w-4 h-4"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">4. Pengeluaran Lainnya</h4>
+                                    </div>
+                                    <div class="space-y-3 pl-2">
                                         {tripDetails.others.map((item: any) => (
-                                            <div class="flex justify-between items-start text-gray-800">
-                                                <span class="flex-1 font-medium">{item.name}</span>
-                                                <span class="font-bold">{formatRp(item.price)}</span>
+                                            <div class="flex justify-between items-center text-slate-800 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                                                <span class="font-medium text-sm text-slate-700">{item.name}</span>
+                                                <span class="font-bold text-sm text-slate-900">{formatRp(item.price)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -126,21 +285,26 @@ if (tripDetails) {
                             {/* Section: Buffer */}
                             {tripDetails.buffer > 0 && (
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2 mb-4">Tabungan Darurat</h4>
-                                    <div class="space-y-3">
-                                        <div class="flex justify-between items-start text-gray-800">
-                                            <span class="flex-1 font-medium">Uang Jaga-jaga (Buffer)</span>
-                                            <span class="font-bold">{formatRp(tripDetails.buffer)}</span>
+                                    <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                            <i data-feather="shield-alert" class="w-4 h-4"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider">5. Dana Darurat (Buffer)</h4>
+                                    </div>
+                                    <div class="space-y-3 pl-2">
+                                        <div class="flex justify-between items-center text-slate-800 bg-emerald-50/40 p-3.5 rounded-xl border border-emerald-100">
+                                            <span class="font-medium text-sm text-emerald-900">Uang Jaga-jaga (Buffer)</span>
+                                            <span class="font-bold text-sm text-emerald-700">{formatRp(tripDetails.buffer)}</span>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* GRAND TOTAL */}
-                            <div class="mt-8 pt-6 border-t border-dashed border-gray-300">
-                                <div class="flex justify-between items-center bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                    <span class="text-gray-700 font-bold text-xl tracking-wide">GRAND TOTAL</span>
-                                    <span class="text-3xl font-black text-primary">{formatRp(grandTotal)}</span>
+                            <div class="mt-8 pt-6 border-t border-dashed border-slate-200">
+                                <div class="flex justify-between items-center bg-slate-900 text-white p-6 rounded-2xl shadow-md">
+                                    <span class="font-bold text-base md:text-lg tracking-wide">TOTAL ESTIMASI BIAYA</span>
+                                    <span class="text-2xl md:text-3xl font-black text-emerald-400">{formatRp(grandTotal)}</span>
                                 </div>
                             </div>
                         </div>

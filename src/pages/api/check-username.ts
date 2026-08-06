@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request }) => {
     // 1. Periksa apakah username sudah ada di tabel users Supabase (case-insensitive)
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, full_name')
+      .select('id, username, full_name, avatar_url, image_url')
       .ilike('username', username)
       .maybeSingle();
 
@@ -24,13 +24,13 @@ export const GET: APIRoute = async ({ request }) => {
       throw error;
     }
 
-    let avatarUrl: string | null = null;
+    let avatarUrl: string | null = data?.avatar_url || data?.image_url || null;
     let fullName = data?.full_name || data?.username || null;
 
-    // 2. Ambil foto profil asli user dari Clerk Backend API
+    // 2. Ambil foto profil asli user dari Clerk Backend API jika belum ada
     const clerkSecretKey = import.meta.env.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY;
     
-    if (data && data.id && clerkSecretKey) {
+    if (data && data.id && clerkSecretKey && !avatarUrl) {
       try {
         const clerkRes = await fetch(`https://api.clerk.com/v1/users/${data.id}`, {
           headers: {
@@ -53,14 +53,20 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    // Jika data ada, berarti username sudah dipakai (isAvailable = false) -> user ditemukan!
+    const finalName = fullName || username;
+
+    // Jika avatarUrl masih null, buat UI Avatar unik berbasis nama/username
+    if (!avatarUrl || avatarUrl.includes('unsplash.com/photo-1534528741775')) {
+      avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(finalName)}&background=random&color=fff&bold=true`;
+    }
+
     const isAvailable = !data;
 
     return new Response(JSON.stringify({
       isAvailable,
       user: data ? {
         username: data.username,
-        fullName: fullName || data.username,
+        fullName: finalName,
         avatarUrl: avatarUrl
       } : null
     }), {

@@ -31,7 +31,7 @@ const snapSdkUrl = isProd
     <!-- Midtrans Snap SDK -->
     <script src={snapSdkUrl} data-client-key={clientKey} is:inline></script>
 </head>
-<body class="bg-gray-50 font-sans pb-24 lg:pb-0">
+<body class="bg-gray-50 font-sans pb-20 lg:pb-0">
     <!-- Header Component -->
     <Header />
 
@@ -75,17 +75,17 @@ const snapSdkUrl = isProd
                     </div>
                     <span class="text-[10px] mt-1 font-medium">Dompet</span>
                 </a>
-                <a href="/community" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/community' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
-                    <div class={`p-1.5 rounded-xl ${currentPath === '/community' ? 'bg-indigo-50 text-primary' : ''}`}>
-                        <i data-feather="users" class="w-5 h-5"></i>
+                <a href="/team-calendar" class={`tap-active flex-1 flex flex-col items-center justify-center ${currentPath === '/team-calendar' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+                    <div class={`p-1.5 rounded-xl ${currentPath === '/team-calendar' ? 'bg-indigo-50 text-primary' : ''}`}>
+                        <i data-feather="calendar" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] mt-1 font-medium">Sosial</span>
+                    <span class="text-[10px] mt-1 font-medium">Kalender</span>
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Client-side Feather Icons Initialization -->
+    <!-- Client-side Feather Icons & Auth Interceptors -->
     <script is:inline>
         function initFeather() {
             if (typeof feather !== 'undefined') {
@@ -99,6 +99,39 @@ const snapSdkUrl = isProd
         // Run on DOM updates / Astro navigation if applicable
         document.addEventListener('astro:page-load', initFeather);
         document.addEventListener('astro:after-swap', initFeather);
+
+        function checkAndOpenLoginModal() {
+            if (window.location.search.includes('openLogin=true') || window.location.search.includes('auth=required')) {
+                const loginModal = document.getElementById('custom-login-modal');
+                if (loginModal) {
+                    loginModal.classList.remove('hidden');
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAndOpenLoginModal);
+        } else {
+            checkAndOpenLoginModal();
+        }
+
+        // Intercept clicks on protected links (/dashboard, /team-calendar, /profile, /setup-saving) if user is signed out
+        document.addEventListener('click', function (e) {
+            const protectedLink = e.target.closest('a[href="/dashboard"], a[href="/team-calendar"], a[href="/profile"], a[href="/setup-saving"]');
+            if (protectedLink) {
+                const isSignedIn = window.Clerk && window.Clerk.user;
+                if (!isSignedIn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const loginModal = document.getElementById('custom-login-modal');
+                    if (loginModal) {
+                        loginModal.classList.remove('hidden');
+                    } else if (window.Clerk && typeof window.Clerk.openSignIn === 'function') {
+                        window.Clerk.openSignIn();
+                    }
+                }
+            }
+        }, true);
     </script>
 </body>
 </html>

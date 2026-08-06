@@ -26,6 +26,9 @@ pnpm-debug.log*
 # clerk configuration (can include secrets)
 /.clerk/
 
+# vercel build outputs
+.vercel/
+
 # scratch directory (test scripts)
 scratch/
 

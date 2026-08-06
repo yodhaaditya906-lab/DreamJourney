@@ -18,20 +18,27 @@ if (!dbUser) {
     dbUser = { id: userId, balance: 0, lentera_id: null };
 }
 
+const userAvatar = dbUser.avatar_url || dbUser.image_url || user.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=random&color=fff&bold=true`;
+const currentUsername = (dbUser.username || user.username || '').toLowerCase();
+
 // Get goals
 const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId);
 const goals = goalsData || [];
 const activeGoalsCount = goals.length;
 
-// --- FETCH DATA TABUNGAN DARI GOOGLE SHEET ---
+// --- FETCH DATA PARALLEL (TABUNGAN & LENTERA DARI GOOGLE SHEET) ---
 const GOOGLE_SHEET_TABUNGAN_URL = "https://docs.google.com/spreadsheets/d/1RQkDKebj_FXnFZnom5JazwHz0f0JLKupHuWu8tebzZo/export?format=csv";
-let tabunganMap = new Map<string, number>();
-try {
-    const res = await fetch(GOOGLE_SHEET_TABUNGAN_URL);
-    if (res.ok) {
-        const csv = await res.text();
-        const allRows = csv.split('\n').filter(r => r.trim());
+const GOOGLE_SHEET_LENTERA_URL = "https://docs.google.com/spreadsheets/d/1qie-zXXTH6xqEn_oxlZEQYCU2DDGmQn_ACWZNFI7xOM/export?format=csv";
 
+const [tabunganCsv, lenteraCsv] = await Promise.all([
+    fetchCachedCSV(GOOGLE_SHEET_TABUNGAN_URL),
+    fetchCachedCSV(GOOGLE_SHEET_LENTERA_URL)
+]);
+
+let tabunganMap = new Map<string, number>();
+if (tabunganCsv) {
+    try {
+        const allRows = tabunganCsv.split('\n').filter(r => r.trim());
         if (allRows.length > 0) {
             const headers = allRows[0].split(',').map(h => h.trim().replace(/"/g, ''));
             const idxId = headers.findIndex(h => h.toLowerCase().includes('id target') || h.toLowerCase().includes('id'));
@@ -59,9 +66,9 @@ try {
                 }
             });
         }
+    } catch (e) {
+        console.error("Gagal memproses data tabungan dari Sheet", e);
     }
-} catch (e) {
-    console.error("Gagal mengambil data tabungan dari Sheet", e);
 }
 
 const totalSaved = goals.reduce((acc: number, goal: any) => {
@@ -72,50 +79,49 @@ const totalSaved = goals.reduce((acc: number, goal: any) => {
 // Format currency
 const formatRp = (num: number) => `Rp ${num.toLocaleString('id-ID')}`;
 
-// --- LENTERA DATA FETCHING ---
+// --- PROCESS LENTERA DATA ---
 let lenteras: any[] = [];
-try {
-  const csvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1qie-zXXTH6xqEn_oxlZEQYCU2DDGmQn_ACWZNFI7xOM/export?format=csv');
-  
-  function parseCSVRow(row: string) {
-      const result = [];
-      let curVal = '';
-      let inQuotes = false;
-      for (let i = 0; i < row.length; i++) {
-          if (row[i] === '"') {
-              inQuotes = !inQuotes;
-          } else if (row[i] === ',' && !inQuotes) {
-              result.push(curVal.trim());
-              curVal = '';
-          } else {
-              curVal += row[i];
-          }
-      }
-      result.push(curVal.trim());
-      return result;
-  }
+if (lenteraCsv) {
+    try {
+        function parseCSVRow(row: string) {
+            const result = [];
+            let curVal = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                if (row[i] === '"') {
+                    inQuotes = !inQuotes;
+                } else if (row[i] === ',' && !inQuotes) {
+                    result.push(curVal.trim());
+                    curVal = '';
+                } else {
+                    curVal += row[i];
+                }
+            }
+            result.push(curVal.trim());
+            return result;
+        }
 
-  const rows = csvText.split('\n').slice(1);
-  lenteras = rows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
-      const cols = parseCSVRow(row);
-      return {
-          id: cols[0] || "",
-          name: cols[1] || "Unknown",
-          desc: cols[2] || "",
-          image: cols[3] || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200",
-          telegram: cols[4] || "#",
-          line: cols[5] || "#",
-          color: cols[6] || "bg-blue-100 text-blue-600"
-      };
-  });
-} catch (error) {
-  console.error("Failed to fetch lentera data:", error);
+        const rows = lenteraCsv.split('\n').slice(1);
+        lenteras = rows.filter(row => row.trim() && !row.startsWith(',')).map(row => {
+            const cols = parseCSVRow(row);
+            return {
+                id: cols[0] || "",
+                name: cols[1] || "Unknown",
+                desc: cols[2] || "",
+                image: cols[3] || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200",
+                telegram: cols[4] || "#",
+                line: cols[5] || "#",
+                color: cols[6] || "bg-blue-100 text-blue-600"
+            };
+        });
+    } catch (error) {
+        console.error("Failed to process lentera data:", error);
+    }
 }
 const activeLentera = lenteras.find(l => l.id === dbUser.lentera_id);
 
 // --- FETCH INVITATIONS ---
 let pendingInvitations: any[] = [];
-const currentUsername = (user.username || dbUser.username || '').toLowerCase();
 if (currentUsername) {
     const { data } = await supabase
         .from('group_invitations')
@@ -128,134 +134,585 @@ if (currentUsername) {
 ---
 
 <Layout title="Profil Saya - DreamJourney">
-    <main class="pt-20 bg-gray-50 min-h-screen pb-12">
-        <!-- Banner & Profile Header -->
-        <div class="relative bg-gradient-to-r from-primary to-secondary h-48 md:h-64 w-full">
-            <div class="absolute inset-0 bg-black/10"></div>
+    <main class="pt-20 bg-slate-50/70 min-h-screen pb-16">
+        <!-- Modern Header Banner -->
+        <div class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 h-44 md:h-52 relative overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)]"></div>
+            <div class="absolute -bottom-10 right-10 w-72 h-72 bg-white/5 rounded-full blur-2xl"></div>
         </div>
-        
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl -mt-20 md:-mt-24 relative z-10">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                <div class="px-6 py-8 md:p-10 text-center md:text-left md:flex items-center gap-8 border-b border-gray-100 relative">
-                    <div class="relative inline-block mb-4 md:mb-0">
-                        <img src={user.imageUrl} alt={user.fullName || 'User'} class="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg mx-auto md:mx-0 bg-gray-200">
-                        <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-green-500 w-5 h-5 rounded-full border-4 border-white shadow-sm" title="Online"></div>
-                    </div>
-                    <div class="flex-1">
-                        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">{user.fullName || 'Pengguna DreamJourney'}</h1>
-                        <p class="text-gray-500 text-lg flex items-center justify-center md:justify-start gap-2 mb-2">
-                            <i data-feather="mail" class="w-5 h-5 text-gray-400"></i>
-                            {user.primaryEmailAddress?.emailAddress}
-                        </p>
-                        <div class="inline-flex items-center bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-purple-100 mb-6 mx-auto md:mx-0">
-                            <i data-feather="at-sign" class="w-4 h-4 mr-1.5"></i>
-                            {dbUser.username || user.username || 'Username belum diset'}
-                        </div>
-                        
-                        <div class="flex flex-wrap gap-3 justify-center md:justify-start">
-                            <a href="/dashboard" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold py-2.5 px-6 rounded-xl transition border border-blue-200 flex items-center shadow-sm hover:shadow">
-                                <i data-feather="pie-chart" class="w-4 h-4 mr-2"></i> Ke Dashboard
-                            </a>
-                            <div class="bg-red-50 text-red-600 hover:bg-red-100 font-semibold py-2.5 px-6 rounded-xl transition border border-red-200 cursor-pointer flex items-center shadow-sm hover:shadow group">
-                                <i data-feather="log-out" class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform"></i> 
-                                <SignOutButton>Keluar Akun</SignOutButton>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 md:-mt-24 relative z-10">
+            <!-- Profile Card -->
+            <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden mb-8">
+                <div class="p-6 md:p-8">
+                    <div class="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 pb-6 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
+                            
+                            <!-- Interactive Avatar Box Column -->
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="relative group cursor-pointer" id="avatar-container" title="Klik untuk ubah foto profil">
+                                    <img 
+                                        id="profile-avatar-img"
+                                        src={userAvatar} 
+                                        alt={user.fullName || 'User'} 
+                                        class="w-28 h-28 md:w-32 md:h-32 rounded-2xl object-cover ring-4 ring-white shadow-lg bg-slate-100 group-hover:opacity-90 transition"
+                                    />
+                                    <button 
+                                        id="open-avatar-modal-btn"
+                                        type="button"
+                                        class="absolute inset-0 bg-slate-900/60 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer"
+                                    >
+                                        <i data-feather="camera" class="w-6 h-6 mb-1"></i>
+                                        <span>Ubah Foto</span>
+                                    </button>
+                                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full ring-4 ring-white shadow-sm" title="Online"></div>
+                                </div>
+
+                                <!-- Prominent "Edit profile" Button Right Below Avatar -->
+                                <button 
+                                    id="btn-edit-profile-below-avatar" 
+                                    type="button" 
+                                    class="w-28 md:w-32 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold py-1.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs mt-0.5"
+                                >
+                                    <i data-feather="edit-3" class="w-3.5 h-3.5 text-slate-600"></i>
+                                    <span>Edit profile</span>
+                                </button>
+                            </div>
+
+                            <div class="space-y-1">
+                                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+                                    {user.fullName || 'Pengguna DreamJourney'}
+                                </h1>
+                                <p class="text-slate-500 text-sm font-medium flex items-center justify-center sm:justify-start gap-1.5">
+                                    <i data-feather="mail" class="w-4 h-4 text-slate-400"></i>
+                                    {user.primaryEmailAddress?.emailAddress}
+                                </p>
+                                <div class="pt-1 flex items-center justify-center sm:justify-start gap-2">
+                                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                        <i data-feather="at-sign" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        {dbUser.username || user.username || 'Username belum diset'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    <div class="p-8 text-center hover:bg-white transition duration-300">
-                        <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-200">
-                            <i data-feather="target" class="w-7 h-7"></i>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center gap-3 w-full sm:w-auto justify-center">
+                            <a href="/dashboard" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-sm hover:shadow text-sm">
+                                <i data-feather="pie-chart" class="w-4 h-4"></i>
+                                <span>Dashboard</span>
+                            </a>
+                            <div class="inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 px-4 rounded-xl transition-all border border-rose-100 text-sm cursor-pointer group">
+                                <i data-feather="log-out" class="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform"></i>
+                                <SignOutButton>Keluar</SignOutButton>
+                            </div>
                         </div>
-                        <p class="text-gray-500 font-medium text-sm mb-1 uppercase tracking-wider">Target Aktif</p>
-                        <h3 class="text-3xl font-bold text-gray-900">{activeGoalsCount} <span class="text-lg font-normal text-gray-500">Liburan</span></h3>
                     </div>
-                    
-                    <div class="p-8 text-center hover:bg-white transition duration-300">
-                        <div class="w-14 h-14 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-purple-200">
-                            <i data-feather="users" class="w-7 h-7"></i>
+
+                    <!-- Key Metrics Overview -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                        <!-- Total Tabungan -->
+                        <div class="bg-gradient-to-br from-blue-50/60 to-slate-50 p-5 rounded-2xl border border-blue-100/60 transition-all hover:shadow-md hover:border-blue-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600/80">Total Terkumpul</span>
+                                <div class="w-9 h-9 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center">
+                                    <i data-feather="wallet" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-black text-slate-900">{formatRp(totalSaved)}</h3>
+                            <p class="text-xs text-slate-500 mt-1 font-medium">Dari {activeGoalsCount} target aktif</p>
                         </div>
-                        <p class="text-gray-500 font-medium text-sm mb-1 uppercase tracking-wider">Lentera Anda</p>
-                        <h3 class="text-xl font-bold text-gray-900 line-clamp-1">{activeLentera ? activeLentera.name : 'Belum Dipilih'}</h3>
+
+                        <!-- Target Aktif -->
+                        <div class="bg-gradient-to-br from-purple-50/60 to-slate-50 p-5 rounded-2xl border border-purple-100/60 transition-all hover:shadow-md hover:border-purple-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-600/80">Target Liburan</span>
+                                <div class="w-9 h-9 bg-purple-500/10 text-purple-600 rounded-xl flex items-center justify-center">
+                                    <i data-feather="target" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-black text-slate-900">{activeGoalsCount} <span class="text-sm font-semibold text-slate-500">Destinasi</span></h3>
+                            <p class="text-xs text-slate-500 mt-1 font-medium">Rencana perjalanan berjalan</p>
+                        </div>
+
+                        <!-- Lentera Pendamping -->
+                        <div class="bg-gradient-to-br from-emerald-50/60 to-slate-50 p-5 rounded-2xl border border-emerald-100/60 transition-all hover:shadow-md hover:border-emerald-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-600/80">Lentera Pendamping</span>
+                                <div class="w-9 h-9 bg-emerald-500/10 text-emerald-600 rounded-xl flex items-center justify-center">
+                                    <i data-feather="users" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            {activeLentera ? (
+                                <div>
+                                    <h3 class="text-base font-extrabold text-slate-900 truncate">{activeLentera.name}</h3>
+                                    <a href="/planner" class="text-xs text-emerald-600 font-semibold hover:underline mt-1 inline-block">Lihat Kontak →</a>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h3 class="text-base font-extrabold text-slate-400">Belum Dipilih</h3>
+                                    <a href="/planner" class="text-xs text-primary font-semibold hover:underline mt-1 inline-block">Pilih Lentera di Planner →</a>
+                                </div>
+                            )}
+                        </div>
                     </div>
+
                 </div>
             </div>
 
-            <!-- Notifications Section -->
+            <!-- UNDANGAN GRUP / TIM TABUNGAN -->
             {pendingInvitations.length > 0 && (
-                <div class="mt-8 bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-5 border-b border-orange-100 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="bg-orange-100 text-orange-600 p-2 rounded-lg">
-                                <i data-feather="bell" class="w-5 h-5"></i>
-                            </div>
-                            <h2 class="text-lg font-bold text-gray-900">Notifikasi Undangan Grup</h2>
+                <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-6 text-white shadow-lg mb-8 relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-xl"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">Undangan Masuk</span>
+                            <span class="bg-white text-orange-600 text-[10px] font-black px-2 py-0.5 rounded-full">{pendingInvitations.length} Pending</span>
                         </div>
-                        <span class="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">{pendingInvitations.length} Baru</span>
-                    </div>
-                    <div class="divide-y divide-gray-100">
-                        {pendingInvitations.map((inv) => (
-                            <div class="p-6 md:flex items-center justify-between hover:bg-orange-50/30 transition">
-                                <div class="mb-4 md:mb-0">
-                                    <h4 class="text-lg font-bold text-gray-900 mb-1">{inv.goal_title}</h4>
-                                    <p class="text-gray-600 text-sm mb-2">
-                                        Anda diundang oleh <span class="font-bold text-primary">@{inv.inviter_username}</span> untuk ikut serta dalam rencana tabungan ini.
-                                    </p>
-                                    <div class="flex gap-4 text-sm font-medium text-gray-500">
-                                        <div class="flex items-center gap-1.5"><i data-feather="target" class="w-4 h-4"></i> Target: {formatRp(inv.target_amount)}</div>
-                                        <div class="flex items-center gap-1.5"><i data-feather="repeat" class="w-4 h-4"></i> {formatRp(inv.auto_debit_amount)} / {inv.frequency == 1 ? 'hari' : (inv.frequency == 7 ? 'minggu' : 'bulan')}</div>
+                        <h3 class="text-xl font-black mb-1">Undangan Gabung Tabungan Bersama!</h3>
+                        <p class="text-white/90 text-xs mb-4">Teman Anda mengundang Anda untuk mulai menabung liburan bersama.</p>
+
+                        <div class="space-y-3">
+                            {pendingInvitations.map((inv: any) => (
+                                <div class="bg-white/15 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <h4 class="font-extrabold text-sm">{inv.goal_title}</h4>
+                                        <p class="text-xs text-white/80">Diundang oleh: <span class="font-bold">@{inv.inviter_username}</span></p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button 
+                                            class="btn-invitation bg-white text-orange-600 hover:bg-orange-50 font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer shadow-sm"
+                                            data-action="ACCEPT"
+                                            data-id={inv.id}
+                                        >
+                                            Setuju & Gabung
+                                        </button>
+                                        <button 
+                                            class="btn-invitation bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-2 rounded-xl text-xs transition cursor-pointer"
+                                            data-action="REJECT"
+                                            data-id={inv.id}
+                                        >
+                                            Tolak
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <button class="btn-invitation w-full md:w-auto px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition" data-action="REJECT" data-id={inv.id}>
-                                        Tolak
-                                    </button>
-                                    <button class="btn-invitation w-full md:w-auto px-5 py-2.5 bg-primary hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition" data-action="ACCEPT" data-id={inv.id}>
-                                        Setuju
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            <!-- Additional Info / Features -->
-            <div class="mt-8 bg-white rounded-2xl shadow-md p-8 border border-gray-100">
-                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <!-- Target Liburan / Goals Section -->
+            <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                     <div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2 flex items-center">
-                            <i data-feather="settings" class="w-6 h-6 text-primary mr-3"></i>
-                            Pengaturan Akun & Keamanan
-                        </h3>
-                        <p class="text-gray-600 max-w-xl">
-                            Untuk mengubah kata sandi, memperbarui alamat email, atau mengatur keamanan ekstra (autentikasi dua faktor), Anda dapat mengakses portal keamanan.
-                        </p>
+                        <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <i data-feather="map-pin" class="w-5 h-5 text-primary"></i>
+                            <span>Destinasi Pilihan Anda</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">Daftar paket liburan dan target impian yang sedang Anda tabung</p>
                     </div>
-                    <button id="open-clerk-profile" class="flex-shrink-0 bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2 transform hover:-translate-y-0.5">
-                        <i data-feather="external-link" class="w-4 h-4"></i>
-                        Kelola Akun
-                    </button>
+                    <span class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full border border-blue-100">
+                        {activeGoalsCount} Destinasi Aktif
+                    </span>
                 </div>
+
+                {goals.length === 0 ? (
+                    <div class="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i data-feather="compass" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-base font-extrabold text-slate-800">Belum Ada Target Liburan</h3>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Mulai rencanakan liburan impian Anda dan tabung sedikit demi sedikit.</p>
+                        <a href="/packages" class="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition">
+                            <span>Jelajahi Paket Liburan</span>
+                            <i data-feather="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                ) : (
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {goals.map((goal: any) => {
+                            const saved = tabunganMap.has(goal.id.toString()) ? tabunganMap.get(goal.id.toString())! : (goal.saved_amount || 0);
+                            const target = goal.target_amount || 1;
+                            const pct = Math.min(100, Math.round((saved / target) * 100));
+
+                            return (
+                                <div class="p-4 rounded-2xl border border-slate-100 hover:border-blue-200 bg-slate-50/50 hover:bg-white transition-all group flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3.5 min-w-0">
+                                        <img src={goal.image_url || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=200"} class="w-14 h-14 rounded-xl object-cover ring-2 ring-slate-100 flex-shrink-0" />
+                                        <div class="min-w-0">
+                                            <h4 class="font-extrabold text-slate-900 text-sm truncate group-hover:text-primary transition-colors">{goal.title}</h4>
+                                            <p class="text-xs text-slate-500 font-semibold mt-0.5">{formatRp(saved)} <span class="text-[10px] text-slate-400 font-normal">• Target: {formatRp(target)}</span></p>
+                                            
+                                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                                                <div class="bg-primary h-full rounded-full transition-all duration-500" style={`width: ${pct}%`}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <a href="/dashboard" class="flex-shrink-0 bg-slate-900 hover:bg-black text-white font-bold px-3 py-2 rounded-xl text-xs transition">
+                                        Detail Destinasi →
+                                    </a>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     </main>
+
+    <!-- Cropper.js CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <style>
+        /* Circular Crop Mask Styling */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 50% !important;
+        }
+        .cropper-view-box {
+            outline: 2px solid #3b82f6 !important;
+            outline-color: rgba(59, 130, 246, 0.85) !important;
+        }
+    </style>
+
+    <!-- MODAL UBAH FOTO PROFIL (WITH CROPPER.JS) -->
+    <div id="avatar-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-800" id="avatar-modal-title">Profile picture</h3>
+                <button id="close-avatar-modal-btn" type="button" class="text-slate-400 hover:text-slate-600 p-1 transition cursor-pointer">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 text-center space-y-4">
+                
+                <!-- State 1: Static Current Preview -->
+                <div id="static-preview-container" class="relative w-44 h-44 mx-auto">
+                    <img 
+                        id="modal-avatar-preview" 
+                        src={userAvatar} 
+                        class="w-44 h-44 rounded-full object-cover ring-4 ring-slate-100 shadow-md bg-slate-100" 
+                    />
+                    <button 
+                        id="trigger-file-select-badge-btn" 
+                        type="button" 
+                        class="absolute bottom-2 right-2 bg-slate-900 hover:bg-black text-white p-2.5 rounded-full ring-2 ring-white shadow-md cursor-pointer transition flex items-center justify-center" 
+                        title="Upload a photo..."
+                    >
+                        <i data-feather="edit-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- State 2: Interactive Cropper Container -->
+                <div id="crop-editor-wrapper" class="hidden space-y-3">
+                    <p class="text-xs font-semibold text-slate-500 mb-1">Geser & Zoom foto untuk menyesuaikan posisi profil lingkaran Anda</p>
+                    
+                    <div class="max-h-72 w-full overflow-hidden rounded-2xl bg-slate-900 flex items-center justify-center p-2">
+                        <img id="cropper-target-img" class="max-w-full max-h-64 block" />
+                    </div>
+
+                    <!-- Cropper Toolbar Controls -->
+                    <div class="flex items-center justify-center gap-2 pt-1">
+                        <button type="button" id="cropper-zoom-in" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer">
+                            <i data-feather="zoom-in" class="w-3.5 h-3.5"></i>
+                            <span>Zoom In</span>
+                        </button>
+                        <button type="button" id="cropper-zoom-out" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer">
+                            <i data-feather="zoom-out" class="w-3.5 h-3.5"></i>
+                            <span>Zoom Out</span>
+                        </button>
+                        <button type="button" id="cropper-rotate" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer">
+                            <i data-feather="rotate-cw" class="w-3.5 h-3.5"></i>
+                            <span>Putar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hidden File Input -->
+                <input type="file" id="avatar-file-input" accept="image/*" class="hidden" />
+
+                <!-- Action Buttons -->
+                <div class="space-y-2 pt-2">
+                    <button 
+                        type="button" 
+                        id="trigger-file-select-btn" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <i data-feather="upload-cloud" class="w-4 h-4"></i>
+                        <span>Upload a photo...</span>
+                    </button>
+
+                    <div id="save-avatar-actions-container" class="hidden pt-1 space-y-2">
+                        <button 
+                            type="button" 
+                            id="save-avatar-submit-btn" 
+                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm hover:shadow flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <span>✓ Simpan Hasil Crop</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            id="cancel-new-photo-btn" 
+                            class="text-xs font-semibold text-slate-500 hover:underline cursor-pointer block mx-auto pt-1"
+                        >
+                            Pilih Foto Lain / Batal
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    <!-- MODAL CUSTOM ALERT (CENTERED - MATCHING USER DESIGN) -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-center p-6 space-y-4">
+            <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
+                <i data-feather="check-circle" class="w-7 h-7"></i>
+            </div>
+            <h3 id="custom-alert-message" class="text-base font-bold text-slate-800">
+                Foto profil berhasil diperbarui!
+            </h3>
+            <button 
+                id="custom-alert-ok-btn" 
+                type="button" 
+                class="w-full bg-slate-900 hover:bg-black text-white font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer shadow-sm"
+            >
+                OK
+            </button>
+        </div>
+    </div>
 </Layout>
 
-<script>
-    declare global {
-        interface Window {
-            Clerk: any;
-        }
-    }
-
+<script is:inline define:vars={{ currentUsername }}>
     document.addEventListener("DOMContentLoaded", function () {
-        const openClerkProfileBtn = document.getElementById('open-clerk-profile');
-        if (openClerkProfileBtn) {
-            openClerkProfileBtn.addEventListener('click', () => {
-                if (window.Clerk && typeof window.Clerk.openUserProfile === 'function') {
-                    window.Clerk.openUserProfile();
-                } else {
-                    alert("Sistem manajemen profil tidak tersedia saat ini.");
+        let cropperInstance = null;
+
+        function showCustomAlert(msg = "Foto profil berhasil diperbarui!") {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-alert-modal');
+                const msgEl = document.getElementById('custom-alert-message');
+                const okBtn = document.getElementById('custom-alert-ok-btn');
+                if (!modal || !msgEl || !okBtn) {
+                    alert(msg);
+                    resolve();
+                    return;
                 }
+
+                msgEl.textContent = msg;
+                modal.classList.remove('hidden');
+                if (window.feather) window.feather.replace();
+
+                function onOk() {
+                    modal.classList.add('hidden');
+                    okBtn.removeEventListener('click', onOk);
+                    resolve();
+                }
+
+                okBtn.addEventListener('click', onOk, { once: true });
+            });
+        }
+
+        // Modal Avatar Controls
+        const avatarModal = document.getElementById('avatar-modal');
+        const modalTitle = document.getElementById('avatar-modal-title');
+        const openAvatarBtn = document.getElementById('open-avatar-modal-btn');
+        const editBelowAvatarBtn = document.getElementById('btn-edit-profile-below-avatar');
+        const closeAvatarBtn = document.getElementById('close-avatar-modal-btn');
+        
+        const triggerFileBtn = document.getElementById('trigger-file-select-btn');
+        const triggerBadgeBtn = document.getElementById('trigger-file-select-badge-btn');
+        const fileInput = document.getElementById('avatar-file-input');
+        const previewImg = document.getElementById('modal-avatar-preview');
+        const profileAvatarImg = document.getElementById('profile-avatar-img');
+        const cropperTargetImg = document.getElementById('cropper-target-img');
+
+        const staticPreviewContainer = document.getElementById('static-preview-container');
+        const cropEditorWrapper = document.getElementById('crop-editor-wrapper');
+        const saveActionsContainer = document.getElementById('save-avatar-actions-container');
+        const saveSubmitBtn = document.getElementById('save-avatar-submit-btn');
+        const cancelPhotoBtn = document.getElementById('cancel-new-photo-btn');
+
+        function openAvatarModal() {
+            if (avatarModal) avatarModal.classList.remove('hidden');
+            if (window.feather) window.feather.replace();
+        }
+
+        function resetCropperState() {
+            if (cropperInstance) {
+                cropperInstance.destroy();
+                cropperInstance = null;
+            }
+            if (staticPreviewContainer) staticPreviewContainer.classList.remove('hidden');
+            if (cropEditorWrapper) cropEditorWrapper.classList.add('hidden');
+            if (triggerFileBtn) triggerFileBtn.classList.remove('hidden');
+            if (saveActionsContainer) saveActionsContainer.classList.add('hidden');
+            if (modalTitle) modalTitle.textContent = 'Profile picture';
+            if (fileInput) fileInput.value = '';
+        }
+
+        function closeAvatarModal() {
+            resetCropperState();
+            if (avatarModal) avatarModal.classList.add('hidden');
+        }
+
+        function triggerDeviceFilePicker() {
+            if (fileInput) fileInput.click();
+        }
+
+        if (openAvatarBtn) openAvatarBtn.addEventListener('click', openAvatarModal);
+        if (editBelowAvatarBtn) editBelowAvatarBtn.addEventListener('click', openAvatarModal);
+        if (closeAvatarBtn) closeAvatarBtn.addEventListener('click', closeAvatarModal);
+        if (triggerFileBtn) triggerFileBtn.addEventListener('click', triggerDeviceFilePicker);
+        if (triggerBadgeBtn) triggerBadgeBtn.addEventListener('click', triggerDeviceFilePicker);
+
+        // File selection & Cropper initialization
+        if (fileInput && cropperTargetImg) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const imageSrc = evt.target.result;
+
+                        if (staticPreviewContainer) staticPreviewContainer.classList.add('hidden');
+                        if (cropEditorWrapper) cropEditorWrapper.classList.remove('hidden');
+                        if (triggerFileBtn) triggerFileBtn.classList.add('hidden');
+                        if (saveActionsContainer) saveActionsContainer.classList.remove('hidden');
+                        if (modalTitle) modalTitle.textContent = 'Crop & Adjust Profile Picture';
+
+                        cropperTargetImg.src = imageSrc;
+                        openAvatarModal();
+
+                        if (cropperInstance) {
+                            cropperInstance.destroy();
+                        }
+
+                        // Initialize Cropper.js with circular 1:1 ratio
+                        setTimeout(() => {
+                            if (window.Cropper) {
+                                cropperInstance = new window.Cropper(cropperTargetImg, {
+                                    aspectRatio: 1,
+                                    viewMode: 1,
+                                    dragMode: 'move',
+                                    autoCropArea: 0.9,
+                                    restore: false,
+                                    guides: false,
+                                    center: true,
+                                    highlight: false,
+                                    cropBoxMovable: false,
+                                    cropBoxResizable: true,
+                                    toggleDragModeOnDblclick: false,
+                                });
+                            }
+                        }, 50);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Cropper Toolbar Control Handlers
+        document.getElementById('cropper-zoom-in')?.addEventListener('click', () => cropperInstance?.zoom(0.1));
+        document.getElementById('cropper-zoom-out')?.addEventListener('click', () => cropperInstance?.zoom(-0.1));
+        document.getElementById('cropper-rotate')?.addEventListener('click', () => cropperInstance?.rotate(90));
+
+        if (cancelPhotoBtn) {
+            cancelPhotoBtn.addEventListener('click', resetCropperState);
+        }
+
+        // Check local cached avatar on DOM load
+        const cachedAvatar = localStorage.getItem('dream_user_avatar_' + currentUsername.toLowerCase());
+        if (cachedAvatar && profileAvatarImg) {
+            profileAvatarImg.src = cachedAvatar;
+        }
+
+        // Save Cropped Result Action
+        if (saveSubmitBtn) {
+            saveSubmitBtn.addEventListener('click', async () => {
+                if (!cropperInstance) {
+                    alert("Silakan pilih foto terlebih dahulu.");
+                    return;
+                }
+
+                saveSubmitBtn.disabled = true;
+                saveSubmitBtn.textContent = 'Memproses Crop...';
+
+                const canvas = cropperInstance.getCroppedCanvas({
+                    width: 350,
+                    height: 350,
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high',
+                });
+
+                const croppedBase64 = canvas.toDataURL('image/jpeg', 0.88);
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        saveSubmitBtn.disabled = false;
+                        saveSubmitBtn.textContent = '✓ Simpan Hasil Crop';
+                        return;
+                    }
+
+                    let clerkAvatarUrl = null;
+
+                    // 1. Upload foto baru ke Clerk Profile resmi jika Clerk tersedia
+                    if (window.Clerk && window.Clerk.user && typeof window.Clerk.user.setProfileImage === 'function') {
+                        try {
+                            const avatarFile = new File([blob], "profile-avatar.jpg", { type: "image/jpeg" });
+                            const clerkRes = await window.Clerk.user.setProfileImage({ file: avatarFile });
+                            if (clerkRes && clerkRes.publicUrl) {
+                                clerkAvatarUrl = clerkRes.publicUrl;
+                            } else if (window.Clerk.user.imageUrl) {
+                                clerkAvatarUrl = window.Clerk.user.imageUrl;
+                            }
+                        } catch (clerkErr) {
+                            console.warn("Upload to Clerk API warning:", clerkErr);
+                        }
+                    }
+
+                    const finalAvatarUrl = clerkAvatarUrl || croppedBase64;
+
+                    // 2. Simpan di Local Storage Cache agar tidak pernah reset saat refresh
+                    localStorage.setItem('dream_user_avatar_' + currentUsername.toLowerCase(), finalAvatarUrl);
+
+                    // 3. Simpan di Supabase
+                    try {
+                        const res = await fetch('/api/update-profile-avatar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ avatarUrl: finalAvatarUrl })
+                        });
+
+                        if (profileAvatarImg) profileAvatarImg.src = finalAvatarUrl;
+
+                        // Sync local storage dream_multi_teams for current user avatar
+                        const localTeams = localStorage.getItem('dream_multi_teams');
+                        if (localTeams) {
+                            try {
+                                const teams = JSON.parse(localTeams);
+                                teams.forEach(t => {
+                                    (t.members || []).forEach(m => {
+                                        if (m.username && m.username.toLowerCase() === currentUsername.toLowerCase()) {
+                                            m.avatarUrl = finalAvatarUrl;
+                                        }
+                                    });
+                                });
+                                localStorage.setItem('dream_multi_teams', JSON.stringify(teams));
+                            } catch (err) {}
+                        }
+
+                        closeAvatarModal();
+                        await showCustomAlert("Foto profil berhasil diperbarui!");
+                    } catch (err) {
+                        alert("Terjadi kesalahan jaringan.");
+                    } finally {
+                        saveSubmitBtn.disabled = false;
+                        saveSubmitBtn.textContent = '✓ Simpan Hasil Crop';
+                    }
+                }, 'image/jpeg', 0.88);
             });
         }
 
@@ -263,7 +720,7 @@ if (currentUsername) {
         const invBtns = document.querySelectorAll('.btn-invitation');
         invBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const target = e.currentTarget as HTMLButtonElement;
+                const target = e.currentTarget;
                 const action = target.getAttribute('data-action');
                 const id = target.getAttribute('data-id');
                 

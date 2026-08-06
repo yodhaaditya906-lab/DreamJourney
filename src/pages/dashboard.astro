@@ -6,7 +6,7 @@ import { fetchCachedCSV } from '../lib/fetchCache';
 const { userId } = Astro.locals.auth();
 
 if (!userId) {
-    return Astro.redirect('/');
+    return Astro.redirect('/?openLogin=true');
 }
 
 const clerkUser = await Astro.locals.currentUser();
@@ -114,6 +114,7 @@ const wallet = {
             : g.saving_type,
         groupMembers: g.group_members || [],
         savedAmount: tabunganMap.has(g.id.toString()) ? tabunganMap.get(g.id.toString())!.totalAmount : (g.saved_amount || 0),
+        packageImage: g.package_image || g.image || g.package_img || null,
         createdAt: g.created_at
     })),
     transactions: transactions.map((t: any) => ({
@@ -240,7 +241,7 @@ try {
   console.error("Failed to fetch mitra data:", error);
 }
 
-// --- PACKAGE DATA FETCHING FOR DEPARTURE DATES ---
+// --- PACKAGE DATA FETCHING FOR DEPARTURE DATES & DESTINATION IMAGES ---
 let packageMap = new Map();
 try {
   const pkgCsvText = await fetchCachedCSV('https://docs.google.com/spreadsheets/d/1eD4zbqYsW-Ce6eLemIUt5VdSIykWnlhM0kwTVBgD1Yw/export?format=csv');
@@ -250,6 +251,7 @@ try {
       const idxTitle = headers.findIndex(h => h.toLowerCase().includes('title'));
       const idxTanggal = headers.findIndex(h => h.toLowerCase().includes('tanggal pergi'));
       const idxHitung = headers.findIndex(h => h.toLowerCase().includes('hitung mundur liburan'));
+      const idxMainImage = headers.findIndex(h => h.toLowerCase().includes('main_image') || h.toLowerCase().includes('main image') || h.toLowerCase().includes('image'));
       
       pkgRows.slice(1).forEach(row => {
           if (!row.trim() || row.startsWith(',')) return;
@@ -257,14 +259,202 @@ try {
           const title = (cols[idxTitle !== -1 ? idxTitle : 0] || '').trim();
           const tanggalPergi = (cols[idxTanggal !== -1 ? idxTanggal : 25] || '').trim();
           const hitungMundur = (cols[idxHitung !== -1 ? idxHitung : 24] || '').trim();
+          const mainImage = (idxMainImage !== -1 && cols[idxMainImage] ? cols[idxMainImage] : '').trim();
           if (title) {
-              packageMap.set(title.toLowerCase(), { tanggalPergi, hitungMundur });
+              packageMap.set(title.toLowerCase(), { tanggalPergi, hitungMundur, mainImage });
           }
       });
   }
 } catch (e) {
   console.error("Failed to fetch package data for departure estimation:", e);
 }
+
+// Helper to compute goal card metadata cleanly for SSR template rendering
+function processGoalData(goal: any) {
+    const percentage = Math.min(100, Math.round((goal.savedAmount / (goal.targetAmount || 1)) * 100));
+    const remainingAmount = Math.max(0, goal.targetAmount - goal.savedAmount);
+    let remainingCycles = 0;
+    if (goal.autoDebitAmount > 0) {
+        remainingCycles = Math.ceil(remainingAmount / goal.autoDebitAmount);
+    }
+    let daysPerCycle = 30;
+    if (goal.autoDebitFrequency === 'Harian') daysPerCycle = 1;
+    else if (goal.autoDebitFrequency === 'Mingguan') daysPerCycle = 7;
+    const daysLeft = remainingCycles * daysPerCycle;
+
+    const estimatedDate = new Date();
+    estimatedDate.setDate(estimatedDate.getDate() + daysLeft);
+    const formattedDate = estimatedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    const isAcakFreq = goal.autoDebitFrequency?.includes('Acak') || goal.autoDebitAmount === 0;
+    const freqBadgeText = isAcakFreq ? 'Acak (Sesuka Hati)' : `${goal.autoDebitFrequency} (${formatRp(goal.autoDebitAmount)})`;
+
+    const pkgInfo = packageMap.get(goal.title.toLowerCase().trim());
+    const hitungMundur = pkgInfo?.hitungMundur || '0';
+    const destImage = pkgInfo?.mainImage || goal.packageImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop';
+    const hasSheetDeparture = pkgInfo && pkgInfo.hitungMundur !== "0" && pkgInfo.tanggalPergi && !pkgInfo.tanggalPergi.toLowerCase().includes("tidak") && pkgInfo.tanggalPergi !== "-";
+
+    let sheetDisplayDate = '';
+    if (hasSheetDeparture) {
+        sheetDisplayDate = pkgInfo.tanggalPergi;
+        try {
+            const parsedDate = new Date(pkgInfo.tanggalPergi);
+            if (!isNaN(parsedDate.getTime())) {
+                sheetDisplayDate = parsedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+        } catch (e) {}
+    }
+
+    const goalTransactions = wallet.transactions.filter((t: any) => 
+        t.desc?.toLowerCase().includes(goal.title.toLowerCase()) || 
+        t.desc?.toLowerCase().includes(goal.id.toString().toLowerCase())
+    );
+
+    let lastDepositDate: Date | null = null;
+    if (goalTransactions.length > 0) {
+        const dates = goalTransactions.map((t: any) => new Date(t.date).getTime());
+        lastDepositDate = new Date(Math.max(...dates));
+    } else if (goal.savedAmount > 0) {
+        lastDepositDate = new Date(goal.createdAt || Date.now());
+    }
+
+    const now = new Date();
+    let depositStatusBadge = { text: '', colorClass: '', icon: '', isWarning: false };
+
+    const freqType = goal.autoDebitFrequency;
+    const isHarian = freqType === 'Harian';
+    const isMingguan = freqType === 'Mingguan';
+    const isBulanan = freqType === 'Bulanan';
+
+    if (isHarian) {
+        const hasSavedToday = lastDepositDate ? (
+            lastDepositDate.getFullYear() === now.getFullYear() &&
+            lastDepositDate.getMonth() === now.getMonth() &&
+            lastDepositDate.getDate() === now.getDate()
+        ) : false;
+        depositStatusBadge = hasSavedToday
+            ? { text: 'Sudah Menabung Hari Ini', colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200', icon: 'check-circle', isWarning: false }
+            : { text: 'Belum Menabung Hari Ini', colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200', icon: 'alert-circle', isWarning: true };
+    } else if (isMingguan) {
+        const getMonday = (d: Date) => {
+            const date = new Date(d);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const m = new Date(date.setDate(diff));
+            m.setHours(0,0,0,0);
+            return m;
+        };
+        const hasSavedThisWeek = lastDepositDate ? (getMonday(lastDepositDate).getTime() === getMonday(now).getTime()) : false;
+        depositStatusBadge = hasSavedThisWeek
+            ? { text: 'Sudah Menabung Minggu Ini', colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200', icon: 'check-circle', isWarning: false }
+            : { text: 'Belum Menabung Minggu Ini', colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200', icon: 'alert-circle', isWarning: true };
+    } else if (isBulanan) {
+        const hasSavedThisMonth = lastDepositDate ? (
+            lastDepositDate.getFullYear() === now.getFullYear() && lastDepositDate.getMonth() === now.getMonth()
+        ) : false;
+        depositStatusBadge = hasSavedThisMonth
+            ? { text: 'Sudah Menabung Bulan Ini', colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200', icon: 'check-circle', isWarning: false }
+            : { text: 'Belum Menabung Bulan Ini', colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200', icon: 'alert-circle', isWarning: true };
+    } else {
+        if (lastDepositDate) {
+            const diffMs = now.getTime() - lastDepositDate.getTime();
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            let dateFormatted = '';
+            if (diffDays === 0) dateFormatted = 'Hari ini';
+            else if (diffDays === 1) dateFormatted = 'Kemarin';
+            else if (diffDays < 7) dateFormatted = `${diffDays} hari yang lalu`;
+            else dateFormatted = lastDepositDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            depositStatusBadge = { text: `Terakhir Menabung: ${dateFormatted}`, colorClass: 'bg-slate-50 text-slate-700 border-slate-200', icon: 'clock', isWarning: false };
+        } else {
+            depositStatusBadge = { text: 'Terakhir Menabung: Belum ada setoran', colorClass: 'bg-slate-50 text-slate-600 border-slate-200', icon: 'clock', isWarning: false };
+        }
+    }
+
+    const isGroupTrip = goal.tripType === 'Group' || goal.tripType === 'Couple' || (goal.groupMembers && goal.groupMembers.length > 0);
+
+    // --- SAVINGS CALENDAR METADATA ---
+    const goalDeposits = wallet.transactions.filter((t: any) => 
+        (t.type === 'DEPOSIT' || t.type === 'SETORAN' || t.type === 'SETORAN_MITRA') &&
+        (t.desc?.toLowerCase().includes(goal.title.toLowerCase()) || 
+         t.desc?.toLowerCase().includes(goal.id.toString().toLowerCase()))
+    );
+
+    const depositDateSet = new Set<string>();
+    goalDeposits.forEach((t: any) => {
+        const d = new Date(t.date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        depositDateSet.add(key);
+    });
+
+    const currYear = now.getFullYear();
+    const currMonth = now.getMonth();
+    const todayDate = now.getDate();
+
+    const monthNamesIndo = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const monthName = monthNamesIndo[currMonth];
+
+    const firstDayIndex = new Date(currYear, currMonth, 1).getDay(); // 0 = Sun
+    const totalDays = new Date(currYear, currMonth + 1, 0).getDate();
+
+    const calendarDays = Array.from({ length: totalDays }, (_, i) => {
+        const dayNum = i + 1;
+        const dateKey = `${currYear}-${String(currMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+        const isToday = dayNum === todayDate;
+        const isPast = dayNum < todayDate;
+        const hasSaved = depositDateSet.has(dateKey);
+
+        let badgeStyle = "bg-slate-50 text-slate-400 border border-slate-100";
+        let titleText = `Tanggal ${dayNum} ${monthName}: Belum waktunya`;
+
+        if (hasSaved) {
+            badgeStyle = "bg-emerald-500 text-white shadow-xs font-black ring-1 ring-emerald-600/30";
+            titleText = `Tanggal ${dayNum} ${monthName}: Sudah Menabung ✓`;
+        } else if (isToday) {
+            badgeStyle = "bg-rose-500 text-white font-extrabold ring-2 ring-rose-300 animate-pulse shadow-sm";
+            titleText = `Hari ini (Tanggal ${dayNum} ${monthName}): Belum Menabung!`;
+        } else if (isPast) {
+            badgeStyle = "bg-amber-50 text-amber-800 border border-amber-200/90 font-bold";
+            titleText = `Tanggal ${dayNum} ${monthName}: Terlewat (Belum Menabung)`;
+        }
+
+        return {
+            dayNum,
+            hasSaved,
+            badgeStyle,
+            titleText
+        };
+    });
+
+    return {
+        percentage,
+        daysLeft,
+        formattedDate,
+        isAcakFreq,
+        freqBadgeText,
+        destImage,
+        hasSheetDeparture,
+        sheetDisplayDate,
+        hitungMundur,
+        depositStatusBadge,
+        isGroupTrip,
+        isHarian,
+        isMingguan,
+        isBulanan,
+        monthName,
+        currYear,
+        firstDayIndex,
+        depositCount: depositDateSet.size,
+        calendarDays
+    };
+}
+
+const processedGoals = wallet.goals.map((goal: any, index: number) => {
+    return {
+        ...goal,
+        ...processGoalData(goal),
+        index
+    };
+});
 ---
 
 <Layout title="Savings Dashboard - DreamJourney">
@@ -272,53 +462,53 @@ try {
         <section class="py-10">
             <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
                 <!-- Dashboard Header Title -->
-                <div class="mb-8 text-center md:text-left">
-                    <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard Tabungan</h1>
-                    <p class="text-xs md:text-sm text-slate-500 mt-1">Pantau perkembangan tabungan & rencana perjalanan impian Anda secara real-time.</p>
+                <div class="mb-6 text-center md:text-left">
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard Tabungan</h1>
+                    <p class="text-[11px] sm:text-xs md:text-sm text-slate-500 mt-0.5">Pantau perkembangan tabungan & rencana perjalanan impian Anda secara real-time.</p>
                 </div>
                 
                 <!-- Financial Summary Balance Card & Sub-Stats -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-sm mb-8">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm mb-6 sm:mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4 mb-5 md:mb-6">
                         <div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Tabungan Tersimpan</span>
-                            <div class="text-3xl md:text-4xl font-black text-primary tracking-tight">{formatRp(displayBalance)}</div>
+                            <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Total Tabungan Tersimpan</span>
+                            <div class="text-2xl sm:text-3xl md:text-4xl font-black text-primary tracking-tight">{formatRp(displayBalance)}</div>
                         </div>
-                        <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-primary px-4 py-2 rounded-xl text-xs font-bold shadow-2xs">
-                            <i data-feather="shield-check" class="w-4 h-4"></i>
+                        <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-primary px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold shadow-2xs">
+                            <i data-feather="shield-check" class="w-3.5 h-3.5"></i>
                             <span>Dana Tersimpan Aman & Terverifikasi</span>
                         </div>
                     </div>
 
                     <!-- Ringkasan Detail Perjalanan (Sub-Stats Grid) -->
-                    <div class="pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Aktif</span>
-                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{activeGoalsCount} Perjalanan</span>
+                    <div class="pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+                        <div class="bg-slate-50/90 p-2.5 sm:p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Aktif</span>
+                            <span class="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{activeGoalsCount} Perjalanan</span>
                         </div>
-                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Solo Trip</span>
-                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{soloGoalsCount} Target</span>
+                        <div class="bg-slate-50/90 p-2.5 sm:p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Solo Trip</span>
+                            <span class="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{soloGoalsCount} Target</span>
                         </div>
-                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tim / Group</span>
-                            <span class="text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{groupGoalsCount} Target</span>
+                        <div class="bg-slate-50/90 p-2.5 sm:p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tim / Group</span>
+                            <span class="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 mt-0.5 block">{groupGoalsCount} Target</span>
                         </div>
-                        <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/60">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tercapai 100%</span>
-                            <span class="text-sm md:text-base font-extrabold text-emerald-600 mt-0.5 block">{completedGoalsCount} Target</span>
+                        <div class="bg-slate-50/90 p-2.5 sm:p-3.5 rounded-xl border border-slate-200/60">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tercapai 100%</span>
+                            <span class="text-xs sm:text-sm md:text-base font-extrabold text-emerald-600 mt-0.5 block">{completedGoalsCount} Target</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Main Content Grid (70% Target Aktif / 30% Riwayat Aktivitas) -->
-                <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 lg:gap-8 mb-12">
+                <div class="grid grid-cols-1 lg:grid-cols-10 gap-5 lg:gap-8 mb-12">
                     
                     <!-- LEFT COLUMN: Target Aktif (70% Width) -->
-                    <div class="lg:col-span-7 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200/80">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                            <h3 class="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2.5">
-                                <i data-feather="target" class="w-5 h-5 text-primary"></i> Target Aktif
+                    <div class="lg:col-span-7 bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                            <h3 class="text-base sm:text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                                <i data-feather="target" class="w-4 h-4 sm:w-5 sm:h-5 text-primary"></i> Target Aktif
                             </h3>
                             
                             <!-- Filter Buttons for Target Aktif -->
@@ -330,415 +520,395 @@ try {
                         </div>
                         
                         <div id="goals-list-container" class="space-y-6">
-                            {wallet.goals.length === 0 ? (
+                            {processedGoals.length === 0 ? (
                                 <div class="text-center py-10 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                                     <i data-feather="flag" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
                                     <p class="text-sm font-semibold">Belum ada target liburan aktif.</p>
                                     <a href="/packages" class="text-xs text-primary font-bold hover:underline mt-2 inline-block">Mulai Rencanakan Liburan Sekarang →</a>
                                 </div>
                             ) : (
-                                wallet.goals.map((goal: any, index: number) => {
-                                    const percentage = Math.min(100, Math.round((goal.savedAmount / goal.targetAmount) * 100));
+                                processedGoals.map(({
+                                    percentage,
+                                    daysLeft,
+                                    formattedDate,
+                                    isAcakFreq,
+                                    freqBadgeText,
+                                    destImage,
+                                    hasSheetDeparture,
+                                    sheetDisplayDate,
+                                    hitungMundur,
+                                    depositStatusBadge,
+                                    isGroupTrip,
+                                    isHarian,
+                                    isMingguan,
+                                    isBulanan,
+                                    ...goal
+                                }: any, index: number) => (
+                                    <div class="goal-item-card" data-trip-type={isGroupTrip ? 'group' : 'solo'}>
+                                             {index > 0 && (
+                                                 <div class="my-8 relative flex items-center">
+                                                     <div class="w-full border-t-2 border-dashed border-slate-200"></div>
+                                                     <div class="absolute left-0 bg-white pr-2.5 text-slate-400 flex items-center">
+                                                         <i data-feather="scissors" class="w-4 h-4 text-slate-400 transform -rotate-45"></i>
+                                                     </div>
+                                                 </div>
+                                             )}
 
-                                    // --- ESTIMATION CALCULATION ---
-                                    const remainingAmount = Math.max(0, goal.targetAmount - goal.savedAmount);
-                                    let remainingCycles = 0;
-                                    if (goal.autoDebitAmount > 0) {
-                                        remainingCycles = Math.ceil(remainingAmount / goal.autoDebitAmount);
-                                    }
-                                    
-                                    let daysPerCycle = 30; // default Bulanan
-                                    if (goal.autoDebitFrequency === 'Harian') daysPerCycle = 1;
-                                    else if (goal.autoDebitFrequency === 'Mingguan') daysPerCycle = 7;
-                                    
-                                    const daysLeft = remainingCycles * daysPerCycle;
-                                    
-                                    const estimatedDate = new Date();
-                                    estimatedDate.setDate(estimatedDate.getDate() + daysLeft);
-                                    const dateOptions: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-                                    const formattedDate = estimatedDate.toLocaleDateString('id-ID', dateOptions);
-                                    const isAcakFreq = goal.autoDebitFrequency?.includes('Acak') || goal.autoDebitAmount === 0;
-                                    const freqBadgeText = isAcakFreq ? 'Acak (Sesuka Hati)' : `${goal.autoDebitFrequency} (${formatRp(goal.autoDebitAmount)})`;
-                                    
-                                    // Check departure date from Google Sheet package
-                                    const pkgInfo = packageMap.get(goal.title.toLowerCase().trim());
-                                    const hasSheetDeparture = pkgInfo && pkgInfo.hitungMundur !== "0" && pkgInfo.tanggalPergi && !pkgInfo.tanggalPergi.toLowerCase().includes("tidak") && pkgInfo.tanggalPergi !== "-";
-                                    
-                                    let sheetDisplayDate = '';
-                                    if (hasSheetDeparture) {
-                                        sheetDisplayDate = pkgInfo.tanggalPergi;
-                                        try {
-                                            const parsedDate = new Date(pkgInfo.tanggalPergi);
-                                            if (!isNaN(parsedDate.getTime())) {
-                                                sheetDisplayDate = parsedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-                                            }
-                                        } catch (e) {}
-                                    }
+                                             <!-- BOARDING PASS / EVENT TICKET CONTAINER -->
+                                             <div class="relative bg-white border border-slate-200/90 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row overflow-hidden">
+                                                 
+                                                 <!-- NOTCH CUTOUTS ON TEAR-OFF LINE (Desktop) -->
+                                                 <div class="hidden md:block absolute -top-3 right-[280px] lg:right-[320px] w-6 h-6 rounded-full bg-slate-100 border border-slate-200/90 z-10 shadow-inner"></div>
+                                                 <div class="hidden md:block absolute -bottom-3 right-[280px] lg:right-[320px] w-6 h-6 rounded-full bg-slate-100 border border-slate-200/90 z-10 shadow-inner"></div>
 
-                                     // --- DEPOSIT FREQUENCY & LAST DEPOSIT CALCULATION ---
-                                    const goalTransactions = wallet.transactions.filter((t: any) => 
-                                        t.desc?.toLowerCase().includes(goal.title.toLowerCase()) || 
-                                        t.desc?.toLowerCase().includes(goal.id.toString().toLowerCase())
-                                    );
+                                                 <!-- SISI KIRI: DETAIL LIBURAN WITH TOP DESTINATION BANNER -->
+                                                 <div class="flex-1 min-w-0 relative flex flex-col justify-between overflow-hidden bg-white">
+                                                     
+                                                     <!-- Top Destination Banner Image with Bottom Vertical Gradient Fade -->
+{destImage && (
+                                                         <div class="relative h-40 sm:h-48 w-full overflow-hidden shrink-0">
+                                                             <img src={destImage} alt={goal.title} class="w-full h-full object-cover object-center" />
+                                                             <!-- Smooth Vertical Gradient Fade from Image to White Content Below -->
+                                                             <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.25) 45%, rgba(255, 255, 255, 0.85) 75%, #ffffff 100%);"></div>
+                                                             
+                                                             <!-- Trip Type & Calendar Modal Toggle floating top right over banner -->
+                                                              <div class="absolute top-4 right-4 z-10 flex items-center gap-2">
+                                                                  <button 
+                                                                      type="button"
+                                                                      class="open-cal-modal-btn bg-white/90 hover:bg-white backdrop-blur-md text-primary border border-white/60 text-[11px] px-3 py-1 rounded-xl font-extrabold shadow-2xs flex items-center gap-1.5 transition-all transform hover:scale-105 cursor-pointer"
+                                                                      data-modal-id={`cal-modal-${goal.id}`}
+                                                                      title="Lihat Kalender Menabung"
+                                                                  >
+                                                                      <i data-feather="calendar" class="w-3.5 h-3.5 text-primary"></i>
+                                                                      <span>Kalender</span>
+                                                                  </button>
 
-                                    let lastDepositDate: Date | null = null;
-                                    if (goalTransactions.length > 0) {
-                                        const dates = goalTransactions.map((t: any) => new Date(t.date).getTime());
-                                        lastDepositDate = new Date(Math.max(...dates));
-                                    } else if (goal.savedAmount > 0) {
-                                        lastDepositDate = new Date(goal.createdAt || Date.now());
-                                    }
+                                                                  <span class="bg-white/90 backdrop-blur-md text-slate-700 border border-white/60 text-[11px] px-3 py-1 rounded-xl font-extrabold shadow-2xs">
+                                                                      {goal.tripType === 'Solo' ? 'Solo Trip' : `${goal.tripType} Trip`}
+                                                                  </span>
+                                                              </div>
+                                                         </div>
+                                                     )}
 
-                                    const now = new Date();
-                                    let depositStatusBadge = { text: '', colorClass: '', icon: '', isWarning: false };
+                                                     <!-- Content Area (Below / Overlapping Gradient) -->
+                                                     <div class={`p-5 md:p-6 space-y-3.5 relative z-10 flex-1 flex flex-col justify-between ${destImage ? '-mt-8 sm:-mt-10' : ''}`}>
+                                                         <div class="space-y-3.5">
+                                                             <!-- Header Title -->
+                                                             <div>
+                                                                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">Destinasi Liburan</span>
+                                                                 <h4 class="font-black text-slate-900 text-lg md:text-xl tracking-tight leading-snug">{goal.title}</h4>
+                                                             </div>
+                                                             
+                                                             <!-- Estimasi Keberangkatan -->
+                                                             <div class="text-xs text-slate-700 flex items-center gap-2 font-medium">
+                                                                 <i data-feather="calendar" class="w-4 h-4 text-primary shrink-0"></i>
+                                                                 {hasSheetDeparture ? (
+                                                                     <span>Estimasi Keberangkatan: <strong>{sheetDisplayDate}</strong> ({hitungMundur} hari lagi)</span>
+                                                                 ) : percentage >= 100 ? (
+                                                                     <span>Target tercapai! Siap berangkat kapan saja. ✈️</span>
+                                                                 ) : isAcakFreq ? (
+                                                                     <span>Estimasi Keberangkatan: <strong>Fleksibel (Menabung Acak)</strong></span>
+                                                                 ) : (
+                                                                     <span>Estimasi Keberangkatan: <strong>{formattedDate}</strong> ({daysLeft} hari lagi)</span>
+                                                                 )}
+                                                             </div>
+                                                             
+                                                             <!-- Status Menabung Indicator -->
+                                                             <div class={`text-xs flex items-center justify-between gap-2 py-0.5 font-bold ${depositStatusBadge.isWarning ? 'text-amber-800' : 'text-emerald-700'}`}>
+                                                                 <div class="flex items-center gap-1.5 min-w-0 truncate">
+                                                                     <i data-feather={depositStatusBadge.icon} class={`w-4 h-4 shrink-0 ${depositStatusBadge.isWarning ? 'text-amber-600' : 'text-emerald-600'}`}></i>
+                                                                     <span class="truncate">Status Tabungan: <strong class="font-extrabold">{depositStatusBadge.text}</strong></span>
+                                                                 </div>
+                                                                 {depositStatusBadge.isWarning && (
+                                                                     <span class="shrink-0 text-[10px] uppercase tracking-wider bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-extrabold whitespace-nowrap">Waktunya Setor</span>
+                                                                 )}
+                                                             </div>
+                                                             
+                                                             <!-- Clean Minimalist Detail Tags -->
+                                                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+                                                                 <span class="flex items-center gap-1.5">
+                                                                     <i data-feather={goal.tripType === 'Solo' ? 'user' : 'users'} class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                                                     {goal.tripType === 'Solo' ? 'Solo' : goal.tripType} Trip
+                                                                 </span>
+                                                                 <span class="text-slate-300">•</span>
+                                                                 <span class="flex items-center gap-1.5">
+                                                                     <i data-feather="box" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                                                     {goal.savingType || 'Konvensional'}
+                                                                 </span>
+                                                                 <span class="text-slate-300">•</span>
+                                                                 <span class="flex items-center gap-1.5">
+                                                                     <i data-feather={goal.paymentMethod === 'Cash' ? 'briefcase' : 'credit-card'} class="w-3.5 h-3.5 text-slate-400 shrink-0"></i> 
+                                                                     {goal.paymentMethod === 'Cash' ? 'Mitra' : 'Cashless'}: {goal.paymentDetail ? goal.paymentDetail.split('|||')[0] : '-'}
+                                                                 </span>
+                                                             </div>
 
-                                    const freqType = goal.autoDebitFrequency;
-                                    const isHarian = freqType === 'Harian';
-                                    const isMingguan = freqType === 'Mingguan';
-                                    const isBulanan = freqType === 'Bulanan';
+                                                             <!-- KALENDER MENABUNG MODAL POPUP -->
+                                                              <div id={`cal-modal-${goal.id}`} class="cal-modal-backdrop fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+                                                                  <div class="bg-white rounded-3xl p-5 md:p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 relative">
+                                                                      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                                                                          <div class="flex items-center gap-2 min-w-0">
+                                                                              <div class="p-2 bg-blue-50 text-primary rounded-xl shrink-0">
+                                                                                  <i data-feather="calendar" class="w-4 h-4"></i>
+                                                                              </div>
+                                                                              <div class="min-w-0">
+                                                                                  <h4 class="font-black text-slate-900 text-sm truncate">{goal.title}</h4>
+                                                                                  <p class="text-[11px] font-bold text-slate-400">Kalender Menabung ({goal.monthName} {goal.currYear})</p>
+                                                                              </div>
+                                                                          </div>
+                                                                          <button type="button" class="close-cal-modal-btn p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer shrink-0">
+                                                                              <i data-feather="x" class="w-4 h-4"></i>
+                                                                          </button>
+                                                                      </div>
 
-                                    if (isHarian) {
-                                        const hasSavedToday = lastDepositDate ? (
-                                            lastDepositDate.getFullYear() === now.getFullYear() &&
-                                            lastDepositDate.getMonth() === now.getMonth() &&
-                                            lastDepositDate.getDate() === now.getDate()
-                                        ) : false;
+                                                                      <div class="space-y-3">
+                                                                          <div class="flex items-center justify-between text-xs">
+                                                                              <span class="font-extrabold text-slate-700">{goal.monthName} {goal.currYear}</span>
+                                                                              <span class="text-[10px] bg-blue-50 text-primary font-black px-2.5 py-0.5 rounded-full border border-blue-100">
+                                                                                  {goal.depositCount} Setoran Bulan Ini
+                                                                              </span>
+                                                                          </div>
 
-                                        if (hasSavedToday) {
-                                            depositStatusBadge = {
-                                                text: 'Sudah Menabung Hari Ini',
-                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
-                                                icon: 'check-circle',
-                                                isWarning: false
-                                            };
-                                        } else {
-                                            depositStatusBadge = {
-                                                text: 'Belum Menabung Hari Ini',
-                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
-                                                icon: 'alert-circle',
-                                                isWarning: true
-                                            };
-                                        }
-                                    } else if (isMingguan) {
-                                        const getMonday = (d: Date) => {
-                                            const date = new Date(d);
-                                            const day = date.getDay();
-                                            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-                                            const m = new Date(date.setDate(diff));
-                                            m.setHours(0,0,0,0);
-                                            return m;
-                                        };
-                                        const hasSavedThisWeek = lastDepositDate ? (
-                                            getMonday(lastDepositDate).getTime() === getMonday(now).getTime()
-                                        ) : false;
+                                                                          <!-- Days Header -->
+                                                                          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                                                                              <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+                                                                          </div>
 
-                                        if (hasSavedThisWeek) {
-                                            depositStatusBadge = {
-                                                text: 'Sudah Menabung Minggu Ini',
-                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
-                                                icon: 'check-circle',
-                                                isWarning: false
-                                            };
-                                        } else {
-                                            depositStatusBadge = {
-                                                text: 'Belum Menabung Minggu Ini',
-                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
-                                                icon: 'alert-circle',
-                                                isWarning: true
-                                            };
-                                        }
-                                    } else if (isBulanan) {
-                                        const hasSavedThisMonth = lastDepositDate ? (
-                                            lastDepositDate.getFullYear() === now.getFullYear() &&
-                                            lastDepositDate.getMonth() === now.getMonth()
-                                        ) : false;
+                                                                          <!-- Calendar Days Grid -->
+                                                                          <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold">
+                                                                              {/* Empty Slots before 1st day of month */}
+                                                                              {Array.from({ length: goal.firstDayIndex }).map(() => (
+                                                                                  <div class="h-8 rounded-lg bg-slate-50 opacity-30"></div>
+                                                                              ))}
 
-                                        if (hasSavedThisMonth) {
-                                            depositStatusBadge = {
-                                                text: 'Sudah Menabung Bulan Ini',
-                                                colorClass: 'bg-emerald-50/90 text-emerald-800 border-emerald-200',
-                                                icon: 'check-circle',
-                                                isWarning: false
-                                            };
-                                        } else {
-                                            depositStatusBadge = {
-                                                text: 'Belum Menabung Bulan Ini',
-                                                colorClass: 'bg-amber-50/90 text-amber-800 border-amber-200',
-                                                icon: 'alert-circle',
-                                                isWarning: true
-                                            };
-                                        }
-                                    } else {
-                                        if (lastDepositDate) {
-                                            const diffMs = now.getTime() - lastDepositDate.getTime();
-                                            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                                            let dateFormatted = '';
-                                            if (diffDays === 0) dateFormatted = 'Hari ini';
-                                            else if (diffDays === 1) dateFormatted = 'Kemarin';
-                                            else if (diffDays < 7) dateFormatted = `${diffDays} hari yang lalu`;
-                                            else dateFormatted = lastDepositDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                                                                              {/* Days 1 to Total Days */}
+                                                                              {goal.calendarDays.map((day: any) => (
+                                                                                  <div 
+                                                                                      class={`h-8 rounded-lg flex items-center justify-center relative transition-transform hover:scale-105 cursor-default ${day.badgeStyle}`}
+                                                                                      title={day.titleText}
+                                                                                  >
+                                                                                      <span class="text-xs">{day.dayNum}</span>
+                                                                                      {day.hasSaved && (
+                                                                                          <span class="absolute -top-1 -right-1 bg-white text-emerald-600 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] font-black shadow-2xs border border-emerald-200">✓</span>
+                                                                                      )}
+                                                                                  </div>
+                                                                              ))}
+                                                                          </div>
 
-                                            depositStatusBadge = {
-                                                text: `Terakhir Menabung: ${dateFormatted}`,
-                                                colorClass: 'bg-slate-50 text-slate-700 border-slate-200',
-                                                icon: 'clock',
-                                                isWarning: false
-                                            };
-                                        } else {
-                                            depositStatusBadge = {
-                                                text: 'Terakhir Menabung: Belum ada setoran',
-                                                colorClass: 'bg-slate-50 text-slate-600 border-slate-200',
-                                                icon: 'clock',
-                                                isWarning: false
-                                            };
-                                        }
-                                    }
+                                                                          <!-- Calendar Legend Indicator -->
+                                                                          <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 text-[10px] text-slate-500 font-semibold">
+                                                                              <div class="flex items-center gap-1.5">
+                                                                                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
+                                                                                  <span>Sudah</span>
+                                                                              </div>
+                                                                              <div class="flex items-center gap-1.5">
+                                                                                  <span class="w-2.5 h-2.5 rounded-full bg-amber-200 border border-amber-400 inline-block"></span>
+                                                                                  <span>Terlewat</span>
+                                                                              </div>
+                                                                              <div class="flex items-center gap-1.5">
+                                                                                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                                                                                  <span>Hari Ini</span>
+                                                                              </div>
+                                                                              <div class="flex items-center gap-1.5">
+                                                                                  <span class="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block"></span>
+                                                                                  <span>Belum</span>
+                                                                              </div>
+                                                                          </div>
+                                                                      </div>
+                                                                  </div>
+                                                              </div>
 
-                                    const isGroupTrip = goal.tripType === 'Group' || goal.tripType === 'Couple' || (goal.groupMembers && goal.groupMembers.length > 0);
+                                                             <!-- Group Members Section (Vertical List) -->
+                                                             {goal.groupMembers && goal.groupMembers.length > 0 && (
+                                                                 <div class="mt-3 bg-slate-50/90 rounded-xl p-3.5 border border-slate-200/70 space-y-2.5 shadow-xs">
+                                                                     <div class="flex items-center justify-between">
+                                                                         <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                                                                             <i data-feather="users" class="w-3.5 h-3.5 text-primary"></i>
+                                                                             Anggota Tim ({goal.groupMembers.length + 1} Orang)
+                                                                         </h4>
+                                                                         <span class="text-[10px] font-bold text-slate-400">Progress Tabungan</span>
+                                                                     </div>
 
-                                    return (
-                                        <div class="goal-item-card" data-trip-type={isGroupTrip ? 'group' : 'solo'}>
-                                            {index > 0 && (
-                                                <div class="my-8 relative flex items-center justify-center">
-                                                    <div class="w-full border-t-2 border-dashed border-slate-200"></div>
-                                                    <div class="absolute bg-white px-3 py-0.5 text-slate-400 text-xs font-semibold flex items-center gap-1.5 rounded-full border border-slate-200/80 shadow-2xs">
-                                                        <i data-feather="scissors" class="w-3.5 h-3.5 transform -rotate-90 text-slate-400"></i>
-                                                        <span class="text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">Potong Di Sini</span>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                                     <div class="space-y-2 divide-y divide-slate-200/60">
+                                                                         {(() => {
+                                                                             const currentUserSaved = goal.savedAmount || 0;
+                                                                             const target = goal.targetAmount || 1;
+                                                                             const currentPct = Math.min(100, Math.round((currentUserSaved / target) * 100));
+                                                                             const userFullName = clerkUser?.fullName || user?.full_name || 'Saya';
+                                                                             const userAvatar = clerkUser?.imageUrl || null;
+                                                                             const userHandle = `@${user?.username || clerkUser?.username || 'saya'}`;
 
-                                            <div class="flex justify-between items-baseline mb-2">
-                                                <h4 class="font-bold text-slate-900 text-base">{goal.title}</h4>
-                                                <span class="text-sm font-extrabold text-primary">{percentage}%</span>
-                                            </div>
+                                                                             return (
+                                                                                 <div class="flex items-center justify-between gap-3 pt-1">
+                                                                                     <div class="flex items-center gap-2.5 min-w-0">
+                                                                                         {userAvatar ? (
+                                                                                             <img src={userAvatar} alt={userFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
+                                                                                         ) : (
+                                                                                             <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                                                                                 {userFullName.charAt(0).toUpperCase()}
+                                                                                             </div>
+                                                                                         )}
+                                                                                         <div class="min-w-0">
+                                                                                             <p class="text-xs font-bold text-slate-900 truncate flex items-center gap-1">
+                                                                                                 <span>{userFullName}</span>
+                                                                                                 <span class="bg-blue-50 text-primary text-[9px] px-1.5 py-0.2 rounded font-extrabold border border-blue-100">Saya</span>
+                                                                                             </p>
+                                                                                             <p class="text-[10px] text-slate-400 truncate">{userHandle}</p>
+                                                                                         </div>
+                                                                                     </div>
+                                                                                     <div class="text-right shrink-0">
+                                                                                         <span class="text-xs font-extrabold text-primary">{currentPct}%</span>
+                                                                                         <p class="text-[10px] text-slate-500 font-medium">{formatRp(currentUserSaved)}</p>
+                                                                                     </div>
+                                                                                 </div>
+                                                                             );
+                                                                         })()}
 
-                                            <div class="w-full bg-slate-100 rounded-full h-2.5 mb-2 overflow-hidden">
-                                                <div class="bg-primary h-2.5 rounded-full transition-all duration-700" style={`width: ${percentage}%`}></div>
-                                            </div>
+                                                                         {goal.groupMembers.map((memberUsername: string) => {
+                                                                             const profile = groupMemberProfilesMap.get(memberUsername.toLowerCase());
+                                                                             const mFullName = profile?.fullName || `@${memberUsername}`;
+                                                                             const mAvatar = profile?.avatarUrl || null;
+                                                                             
+                                                                             let mSaved = 0;
+                                                                             if (profile && profile.userGoals) {
+                                                                                 const matched = profile.userGoals.find((g: any) => g.title === goal.title);
+                                                                                 if (matched) mSaved = matched.saved_amount || 0;
+                                                                             }
+                                                                             const target = goal.targetAmount || 1;
+                                                                             const mPct = Math.min(100, Math.round((mSaved / target) * 100));
 
-                                            <div class="flex justify-between items-center text-xs text-slate-500 mb-3">
-                                                <span>{formatRp(goal.savedAmount)} / {formatRp(goal.targetAmount)}</span>
-                                                <span class="font-semibold text-slate-600">{freqBadgeText}</span>
-                                            </div>
-                                            
-                                            <!-- Estimasi Keberangkatan Box -->
-                                            <div class="mt-2 bg-slate-50 text-slate-700 text-xs px-3.5 py-2.5 rounded-xl flex items-center border border-slate-200/70 font-medium">
-                                                <i data-feather="calendar" class="w-3.5 h-3.5 mr-2 text-primary"></i>
-                                                {hasSheetDeparture ? (
-                                                    <span>Estimasi Keberangkatan: <strong>{sheetDisplayDate}</strong> ({pkgInfo.hitungMundur} hari lagi)</span>
-                                                ) : percentage >= 100 ? (
-                                                    <span>Target tercapai! Siap berangkat kapan saja. ✈️</span>
-                                                ) : isAcakFreq ? (
-                                                    <span>Estimasi Keberangkatan: <strong>Fleksibel (Menabung Acak)</strong></span>
-                                                ) : (
-                                                    <span>Estimasi Keberangkatan: <strong>{formattedDate}</strong> ({daysLeft} hari lagi)</span>
-                                                )}
-                                            </div>
-                                            
-                                            <!-- Status Menabung Indicator Badge -->
-                                            <div class={`mt-2 text-xs px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 border font-bold whitespace-nowrap overflow-hidden ${depositStatusBadge.colorClass}`}>
-                                                <div class="flex items-center gap-1.5 min-w-0 truncate whitespace-nowrap">
-                                                    <i data-feather={depositStatusBadge.icon} class="w-4 h-4 shrink-0"></i>
-                                                    <span class="truncate whitespace-nowrap">Status Tabungan: <strong>{depositStatusBadge.text}</strong></span>
-                                                </div>
-                                                {depositStatusBadge.isWarning && (
-                                                    <span class="shrink-0 text-[10px] uppercase tracking-wider bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-extrabold whitespace-nowrap">Waktunya Setor</span>
-                                                )}
-                                            </div>
-                                            
-                                            <!-- Clean Neutral Tags for Trip Details -->
-                                            <div class="flex flex-wrap gap-2 mt-3">
-                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
-                                                    <i data-feather={goal.tripType === 'Solo' ? 'user' : 'users'} class="w-3 h-3 mr-1 text-slate-500"></i>
-                                                    {goal.tripType === 'Solo' ? 'Solo' : goal.tripType} Trip
-                                                </span>
-                                                
-                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
-                                                    <i data-feather="box" class="w-3 h-3 mr-1 text-slate-500"></i>
-                                                    {goal.savingType || 'Konvensional'}
-                                                </span>
-                                                
-                                                <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[11px] px-2.5 py-1 rounded-lg font-semibold flex items-center">
-                                                    <i data-feather={goal.paymentMethod === 'Cash' ? 'briefcase' : 'credit-card'} class="w-3 h-3 mr-1 text-slate-500"></i> 
-                                                    {goal.paymentMethod === 'Cash' ? 'Mitra' : 'Cashless'}: {goal.paymentDetail ? goal.paymentDetail.split('|||')[0] : '-'}
-                                                </span>
-                                            </div>
+                                                                             return (
+                                                                                 <div class="flex items-center justify-between gap-3 pt-2">
+                                                                                     <div class="flex items-center gap-2.5 min-w-0">
+                                                                                         {mAvatar ? (
+                                                                                             <img src={mAvatar} alt={mFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
+                                                                                         ) : (
+                                                                                             <div class="w-8 h-8 rounded-full bg-slate-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                                                                                 {memberUsername.charAt(0).toUpperCase()}
+                                                                                             </div>
+                                                                                         )}
+                                                                                         <div class="min-w-0">
+                                                                                             <p class="text-xs font-bold text-slate-900 truncate">{mFullName}</p>
+                                                                                             <p class="text-[10px] text-slate-400 truncate">@{memberUsername}</p>
+                                                                                         </div>
+                                                                                     </div>
+                                                                                     <div class="text-right shrink-0">
+                                                                                         <span class="text-xs font-extrabold text-slate-700">{mPct}%</span>
+                                                                                         <p class="text-[10px] text-slate-500 font-medium">{formatRp(mSaved)}</p>
+                                                                                     </div>
+                                                                                 </div>
+                                                                             );
+                                                                         })}
+                                                                     </div>
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 </div>
 
-                                            <!-- Group Members Section (Vertical List) -->
-                                            {goal.groupMembers && goal.groupMembers.length > 0 && (
-                                                <div class="mt-4 bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/70 space-y-3">
-                                                    <div class="flex items-center justify-between">
-                                                        <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-                                                            <i data-feather="users" class="w-3.5 h-3.5 text-primary"></i>
-                                                            Anggota Tim ({goal.groupMembers.length + 1} Orang)
-                                                        </h4>
-                                                        <span class="text-[10px] font-bold text-slate-400">Progress Tabungan</span>
-                                                    </div>
+                                                 <!-- DASHED DIVIDER LINE BETWEEN SECTIONS -->
+                                                 <div class="relative flex md:flex-col items-center justify-center">
+                                                     <div class="w-full md:w-0 h-0 md:h-full border-b-2 md:border-r-2 border-dashed border-slate-200"></div>
+                                                 </div>
+                                                 
+                                                 <!-- SISI KANAN: PROGRES TABUNGAN & TOMBOL CTA (TICKET STUB) -->
+                                                 <div class="w-full md:w-[280px] lg:w-[320px] bg-slate-50/70 p-5 md:p-6 flex flex-col justify-between space-y-4 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 relative overflow-hidden">
+                                                     
+                                                     <!-- Content Layer (Z-10) -->
+                                                     <div class="relative z-10 flex flex-col justify-between h-full space-y-4">
+                                                         <!-- Progress Tabungan Info -->
+                                                         <div>
+                                                             <div class="flex justify-between items-baseline mb-1.5">
+                                                                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Progress Tabungan</span>
+                                                                 <span class="text-base font-black text-primary">{percentage}%</span>
+                                                             </div>
 
-                                                    <div class="space-y-2 divide-y divide-slate-200/60">
-                                                        {/* Render Current Logged-in User First */}
-                                                        {(() => {
-                                                            const currentUserSaved = goal.savedAmount || 0;
-                                                            const target = goal.targetAmount || 1;
-                                                            const currentPct = Math.min(100, Math.round((currentUserSaved / target) * 100));
-                                                            const userFullName = clerkUser?.fullName || user?.full_name || 'Saya';
-                                                            const userAvatar = clerkUser?.imageUrl || null;
-                                                            const userHandle = `@${user?.username || clerkUser?.username || 'saya'}`;
+                                                             <div class="w-full bg-slate-200/80 rounded-full h-2.5 mb-2 overflow-hidden">
+                                                                 <div class="bg-primary h-2.5 rounded-full transition-all duration-700" style={`width: ${percentage}%`}></div>
+                                                             </div>
 
-                                                            return (
-                                                                <div class="flex items-center justify-between gap-3 pt-1">
-                                                                    <div class="flex items-center gap-2.5 min-w-0">
-                                                                        {userAvatar ? (
-                                                                            <img src={userAvatar} alt={userFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
-                                                                        ) : (
-                                                                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                                                                {userFullName.charAt(0).toUpperCase()}
-                                                                            </div>
-                                                                        )}
-                                                                        <div class="min-w-0">
-                                                                            <p class="text-xs font-bold text-slate-900 truncate flex items-center gap-1">
-                                                                                <span>{userFullName}</span>
-                                                                                <span class="bg-blue-50 text-primary text-[9px] px-1.5 py-0.2 rounded font-extrabold border border-blue-100">Saya</span>
-                                                                            </p>
-                                                                            <p class="text-[10px] text-slate-400 truncate">{userHandle}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="text-right shrink-0">
-                                                                        <span class="text-xs font-extrabold text-primary">{currentPct}%</span>
-                                                                        <p class="text-[10px] text-slate-500 font-medium">{formatRp(currentUserSaved)}</p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                             <div class="flex justify-between items-center text-xs text-slate-600 font-medium">
+                                                                 <span class="font-bold">{formatRp(goal.savedAmount)} / {formatRp(goal.targetAmount)}</span>
+                                                                 <span class="text-slate-500">{freqBadgeText}</span>
+                                                             </div>
+                                                         </div>
 
-                                                        {/* Render Other Group Members Vertically */}
-                                                        {goal.groupMembers.map((memberUsername: string) => {
-                                                            const profile = groupMemberProfilesMap.get(memberUsername.toLowerCase());
-                                                            const mFullName = profile?.fullName || `@${memberUsername}`;
-                                                            const mAvatar = profile?.avatarUrl || null;
-                                                            
-                                                            let mSaved = 0;
-                                                            if (profile && profile.userGoals) {
-                                                                const matched = profile.userGoals.find((g: any) => g.title === goal.title);
-                                                                if (matched) mSaved = matched.saved_amount || 0;
-                                                            }
-                                                            const target = goal.targetAmount || 1;
-                                                            const mPct = Math.min(100, Math.round((mSaved / target) * 100));
+                                                         <!-- Main Action CTA Buttons -->
+                                                         <div>
+                                                             {(() => {
+                                                                 const isMitra = goal.paymentMethod === 'Cash' || (goal.paymentDetail && goal.paymentDetail.toLowerCase().includes('mitra'));
+                                                                 let waNumber = '6287896108664';
+                                                                 const nominalText = (goal.autoDebitAmount && goal.autoDebitAmount > 0 && !isAcakFreq) ? `Rp ${goal.autoDebitAmount.toLocaleString('id-ID')}` : 'Tidak Ditentukan';
+                                                                 let waText = `Halo Admin DreamJourney! Saya ingin setor tabungan untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon info QRIS-nya ya, terima kasih!`;
+                                                                 let mitraNameText = 'Mitra';
 
-                                                            return (
-                                                                <div class="flex items-center justify-between gap-3 pt-2">
-                                                                    <div class="flex items-center gap-2.5 min-w-0">
-                                                                        {mAvatar ? (
-                                                                            <img src={mAvatar} alt={mFullName} class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" />
-                                                                        ) : (
-                                                                            <div class="w-8 h-8 rounded-full bg-slate-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                                                                {memberUsername.charAt(0).toUpperCase()}
-                                                                            </div>
-                                                                        )}
-                                                                        <div class="min-w-0">
-                                                                            <p class="text-xs font-bold text-slate-900 truncate">{mFullName}</p>
-                                                                            <p class="text-[10px] text-slate-400 truncate">@{memberUsername}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="text-right shrink-0">
-                                                                        <span class="text-xs font-extrabold text-slate-700">{mPct}%</span>
-                                                                        <p class="text-[10px] text-slate-500 font-medium">{formatRp(mSaved)}</p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            <!-- Action Links -->
-                                            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-semibold">
-                                                <a href={`/goal-detail/${goal.id}`} class="text-primary hover:text-blue-700 transition flex items-center gap-1">
-                                                    <i data-feather="file-text" class="w-3.5 h-3.5"></i> Rincian Biaya
-                                                </a>
-                                                <a href={`/cancel-trip/${goal.id}`} class="text-red-600 hover:text-red-800 transition flex items-center gap-1">
-                                                    <i data-feather="x-circle" class="w-3.5 h-3.5"></i> Batalkan Target
-                                                </a>
-                                            </div>
-                                            
-                                            <!-- Main Action Button -->
-                                            {(() => {
-                                                const isMitra = goal.paymentMethod === 'Cash' || (goal.paymentDetail && goal.paymentDetail.toLowerCase().includes('mitra'));
-                                                let waNumber = '6287896108664';
-                                                let waButtonText = 'Setor via WA (QRIS)';
-                                                const nominalText = (goal.autoDebitAmount && goal.autoDebitAmount > 0 && !isAcakFreq) ? `Rp ${goal.autoDebitAmount.toLocaleString('id-ID')}` : 'Tidak Ditentukan';
-                                                let waText = `Halo Admin DreamJourney! Saya ingin setor tabungan untuk destinasi ${goal.title}.\n\nID Target: ${goal.id}\nNominal: ${nominalText}\nMohon info QRIS-nya ya, terima kasih!`;
+                                                                 if (isMitra) {
+                                                                     let mitraId: string | null = null;
+                                                                     if (goal.paymentDetail) {
+                                                                         const match = goal.paymentDetail.match(/Mitra ID:\s*([A-Za-z0-9]+)/i);
+                                                                         if (match) {
+                                                                             mitraId = match[1].trim().toLowerCase();
+                                                                         } else {
+                                                                             mitraId = goal.paymentDetail.split('|||')[0].trim().toLowerCase();
+                                                                         }
+                                                                     }
+                                                                     const mitraObj = mitraId ? mitraMap.get(mitraId) : null;
+                                                                     if (mitraObj && mitraObj.wa) {
+                                                                         waNumber = mitraObj.wa;
+                                                                     }
+                                                                     mitraNameText = mitraObj ? `${mitraObj.name}` : 'Mitra';
+                                                                     waText = `Halo Mitra DreamJourney (${mitraNameText})!\n\nSaya ingin melakukan setoran tunai untuk target tabungan saya:\n• Destinasi: ${goal.title}\n• ID Target: ${goal.id}\n• Nominal Setoran: ${nominalText}\n\nMohon bantuannya untuk proses setoran tunai ini ya. Terima kasih!`;
+                                                                 }
 
-                                                if (isMitra) {
-                                                    let mitraId: string | null = null;
-                                                    if (goal.paymentDetail) {
-                                                        const match = goal.paymentDetail.match(/Mitra ID:\s*([A-Za-z0-9]+)/i);
-                                                        if (match) {
-                                                            mitraId = match[1].trim().toLowerCase();
-                                                        } else {
-                                                            mitraId = goal.paymentDetail.split('|||')[0].trim().toLowerCase();
-                                                        }
-                                                    }
-                                                    const mitraObj = mitraId ? mitraMap.get(mitraId) : null;
-                                                    if (mitraObj && mitraObj.wa) {
-                                                        waNumber = mitraObj.wa;
-                                                    }
-                                                    const mitraNameText = mitraObj ? `${mitraObj.name}` : 'Mitra';
-                                                    waButtonText = `Chat Mitra (${mitraNameText}) via WhatsApp`;
-                                                    waText = `Halo Mitra DreamJourney (${mitraNameText})!\n\nSaya ingin melakukan setoran tunai untuk target tabungan saya:\n• Destinasi: ${goal.title}\n• ID Target: ${goal.id}\n• Nominal Setoran: ${nominalText}\n\nMohon bantuannya untuk proses setoran tunai ini ya. Terima kasih!`;
-                                                }
+                                                                 const hasAlreadySavedCycle = !depositStatusBadge.isWarning && !isAcakFreq && goal.autoDebitFrequency !== 'Acak (Sesuka Hati)';
+                                                                 let cyclePeriodText = 'Periode Ini';
+                                                                 if (isHarian) cyclePeriodText = 'Hari Ini';
+                                                                 else if (isMingguan) cyclePeriodText = 'Minggu Ini';
+                                                                 else if (isBulanan) cyclePeriodText = 'Bulan Ini';
 
-                                                const hasAlreadySavedCycle = !depositStatusBadge.isWarning && !isAcakFreq && goal.autoDebitFrequency !== 'Acak (Sesuka Hati)';
-                                                let cyclePeriodText = 'Periode Ini';
-                                                if (isHarian) cyclePeriodText = 'Hari Ini';
-                                                else if (isMingguan) cyclePeriodText = 'Minggu Ini';
-                                                else if (isBulanan) cyclePeriodText = 'Bulan Ini';
+                                                                 const payAmount = goal.autoDebitAmount > 0 ? goal.autoDebitAmount : (goal.targetAmount - goal.savedAmount);
+                                                                 const qrisUrl = `/payment/qris?goalId=${encodeURIComponent(goal.id)}&amount=${payAmount}&title=${encodeURIComponent(goal.title)}&image=${encodeURIComponent(goal.packageImage || '')}&frequency=${encodeURIComponent(goal.autoDebitFrequency || 'Mingguan')}`;
 
-                                                return (
-                                                    <div class="mt-3">
-                                                        {isMitra ? (
-                                                            <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
-                                                                <i data-feather="message-circle" class="w-4 h-4"></i>
-                                                                <span>{waButtonText}</span>
-                                                            </a>
-                                                        ) : (
-                                                            hasAlreadySavedCycle ? (
-                                                                <div class="bg-emerald-50 text-emerald-800 font-bold text-xs text-center py-3 px-4 rounded-xl border border-emerald-200/80 flex items-center justify-center gap-2 cursor-not-allowed">
-                                                                    <i data-feather="check-circle" class="w-4 h-4 text-emerald-600"></i>
-                                                                    <span>Anda Sudah Menabung {cyclePeriodText}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div class="space-y-2">
-                                                                    {(() => {
-                                                                        const payAmount = goal.autoDebitAmount > 0 ? goal.autoDebitAmount : (goal.targetAmount - goal.savedAmount);
-                                                                        const qrisUrl = `/payment/qris?goalId=${encodeURIComponent(goal.id)}&amount=${payAmount}&title=${encodeURIComponent(goal.title)}&image=${encodeURIComponent(goal.packageImage || '')}&frequency=${encodeURIComponent(goal.autoDebitFrequency || 'Mingguan')}`;
-                                                                        return (
-                                                                            <a href={qrisUrl}
-                                                                               target="_blank"
-                                                                               rel="noopener noreferrer"
-                                                                               class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
-                                                                                <i data-feather="qr-code" class="w-4 h-4"></i> Bayar Setoran (Bayar QRIS)
-                                                                            </a>
-                                                                        );
-                                                                    })()}
-                                                                    <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl flex items-center justify-center gap-2 transition border border-slate-200 text-xs">
-                                                                        <i data-feather="message-circle" class="w-3.5 h-3.5"></i> Setor via WA Admin
-                                                                    </a>
-                                                                </div>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
+                                                                 return isMitra ? (
+                                                                     <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
+                                                                         <i data-feather="message-circle" class="w-4 h-4"></i>
+                                                                         <span>Chat Mitra ({mitraNameText})</span>
+                                                                     </a>
+                                                                 ) : (
+                                                                     hasAlreadySavedCycle ? (
+                                                                         <div class="bg-emerald-50 text-emerald-800 font-bold text-xs text-center py-2.5 px-3 rounded-xl border border-emerald-200/80 flex items-center justify-center gap-2 cursor-not-allowed">
+                                                                             <i data-feather="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                                                                             <span>Anda Sudah Menabung {cyclePeriodText}</span>
+                                                                         </div>
+                                                                     ) : (
+                                                                         <div class="space-y-2">
+                                                                             <a href={qrisUrl}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition shadow-sm cursor-pointer text-xs">
+                                                                                 <i data-feather="qr-code" class="w-4 h-4"></i> Bayar Setoran (QRIS)
+                                                                             </a>
+                                                                             <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`} target="_blank" class="w-full bg-white hover:bg-slate-100 text-slate-700 font-semibold py-2 rounded-xl flex items-center justify-center gap-2 transition border border-slate-200/80 text-xs">
+                                                                                 <i data-feather="message-circle" class="w-3.5 h-3.5 text-slate-500"></i> Setor via WA Admin
+                                                                             </a>
+                                                                         </div>
+                                                                     )
+                                                                 );
+                                                             })()}
+                                                         </div>
+                                                                                     <a href={`/cancel-trip/${goal.id}`} class="text-red-600 hover:text-red-800 transition flex items-center gap-1">
+                                                                 <i data-feather="x-circle" class="w-3.5 h-3.5"></i> Batalkan Target
+                                                             </a>
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         )
+                                     )
+                                 )}
+                             </div>
+                         </div>
+                     </div>
 
-                    <!-- RIGHT COLUMN: Riwayat Aktivitas (30% Width) -->
                     <div class="lg:col-span-3 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col h-full">
                         <h3 class="text-base md:text-lg font-black text-slate-900 mb-6 flex items-center gap-2.5">
                             <i data-feather="clock" class="w-4.5 h-4.5 text-primary shrink-0"></i>
@@ -899,6 +1069,31 @@ try {
                 }
             });
         }
+
+        // --- CALENDAR MODAL TOGGLE ---
+        document.querySelectorAll('.open-cal-modal-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const modalId = btn.getAttribute('data-modal-id');
+                if (modalId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal) modal.classList.remove('hidden');
+                }
+            });
+        });
+
+        document.querySelectorAll('.close-cal-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.cal-modal-backdrop');
+                if (modal) modal.classList.add('hidden');
+            });
+        });
+
+        document.querySelectorAll('.cal-modal-backdrop').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        });
 
         // --- GOAL FILTER TAB SWITCHER ---
         const goalFilterBtns = document.querySelectorAll('.goal-filter-btn');

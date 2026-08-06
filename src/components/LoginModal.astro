@@ -1,51 +1,51 @@
 ---
 ---
 
-<div id="custom-login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+<div id="custom-login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-3 sm:p-4">
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="document.getElementById('custom-login-modal').classList.add('hidden')"></div>
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onclick="document.getElementById('custom-login-modal').classList.add('hidden')"></div>
     
     <!-- Modal Content -->
-    <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row transform transition-all animate-fadeInUp">
+    <div class="relative w-full max-w-sm sm:max-w-md md:max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row transform transition-all animate-fadeInUp">
         <!-- Close Button -->
-        <button onclick="document.getElementById('custom-login-modal').classList.add('hidden')" class="absolute top-4 right-4 z-20 text-gray-400 hover:text-gray-600 bg-white/80 hover:bg-white rounded-full p-2 transition shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button onclick="document.getElementById('custom-login-modal').classList.add('hidden')" class="absolute top-3 right-3 z-30 text-slate-400 hover:text-slate-600 bg-white/80 hover:bg-white rounded-full p-2 transition shadow-sm cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
         </button>
 
-        <!-- Left Column: Text & CTA -->
-        <div class="w-full md:w-1/2 bg-gradient-to-br from-blue-50/80 via-white to-blue-50/50 p-8 md:p-12 flex flex-col justify-center items-center text-center relative">
-            <h3 class="text-3xl font-extrabold text-gray-900 mb-3 leading-tight tracking-tight">Mulai Rencanamu ✈️</h3>
+        <!-- Image (Top Hero on Mobile, Right Column on Desktop) -->
+        <div class="w-full md:w-1/2 h-36 sm:h-44 md:h-[480px] relative flex-shrink-0 order-first md:order-last">
+            <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000&auto=format&fit=crop" alt="Travel Destination" class="absolute inset-0 w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/30 to-transparent"></div>
             
-            <p class="text-gray-600 font-medium mb-8 leading-relaxed max-w-xs mx-auto text-sm">
-                Masuk ke akun Anda untuk menyimpan rencana perjalanan, melihat estimasi biaya, dan menabung dengan QRIS / Auto-Debit.
+            <div class="absolute bottom-4 left-5 right-5 md:bottom-8 md:left-8 md:right-8 text-white">
+                <h4 class="text-xl md:text-3xl font-extrabold mb-0.5 md:mb-1 drop-shadow-md tracking-tight">Eksplorasi Dunia</h4>
+                <p class="text-white/90 text-xs md:text-sm font-medium drop-shadow">Liburan mudah dan murah lewat DreamJourney</p>
+            </div>
+        </div>
+
+        <!-- Text & CTA (Bottom on Mobile, Left Column on Desktop) -->
+        <div class="w-full md:w-1/2 bg-gradient-to-br from-blue-50/80 via-white to-blue-50/50 p-6 sm:p-8 md:p-12 flex flex-col justify-center items-center text-center relative order-last md:order-first">
+            <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2 md:mb-3 leading-tight tracking-tight">Mulai Rencanamu ✈️</h3>
+            
+            <p class="text-slate-600 font-medium mb-6 md:mb-8 leading-relaxed max-w-xs mx-auto text-xs sm:text-sm">
+                Masuk ke akun Anda untuk menyimpan rencana perjalanan, melihat kalender tim, dan menabung dengan QRIS / Auto-Debit.
             </p>
             
-            <div class="w-full space-y-3.5 relative z-10">
-                <button onclick="document.getElementById('custom-login-modal')?.classList.add('hidden'); window.Clerk ? window.Clerk.openSignIn() : window.location.reload()" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 cursor-pointer text-sm">
+            <div class="w-full space-y-3 relative z-10">
+                <button onclick="document.getElementById('custom-login-modal')?.classList.add('hidden'); window.Clerk ? window.Clerk.openSignIn() : window.location.reload()" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 px-5 sm:py-3.5 sm:px-6 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 cursor-pointer text-xs sm:text-sm">
                     LOGIN SEKARANG
                 </button>
                 
-                <button onclick="document.getElementById('custom-login-modal')?.classList.add('hidden'); window.Clerk ? window.Clerk.openSignUp({ fallbackRedirectUrl: '/onboarding' }) : window.location.reload()" class="w-full bg-white hover:bg-blue-50/50 border-2 border-primary/20 hover:border-primary text-primary font-bold py-3.5 px-6 rounded-xl transition-all shadow-sm cursor-pointer text-sm">
+                <button onclick="document.getElementById('custom-login-modal')?.classList.add('hidden'); window.Clerk ? window.Clerk.openSignUp({ fallbackRedirectUrl: '/onboarding' }) : window.location.reload()" class="w-full bg-white hover:bg-blue-50/50 border-2 border-primary/20 hover:border-primary text-primary font-bold py-3 px-5 sm:py-3.5 sm:px-6 rounded-xl transition-all shadow-sm cursor-pointer text-xs sm:text-sm">
                     DAFTAR AKUN BARU
                 </button>
             </div>
             
-            <p class="text-[11px] text-gray-400 mt-8 max-w-[260px] mx-auto leading-relaxed">
+            <p class="text-[10px] sm:text-[11px] text-slate-400 mt-5 md:mt-8 max-w-[260px] mx-auto leading-relaxed">
                 Dengan melanjutkan, Anda menyetujui Syarat & Ketentuan serta Kebijakan Privasi dari DreamJourney.
             </p>
-        </div>
-
-        <!-- Right Column: Image -->
-        <div class="w-full md:w-1/2 h-64 md:h-[480px] relative">
-            <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000&auto=format&fit=crop" alt="Travel Destination" class="absolute inset-0 w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/30 to-transparent"></div>
-            
-            <div class="absolute bottom-8 left-8 right-8 text-white">
-                <h4 class="text-3xl font-extrabold mb-1 drop-shadow-md">Eksplorasi Dunia</h4>
-                <p class="text-white/90 text-sm font-medium drop-shadow">Liburan mudah dan murah lewat DreamJourney</p>
-            </div>
         </div>
     </div>
 </div>
