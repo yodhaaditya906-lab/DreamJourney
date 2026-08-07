@@ -187,11 +187,27 @@ if (currentUsername) {
                                     <i data-feather="mail" class="w-4 h-4 text-slate-400"></i>
                                     {user.primaryEmailAddress?.emailAddress}
                                 </p>
-                                <div class="pt-1 flex items-center justify-center sm:justify-start gap-2">
-                                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
-                                        <i data-feather="at-sign" class="w-3.5 h-3.5 text-slate-400"></i>
-                                        {dbUser.username || user.username || 'Username belum diset'}
-                                    </span>
+                                <div class="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                                    {dbUser.username || user.username ? (
+                                        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i data-feather="at-sign" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            {dbUser.username || user.username}
+                                        </span>
+                                    ) : (
+                                        <div class="flex flex-col items-center sm:items-start gap-1.5">
+                                            <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/80 px-3 py-1 rounded-full text-xs font-semibold">
+                                                <i data-feather="alert-circle" class="w-3.5 h-3.5 text-amber-500"></i>
+                                                Username belum diset
+                                            </span>
+                                            <a 
+                                                href="/onboarding" 
+                                                class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold px-4 py-1.5 rounded-full text-xs transition shadow-sm hover:shadow"
+                                            >
+                                                <i data-feather="shield-check" class="w-3.5 h-3.5"></i>
+                                                <span>Verifikasi Profil</span>
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

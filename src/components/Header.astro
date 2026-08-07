@@ -6,10 +6,12 @@ const currentPath = Astro.url.pathname;
 const { userId } = Astro.locals.auth();
 
 let mobileUserAvatar = '';
+let hasUsername = true;
 if (userId) {
     const user = await Astro.locals.currentUser();
     const { data: dbUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
     mobileUserAvatar = dbUser?.avatar_url || dbUser?.image_url || user?.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'User')}&background=random&color=fff&bold=true`;
+    hasUsername = !!(dbUser?.username || user?.username);
 }
 ---
 
@@ -44,13 +46,13 @@ if (userId) {
                 </a>
             </Show>
             <Show when="signed-out">
-                <button 
-                    type="button" 
-                    class="btn-require-auth w-9 h-9 rounded-full bg-indigo-50 text-primary flex items-center justify-center cursor-pointer shadow-2xs border border-indigo-100/80"
+                <SignInButton 
+                    mode="modal" 
+                    class="w-9 h-9 rounded-full bg-indigo-50 text-primary flex items-center justify-center cursor-pointer shadow-2xs border border-indigo-100/80 hover:bg-indigo-100 transition-colors"
                     title="Masuk Akun"
                 >
                     <i data-feather="user" class="w-4.5 h-4.5"></i>
-                </button>
+                </SignInButton>
             </Show>
         </div>
 
@@ -80,7 +82,13 @@ if (userId) {
                 </SignUpButton>
             </Show>
             <Show when="signed-in">
-                <div class="flex items-center gap-5">
+                <div class="flex items-center gap-4 sm:gap-5">
+                    {!hasUsername && (
+                        <a href="/onboarding" class="flex items-center gap-1.5 text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-3.5 py-1.5 rounded-full transition shadow-xs hover:shadow-sm" title="Lengkapi data profil & username">
+                            <i data-feather="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>Verifikasi Profil</span>
+                        </a>
+                    )}
                     <a href="/dashboard" class={`flex items-center gap-2 font-medium transition ${currentPath === '/dashboard' ? 'text-primary' : 'text-gray-600 hover:text-primary'}`} title="Savings Tracker Dashboard">
                         <i data-feather="pie-chart" class="w-5 h-5"></i>
                         <span>Dashboard</span>
@@ -103,8 +111,8 @@ if (userId) {
     <!-- Mobile Drawer Navigation -->
     <div class="hidden lg:hidden bg-white border-t border-gray-100 shadow-inner px-4 py-6" id="mobile-menu-drawer">
         <Show when="signed-in">
-            <div class="flex items-center gap-3 mb-5">
-                <a href="/profile" class="flex items-center gap-3 group">
+            <div class="flex items-center justify-between gap-3 mb-5">
+                <a href="/profile" class="flex items-center gap-3 group min-w-0">
                     <UserButton 
                         userProfileMode="navigation" 
                         userProfileUrl="/profile" 
@@ -114,11 +122,17 @@ if (userId) {
                             }
                         }}
                     />
-                    <div class="text-left">
-                        <p id="header-mobile-fullname" class="font-bold text-gray-800 text-sm group-hover:text-primary transition">Profil Akun Saya</p>
-                        <p id="header-mobile-username" class="text-xs text-gray-500">Lihat profil & opsi keluar</p>
+                    <div class="text-left min-w-0">
+                        <p id="header-mobile-fullname" class="font-bold text-gray-800 text-sm group-hover:text-primary transition truncate">Profil Akun Saya</p>
+                        <p id="header-mobile-username" class="text-xs text-gray-500 truncate">{hasUsername ? 'Lihat profil & opsi keluar' : '⚠️ Username belum diset'}</p>
                     </div>
                 </a>
+                {!hasUsername && (
+                    <a href="/onboarding" class="flex items-center gap-1 text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-3 py-1.5 rounded-full transition shadow-xs flex-shrink-0">
+                        <i data-feather="shield-check" class="w-3.5 h-3.5"></i>
+                        <span>Verifikasi</span>
+                    </a>
+                )}
             </div>
             <hr class="border-gray-100 mb-5">
         </Show>
