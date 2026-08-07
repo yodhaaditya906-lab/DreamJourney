@@ -22,9 +22,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     const otpCode = generateOTP(whatsappNumber);
 
-    // Cek apakah ada konfigurasi WhatsApp Gateway (misal Fonnte / Wablas) di environment variable
-    const FONNTE_TOKEN = import.meta.env.FONNTE_TOKEN;
+    const FONNTE_TOKEN = (process.env.FONNTE_TOKEN || import.meta.env.FONNTE_TOKEN || 'zRESTdPQrKVtTQ7YzPc9').trim();
     let sentRealMsg = false;
+    let errorMessage = '';
 
     let targetPhone = cleanPhone;
     if (targetPhone.startsWith('0')) {
@@ -45,23 +45,36 @@ export const POST: APIRoute = async ({ request }) => {
           body: formData,
         });
         const fonnteRes = await res.json();
-        if (fonnteRes.status) {
+        console.log("Fonnte API Response:", fonnteRes);
+
+        if (fonnteRes && (fonnteRes.status === true || fonnteRes.status === "true")) {
           sentRealMsg = true;
         } else {
-          console.warn("Fonnte API response false:", fonnteRes);
+          console.warn("Fonnte API error response:", fonnteRes);
+          errorMessage = fonnteRes?.detail || fonnteRes?.reason || 'Respon Fonnte gagal';
         }
-      } catch (err) {
-        console.warn("Gagal mengirim via Fonnte WA Gateway, beralih ke simulasi:", err);
+      } catch (err: any) {
+        console.error("Gagal mengirim via Fonnte WA Gateway:", err);
+        errorMessage = err.message || 'Gagal terhubung ke Fonnte';
       }
+    } else {
+      errorMessage = "FONNTE_TOKEN tidak ditemukan";
+    }
+
+    if (!sentRealMsg) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Gagal mengirim OTP via Fonnte: ${errorMessage}. Pastikan nomor WhatsApp aktif.`
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     return new Response(JSON.stringify({
       success: true,
-      message: sentRealMsg 
-        ? 'Kode OTP telah dikirimkan ke nomor WhatsApp Anda.' 
-        : 'Kode OTP simulasi telah dibuat (Mode Simulasi).',
-      simulatedOtp: sentRealMsg ? undefined : otpCode, // Sertakan OTP simulasi jika gateway belum dikonfigurasi
-      isSimulated: !sentRealMsg
+      message: 'Kode OTP asli telah dikirimkan ke nomor WhatsApp Anda via Fonnte.',
+      isSimulated: false
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

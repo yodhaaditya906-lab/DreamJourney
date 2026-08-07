@@ -339,15 +339,8 @@ if (!userId) {
                     otpContainer.classList.remove('hidden');
                     otpCodeInput.focus();
 
-                    if (data.isSimulated && data.simulatedOtp) {
-                        simulatedOtpCode.innerText = data.simulatedOtp;
-                        simulatedOtpBanner.classList.remove('hidden');
-                        // auto fill ke input OTP untuk kenyamanan testing
-                        otpCodeInput.value = data.simulatedOtp;
-                    } else {
-                        simulatedOtpBanner.classList.add('hidden');
-                    }
-
+                    simulatedOtpBanner.classList.add('hidden');
+                    otpCodeInput.value = '';
                     startResendTimer(60);
                 } else {
                     whatsappStatus.className = 'text-xs mt-2 font-medium text-red-600';
