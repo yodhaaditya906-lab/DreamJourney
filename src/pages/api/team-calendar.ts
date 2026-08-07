@@ -32,7 +32,7 @@ export const GET: APIRoute = async (context) => {
             const { data: nData, error: nError } = await supabase
                 .from('team_notifications')
                 .select('*')
-                .eq('recipient_username', username)
+                .ilike('recipient_username', username)
                 .order('created_at', { ascending: false });
 
             if (!nError && nData) {
