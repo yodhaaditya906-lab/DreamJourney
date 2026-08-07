@@ -920,7 +920,7 @@ const isVerified = !!(dbUser?.username);
             const countBadge = document.getElementById('inbox-badge-count');
             if (!container || !countBadge) return;
 
-            const unreadNotifs = notifications.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase() && n.status === 'UNREAD');
+            const unreadNotifs = notifications.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase() && (n.status === 'UNREAD' || n.status === 'PENDING'));
             if (unreadNotifs.length > 0) {
                 countBadge.textContent = unreadNotifs.length;
                 countBadge.classList.remove('hidden');
