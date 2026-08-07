@@ -78,6 +78,12 @@ export const POST: APIRoute = async (context) => {
         if (action === 'CREATE_TEAM') {
             const { name, category, members, owner_username, owner_user_obj } = body;
 
+            // Enforce profile verification on server side
+            const { data: dbUser } = await supabase.from('users').select('username').eq('id', userId).maybeSingle();
+            if (!dbUser || !dbUser.username) {
+                return new Response(JSON.stringify({ error: 'Anda harus memverifikasi profil terlebih dahulu sebelum membuat tim.' }), { status: 403 });
+            }
+
             if (!name) {
                 return new Response(JSON.stringify({ error: 'Nama tim harus diisi.' }), { status: 400 });
             }

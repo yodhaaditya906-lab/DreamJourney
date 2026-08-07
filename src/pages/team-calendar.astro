@@ -14,6 +14,7 @@ const { data: dbUser } = await supabase.from('users').select('*').eq('id', userI
 const currentUsername = (dbUser?.username || (sessionClaims?.username as string) || 'user').toLowerCase();
 const currentUserFullName = dbUser?.full_name || (sessionClaims?.fullName as string) || 'Anda';
 const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionClaims?.imageUrl as string) || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserFullName)}&background=random&color=fff&bold=true`;
+const isVerified = !!(dbUser?.username);
 ---
 
 <Layout title="Kalender Tim - DreamJourney">
@@ -298,6 +299,32 @@ const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionCla
 
         </div>
     </main>
+
+    <!-- MODAL 0: VERIFIKASI PROFIL DIPERLUKAN -->
+    <div id="verification-required-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="p-6 text-center space-y-4">
+                <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <i data-feather="shield-alert" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Verifikasi Profil Diperlukan</h3>
+                    <p class="text-xs text-slate-500 font-medium mt-2 leading-relaxed">
+                        Anda harus melengkapi profil dan memverifikasi akun Anda terlebih dahulu sebelum dapat membuat tim liburan baru dan mengundang anggota.
+                    </p>
+                </div>
+                <div class="pt-2 flex flex-col gap-2.5">
+                    <a href="/onboarding" class="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl transition shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-feather="shield-check" class="w-4 h-4"></i>
+                        <span>Verifikasi Profil Sekarang</span>
+                    </a>
+                    <button type="button" id="close-verification-modal-btn" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-xl transition cursor-pointer">
+                        Nanti Saja
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL 1: BUAT TIM BARU -->
     <div id="create-team-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
@@ -610,7 +637,7 @@ const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionCla
     </div>
 </Layout>
 
-<script is:inline define:vars={{ currentUsername, currentUserFullName, currentUserAvatar }}>
+<script is:inline define:vars={{ currentUsername, currentUserFullName, currentUserAvatar, isVerified }}>
     document.addEventListener("DOMContentLoaded", function () {
         const currentUser = {
             username: currentUsername,
@@ -1800,8 +1827,19 @@ const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionCla
         const closeCreateTeamBtn = document.getElementById('close-create-team-modal-btn');
         const cancelCreateTeamBtn = document.getElementById('cancel-create-team-btn');
         const createTeamForm = document.getElementById('create-team-form');
+        const closeVerificationModalBtn = document.getElementById('close-verification-modal-btn');
 
         function openCreateTeamModal() {
+            if (!isVerified) {
+                const verifModal = document.getElementById('verification-required-modal');
+                if (verifModal) {
+                    verifModal.classList.remove('hidden');
+                    if (window.feather) window.feather.replace();
+                } else {
+                    window.location.href = '/onboarding';
+                }
+                return;
+            }
             tempCreateMembers = [];
             renderTempInitialMembers();
             if (createTeamModal) createTeamModal.classList.remove('hidden');
@@ -1814,6 +1852,12 @@ const currentUserAvatar = dbUser?.avatar_url || dbUser?.image_url || (sessionCla
         if (openCreateTeamBtn) openCreateTeamBtn.addEventListener('click', openCreateTeamModal);
         if (closeCreateTeamBtn) closeCreateTeamBtn.addEventListener('click', closeCreateTeamModal);
         if (cancelCreateTeamBtn) cancelCreateTeamBtn.addEventListener('click', closeCreateTeamModal);
+        if (closeVerificationModalBtn) {
+            closeVerificationModalBtn.addEventListener('click', () => {
+                const verifModal = document.getElementById('verification-required-modal');
+                if (verifModal) verifModal.classList.add('hidden');
+            });
+        }
 
         // Add Initial Member in Modal
         const initMemberInput = document.getElementById('initial-member-input');
