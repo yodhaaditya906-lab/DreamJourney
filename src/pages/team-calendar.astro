@@ -477,6 +477,30 @@ const isVerified = !!(dbUser?.username);
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pengulangan Jadwal</label>
+                        <select 
+                            id="event-repeat-type-select" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        >
+                            <option value="NONE">Tidak Berulang (Sekali Saja)</option>
+                            <option value="DAILY">Setiap Hari</option>
+                            <option value="WEEKLY">Setiap Minggu (Hari yang sama)</option>
+                            <option value="WEEKDAYS">Hari Kerja (Senin - Jumat)</option>
+                            <option value="CUSTOM_RANGE">Rentang Tanggal (Multi-Hari)</option>
+                        </select>
+                    </div>
+                    <div id="event-repeat-until-container" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sampai Tanggal <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="date" 
+                            id="event-repeat-until-input" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        />
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Catatan Tambahan (Opsional)</label>
                     <textarea 
@@ -576,6 +600,30 @@ const isVerified = !!(dbUser?.username);
                             id="group-event-end-time-input" 
                             required 
                             value="21:00"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                        />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pengulangan Agenda</label>
+                        <select 
+                            id="group-event-repeat-type-select" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
+                        >
+                            <option value="NONE">Tidak Berulang (Sekali Saja)</option>
+                            <option value="DAILY">Setiap Hari</option>
+                            <option value="WEEKLY">Setiap Minggu (Hari yang sama)</option>
+                            <option value="WEEKDAYS">Hari Kerja (Senin - Jumat)</option>
+                            <option value="CUSTOM_RANGE">Rentang Tanggal (Multi-Hari)</option>
+                        </select>
+                    </div>
+                    <div id="group-event-repeat-until-container" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sampai Tanggal <span class="text-rose-500">*</span></label>
+                        <input 
+                            type="date" 
+                            id="group-event-repeat-until-input" 
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
                         />
                     </div>
@@ -2016,6 +2064,93 @@ const isVerified = !!(dbUser?.username);
             });
         }
 
+        // Helper Generator for Recurrent Dates
+        function generateRecurrentDates(startDateStr, repeatType, untilDateStr) {
+            const dates = [];
+            if (!startDateStr) return dates;
+            if (repeatType === 'NONE' || !untilDateStr) {
+                dates.push(startDateStr);
+                return dates;
+            }
+
+            const start = new Date(startDateStr + 'T00:00:00');
+            const until = new Date(untilDateStr + 'T23:59:59');
+
+            if (until < start) {
+                dates.push(startDateStr);
+                return dates;
+            }
+
+            let curr = new Date(start);
+            let maxIterations = 60; // Max 60 dates safeguard
+
+            while (curr <= until && maxIterations > 0) {
+                maxIterations--;
+                const dateStr = formatDateKey(curr);
+                const dayOfWeek = curr.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+
+                if (repeatType === 'DAILY' || repeatType === 'CUSTOM_RANGE') {
+                    dates.push(dateStr);
+                    curr.setDate(curr.getDate() + 1);
+                } else if (repeatType === 'WEEKLY') {
+                    dates.push(dateStr);
+                    curr.setDate(curr.getDate() + 7);
+                } else if (repeatType === 'WEEKDAYS') {
+                    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                        dates.push(dateStr);
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                } else {
+                    dates.push(dateStr);
+                    break;
+                }
+            }
+
+            return dates.length > 0 ? dates : [startDateStr];
+        }
+
+        // Toggle Recurrence Controls (Personal Event)
+        const eventRepeatSelect = document.getElementById('event-repeat-type-select');
+        const eventRepeatUntilContainer = document.getElementById('event-repeat-until-container');
+        const eventRepeatUntilInput = document.getElementById('event-repeat-until-input');
+
+        eventRepeatSelect?.addEventListener('change', () => {
+            if (eventRepeatSelect.value !== 'NONE') {
+                eventRepeatUntilContainer?.classList.remove('hidden');
+                if (eventRepeatUntilInput && !eventRepeatUntilInput.value) {
+                    const startVal = document.getElementById('event-date-input').value;
+                    if (startVal) {
+                        const startDate = new Date(startVal + 'T00:00:00');
+                        startDate.setDate(startDate.getDate() + 7);
+                        eventRepeatUntilInput.value = formatDateKey(startDate);
+                    }
+                }
+            } else {
+                eventRepeatUntilContainer?.classList.add('hidden');
+            }
+        });
+
+        // Toggle Recurrence Controls (Group Event)
+        const groupRepeatSelect = document.getElementById('group-event-repeat-type-select');
+        const groupRepeatUntilContainer = document.getElementById('group-event-repeat-until-container');
+        const groupRepeatUntilInput = document.getElementById('group-event-repeat-until-input');
+
+        groupRepeatSelect?.addEventListener('change', () => {
+            if (groupRepeatSelect.value !== 'NONE') {
+                groupRepeatUntilContainer?.classList.remove('hidden');
+                if (groupRepeatUntilInput && !groupRepeatUntilInput.value) {
+                    const startVal = document.getElementById('group-event-date-input').value;
+                    if (startVal) {
+                        const startDate = new Date(startVal + 'T00:00:00');
+                        startDate.setDate(startDate.getDate() + 7);
+                        groupRepeatUntilInput.value = formatDateKey(startDate);
+                    }
+                }
+            } else {
+                groupRepeatUntilContainer?.classList.add('hidden');
+            }
+        });
+
         // MODAL 2: ADD PERSONAL EVENT
         const addEventModal = document.getElementById('add-event-modal');
         const openAddEventBtn = document.getElementById('open-add-event-modal-btn');
@@ -2026,6 +2161,8 @@ const isVerified = !!(dbUser?.username);
         if (openAddEventBtn && addEventModal) {
             openAddEventBtn.addEventListener('click', () => {
                 document.getElementById('event-date-input').value = selectedDateStr;
+                if (eventRepeatSelect) eventRepeatSelect.value = 'NONE';
+                if (eventRepeatUntilContainer) eventRepeatUntilContainer.classList.add('hidden');
                 addEventModal.classList.remove('hidden');
             });
         }
@@ -2047,6 +2184,8 @@ const isVerified = !!(dbUser?.username);
                 const start_time = document.getElementById('event-start-time-input').value;
                 const end_time = document.getElementById('event-end-time-input').value;
                 const description = document.getElementById('event-desc-input').value.trim();
+                const repeatType = eventRepeatSelect ? eventRepeatSelect.value : 'NONE';
+                const repeatUntil = eventRepeatUntilInput ? eventRepeatUntilInput.value : '';
 
                 if (!title || !event_date || !start_time || !end_time) return;
 
@@ -2054,38 +2193,47 @@ const isVerified = !!(dbUser?.username);
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Menyimpan...';
 
+                const targetDates = generateRecurrentDates(event_date, repeatType, repeatUntil);
                 const myUsername = currentUser.username.toLowerCase();
-                const newEvt = {
-                    id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    team_id: activeTeamId,
-                    user_id: myUsername,
-                    owner_username: myUsername,
-                    member_username: myUsername,
-                    title: title,
-                    event_date: event_date,
-                    start_time: start_time,
-                    end_time: end_time,
-                    description: description,
-                    is_group_event: false
-                };
+                const createdEvts = [];
 
-                allEvents.push(newEvt);
+                targetDates.forEach(dt => {
+                    const newEvt = {
+                        id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                        team_id: activeTeamId,
+                        user_id: myUsername,
+                        owner_username: myUsername,
+                        member_username: myUsername,
+                        title: title,
+                        event_date: dt,
+                        start_time: start_time,
+                        end_time: end_time,
+                        description: description,
+                        is_group_event: false
+                    };
+                    allEvents.push(newEvt);
+                    createdEvts.push(newEvt);
+                });
+
                 saveLocalEvents();
                 selectedDateStr = event_date;
                 renderCalendar();
                 renderSelectedDayEvents();
                 closeAddEventModal();
                 addEventForm.reset();
+                if (eventRepeatUntilContainer) eventRepeatUntilContainer.classList.add('hidden');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan Kesibukan';
 
-                try {
-                    await fetch('/api/team-calendar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'ADD_EVENT', ...newEvt })
-                    });
-                } catch (err) {}
+                for (const evt of createdEvts) {
+                    try {
+                        await fetch('/api/team-calendar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'ADD_EVENT', ...evt })
+                        });
+                    } catch (err) {}
+                }
             });
         }
 
@@ -2100,6 +2248,8 @@ const isVerified = !!(dbUser?.username);
         function openGroupEventModalHandler() {
             if (groupEventModal) {
                 document.getElementById('group-event-date-input').value = selectedDateStr;
+                if (groupRepeatSelect) groupRepeatSelect.value = 'NONE';
+                if (groupRepeatUntilContainer) groupRepeatUntilContainer.classList.add('hidden');
                 groupEventModal.classList.remove('hidden');
             }
         }
@@ -2125,6 +2275,8 @@ const isVerified = !!(dbUser?.username);
                 const start_time = document.getElementById('group-event-start-time-input').value;
                 const end_time = document.getElementById('group-event-end-time-input').value;
                 const description = document.getElementById('group-event-desc-input').value.trim();
+                const repeatType = groupRepeatSelect ? groupRepeatSelect.value : 'NONE';
+                const repeatUntil = groupRepeatUntilInput ? groupRepeatUntilInput.value : '';
 
                 if (!title || !event_date || !start_time || !end_time) return;
 
@@ -2132,39 +2284,48 @@ const isVerified = !!(dbUser?.username);
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Menyimpan Agenda...';
 
+                const targetDates = generateRecurrentDates(event_date, repeatType, repeatUntil);
                 const myUsername = currentUser.username.toLowerCase();
-                const newGroupEvt = {
-                    id: 'evt_group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    team_id: activeTeamId,
-                    user_id: myUsername,
-                    owner_username: myUsername,
-                    member_username: 'ALL',
-                    title: title,
-                    event_date: event_date,
-                    start_time: start_time,
-                    end_time: end_time,
-                    description: description,
-                    is_group_event: true,
-                    group_category: category
-                };
+                const createdEvts = [];
 
-                allEvents.push(newGroupEvt);
+                targetDates.forEach(dt => {
+                    const newGroupEvt = {
+                        id: 'evt_group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                        team_id: activeTeamId,
+                        user_id: myUsername,
+                        owner_username: myUsername,
+                        member_username: 'ALL',
+                        title: title,
+                        event_date: dt,
+                        start_time: start_time,
+                        end_time: end_time,
+                        description: description,
+                        is_group_event: true,
+                        group_category: category
+                    };
+                    allEvents.push(newGroupEvt);
+                    createdEvts.push(newGroupEvt);
+                });
+
                 saveLocalEvents();
                 selectedDateStr = event_date;
                 renderCalendar();
                 renderSelectedDayEvents();
                 closeGroupEventModal();
                 groupEventForm.reset();
+                if (groupRepeatUntilContainer) groupRepeatUntilContainer.classList.add('hidden');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan Jadwal Bersama';
 
-                try {
-                    await fetch('/api/team-calendar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'ADD_EVENT', ...newGroupEvt })
-                    });
-                } catch (err) {}
+                for (const evt of createdEvts) {
+                    try {
+                        await fetch('/api/team-calendar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'ADD_EVENT', ...evt })
+                        });
+                    } catch (err) {}
+                }
             });
         }
 
