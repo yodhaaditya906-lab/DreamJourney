@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request }) => {
     // 1. Periksa apakah username sudah ada di tabel users Supabase (case-insensitive)
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, full_name, avatar_url, image_url')
+      .select('id, username, full_name')
       .ilike('username', username)
       .maybeSingle();
 
@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request }) => {
       throw error;
     }
 
-    let avatarUrl: string | null = data?.avatar_url || data?.image_url || null;
+    let avatarUrl: string | null = null;
     let fullName = data?.full_name || data?.username || null;
 
     // 2. Ambil foto profil asli user dari Clerk Backend API jika belum ada
