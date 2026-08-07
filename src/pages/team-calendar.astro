@@ -711,10 +711,30 @@ const isVerified = !!(dbUser?.username);
 
         // Dynamic Avatar Generator per User
         function getAvatarUrl(m) {
-            if (m && m.avatarUrl && !m.avatarUrl.includes('unsplash.com/photo-1534528741775')) {
+            if (!m) return `https://ui-avatars.com/api/?name=User&background=random&color=fff&bold=true`;
+
+            const uname = (m.username || '').toLowerCase();
+
+            // 1. If member is current logged in user, use currentUser's fresh avatar
+            if (uname && uname === currentUser.username.toLowerCase() && currentUser.avatarUrl && !currentUser.avatarUrl.includes('ui-avatars.com')) {
+                return currentUser.avatarUrl;
+            }
+
+            // 2. Check local storage cache for this user's avatar
+            if (uname) {
+                const localAvatar = localStorage.getItem('dream_user_avatar_' + uname);
+                if (localAvatar && !localAvatar.includes('ui-avatars.com')) {
+                    return localAvatar;
+                }
+            }
+
+            // 3. Check m.avatarUrl if valid
+            if (m.avatarUrl && !m.avatarUrl.includes('unsplash.com/photo-1534528741775') && !m.avatarUrl.includes('ui-avatars.com')) {
                 return m.avatarUrl;
             }
-            const name = m?.fullName || m?.username || 'User';
+
+            // 4. Fallback to UI Avatars
+            const name = m.fullName || m.username || 'User';
             return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true`;
         }
 
@@ -838,16 +858,21 @@ const isVerified = !!(dbUser?.username);
                         allEvents = Array.from(mergedEvtMap.values());
                         saveLocalEvents();
                     }
-                    if (data.notifications && data.notifications.length > 0) {
-                        const mergedNotifMap = new Map();
-                        data.notifications.forEach(n => mergedNotifMap.set(n.id, n));
+                    if (Array.isArray(data.notifications)) {
+                        const serverNotifs = data.notifications.filter(n => (n.recipient_username || '').toLowerCase() === currentUser.username.toLowerCase());
+                        const notifMap = new Map();
+                        serverNotifs.forEach(n => notifMap.set(n.id, n));
+                        
                         notifications.forEach(n => {
-                            const existing = mergedNotifMap.get(n.id);
-                            if (!existing || n.status === 'READ' || n.status === 'ACCEPTED' || n.status === 'REJECTED') {
-                                mergedNotifMap.set(n.id, n);
+                            if ((n.recipient_username || '').toLowerCase() === currentUser.username.toLowerCase()) {
+                                const existing = notifMap.get(n.id);
+                                if (existing && (n.status === 'READ' || n.status === 'ACCEPTED' || n.status === 'REJECTED')) {
+                                    existing.status = n.status;
+                                }
                             }
                         });
-                        notifications = Array.from(mergedNotifMap.values());
+                        
+                        notifications = Array.from(notifMap.values());
                         saveLocalNotifs();
                     }
                 }
@@ -855,7 +880,17 @@ const isVerified = !!(dbUser?.username);
                 console.warn("Server sync notice:", err);
             }
 
-            renderTeamsOverview();
+            if (activeTeamId) {
+                const currentActiveTeam = teams.find(t => t.id === activeTeamId);
+                if (currentActiveTeam) {
+                    renderCalendar();
+                    renderSelectedDayEvents();
+                } else {
+                    renderTeamsOverview();
+                }
+            } else {
+                renderTeamsOverview();
+            }
             renderNotifications();
         }
 
@@ -863,13 +898,16 @@ const isVerified = !!(dbUser?.username);
             notifications = [];
             const localNotifs = localStorage.getItem('dream_team_notifications');
             if (localNotifs) {
-                try { notifications = JSON.parse(localNotifs); } catch (e) {}
+                try { 
+                    const parsed = JSON.parse(localNotifs); 
+                    notifications = parsed.filter(n => (n.recipient_username || '').toLowerCase() === currentUser.username.toLowerCase());
+                } catch (e) {}
             }
             const globalNotifsStr = localStorage.getItem('dream_global_team_notifications');
             if (globalNotifsStr) {
                 try {
                     const globalNotifs = JSON.parse(globalNotifsStr);
-                    const myGlobalNotifs = globalNotifs.filter(n => n.recipient_username.toLowerCase() === currentUser.username.toLowerCase());
+                    const myGlobalNotifs = globalNotifs.filter(n => (n.recipient_username || '').toLowerCase() === currentUser.username.toLowerCase());
                     const mergedMap = new Map();
                     myGlobalNotifs.forEach(n => mergedMap.set(n.id, n));
                     notifications.forEach(n => {
@@ -937,24 +975,11 @@ const isVerified = !!(dbUser?.username);
                 targetTeam.members = (targetTeam.members || []).filter(m => m.username.toLowerCase() !== currentUser.username.toLowerCase());
                 saveLocalTeams();
 
-                const notifObj = {
-                    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    recipient_username: targetTeam.owner_username.toLowerCase(),
-                    sender_username: currentUser.username.toLowerCase(),
-                    type: 'REMOVED_FROM_TEAM',
-                    team_name: targetTeam.name,
-                    title: `Anggota Keluar Tim: ${targetTeam.name}`,
-                    message: `@${currentUser.username} telah keluar dari tim "${targetTeam.name}".`,
-                    status: 'UNREAD',
-                    created_at: new Date().toISOString()
-                };
-                pushGlobalNotification(notifObj);
-
                 try {
                     await fetch('/api/team-calendar', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'UPDATE_MEMBERS', teamId: teamId, members: targetTeam.members })
+                        body: JSON.stringify({ action: 'LEAVE_TEAM', teamId: teamId, username: currentUser.username })
                     });
                 } catch (err) {}
 
@@ -993,7 +1018,39 @@ const isVerified = !!(dbUser?.username);
 
             myNotifs.forEach(notif => {
                 const itemEl = document.createElement('div');
-                itemEl.className = `p-3 rounded-2xl border text-xs transition ${notif.status === 'PENDING' ? 'bg-blue-50/90 border-blue-200' : 'bg-slate-50/60 border-slate-100'}`;
+                const isUnread = notif.status === 'UNREAD' || notif.status === 'PENDING';
+                
+                let iconName = 'bell';
+                let iconColor = 'text-primary bg-primary/10';
+                let cardBg = isUnread ? 'bg-slate-50 border-primary/30 shadow-xs' : 'bg-slate-50/60 border-slate-100';
+
+                if (notif.type === 'EVENT_ADDED') {
+                    iconName = 'calendar';
+                    iconColor = 'text-emerald-600 bg-emerald-100/80';
+                    if (isUnread) cardBg = 'bg-emerald-50/80 border-emerald-300 shadow-xs';
+                } else if (notif.type === 'EVENT_DELETED') {
+                    iconName = 'trash-2';
+                    iconColor = 'text-rose-600 bg-rose-100/80';
+                    if (isUnread) cardBg = 'bg-rose-50/80 border-rose-300 shadow-xs';
+                } else if (notif.type === 'TEAM_INVITE') {
+                    iconName = 'user-plus';
+                    iconColor = 'text-blue-600 bg-blue-100/80';
+                    if (isUnread) cardBg = 'bg-blue-50/90 border-blue-200 shadow-xs';
+                } else if (notif.type === 'TEAM_DELETED') {
+                    iconName = 'alert-triangle';
+                    iconColor = 'text-rose-600 bg-rose-100/80';
+                    if (isUnread) cardBg = 'bg-rose-50/80 border-rose-300 shadow-xs';
+                } else if (notif.type === 'MEMBER_JOINED') {
+                    iconName = 'user-check';
+                    iconColor = 'text-teal-600 bg-teal-100/80';
+                    if (isUnread) cardBg = 'bg-teal-50/80 border-teal-300 shadow-xs';
+                } else if (notif.type === 'MEMBER_LEFT' || notif.type === 'REMOVED_FROM_TEAM') {
+                    iconName = 'user-x';
+                    iconColor = 'text-amber-600 bg-amber-100/80';
+                    if (isUnread) cardBg = 'bg-amber-50/80 border-amber-300 shadow-xs';
+                }
+
+                itemEl.className = `p-3 rounded-2xl border text-xs transition ${cardBg}`;
                 
                 let actionsHtml = '';
                 if (notif.type === 'TEAM_INVITE' && notif.status === 'PENDING') {
@@ -1013,17 +1070,28 @@ const isVerified = !!(dbUser?.username);
                     actionsHtml = `<span class="inline-block text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg mt-1.5">Undangan Ditolak</span>`;
                 }
 
+                const timeStr = notif.created_at ? new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Baru';
+
                 itemEl.innerHTML = `
-                    <div class="flex items-start justify-between gap-2">
-                        <h4 class="font-bold text-slate-900 text-xs">${notif.title || 'Notifikasi Tim'}</h4>
-                        <span class="text-[9px] text-slate-400 font-medium">${notif.created_at ? new Date(notif.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Baru'}</span>
+                    <div class="flex items-start gap-2.5">
+                        <div class="p-1.5 rounded-xl shrink-0 ${iconColor} mt-0.5">
+                            <i data-feather="${iconName}" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-1">
+                                <h4 class="font-bold text-slate-900 text-xs truncate">${notif.title || 'Notifikasi Tim'}</h4>
+                                <span class="text-[9px] text-slate-400 font-medium shrink-0">${timeStr}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">${notif.message}</p>
+                            ${actionsHtml}
+                        </div>
                     </div>
-                    <p class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">${notif.message}</p>
-                    ${actionsHtml}
                 `;
 
                 container.appendChild(itemEl);
             });
+
+            if (window.feather) window.feather.replace();
 
             container.querySelectorAll('.btn-process-invite').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
@@ -1259,7 +1327,7 @@ const isVerified = !!(dbUser?.username);
                             await fetch('/api/team-calendar', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ action: 'DELETE_TEAM', teamId: id })
+                                body: JSON.stringify({ action: 'DELETE_TEAM', teamId: id, username: currentUser.username })
                             });
                         } catch (err) {}
                     }
@@ -2329,7 +2397,10 @@ const isVerified = !!(dbUser?.username);
             });
         }
 
-        // Init App
+        // Init App & Start Realtime Auto-Sync Polling (every 10 seconds)
         initData();
+        setInterval(() => {
+            initData();
+        }, 10000);
     });
 </script>

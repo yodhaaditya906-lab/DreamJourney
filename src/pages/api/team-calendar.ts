@@ -1,5 +1,39 @@
-import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+// Helper to collect all relevant recipient usernames for a team
+async function getTeamRecipients(teamId: string, senderUsername: string): Promise<{ recipients: string[]; teamName: string }> {
+    const recipients = new Set<string>();
+    const senderLower = (senderUsername || '').toLowerCase();
+    let teamName = 'Tim Liburan';
+
+    if (teamId) {
+        const { data: teamData } = await supabase.from('teams').select('*').eq('id', teamId).maybeSingle();
+        if (teamData) {
+            if (teamData.name) teamName = teamData.name;
+            if (teamData.owner_username) {
+                recipients.add(teamData.owner_username.toLowerCase());
+            }
+            if (Array.isArray(teamData.members)) {
+                teamData.members.forEach((m: any) => {
+                    const uname = (typeof m === 'string' ? m : (m.username || m.user_id || '')).toLowerCase();
+                    if (uname) recipients.add(uname);
+                });
+            }
+        }
+
+        const { data: notifData } = await supabase
+            .from('team_notifications')
+            .select('recipient_username')
+            .eq('team_id', teamId);
+        
+        if (notifData) {
+            notifData.forEach((n: any) => {
+                if (n.recipient_username) recipients.add(n.recipient_username.toLowerCase());
+            });
+        }
+    }
+
+    recipients.delete(senderLower);
+    return { recipients: Array.from(recipients), teamName };
+}
 
 export const GET: APIRoute = async (context) => {
     try {
@@ -19,6 +53,57 @@ export const GET: APIRoute = async (context) => {
             .from('teams')
             .select('*')
             .order('created_at', { ascending: false });
+
+        // Enrich teams members with latest profile details (avatar_url / image_url / full_name) from users table
+        if (teamsData && teamsData.length > 0) {
+            const allUsernames = new Set<string>();
+            teamsData.forEach((t: any) => {
+                if (t.owner_username) allUsernames.add(t.owner_username.toLowerCase());
+                if (Array.isArray(t.members)) {
+                    t.members.forEach((m: any) => {
+                        const uname = (typeof m === 'string' ? m : (m.username || m.user_id || '')).toLowerCase();
+                        if (uname) allUsernames.add(uname);
+                    });
+                }
+            });
+
+            if (allUsernames.size > 0) {
+                const { data: dbUsers } = await supabase
+                    .from('users')
+                    .select('username, full_name, avatar_url, image_url')
+                    .in('username', Array.from(allUsernames));
+                
+                if (dbUsers) {
+                    const userMap = new Map();
+                    dbUsers.forEach((u: any) => {
+                        if (u.username) {
+                            userMap.set(u.username.toLowerCase(), {
+                                fullName: u.full_name || u.username,
+                                avatarUrl: u.avatar_url || u.image_url || ''
+                            });
+                        }
+                    });
+
+                    teamsData.forEach((t: any) => {
+                        if (Array.isArray(t.members)) {
+                            t.members = t.members.map((m: any) => {
+                                const uname = (typeof m === 'string' ? m : (m.username || '')).toLowerCase();
+                                const freshUser = userMap.get(uname);
+                                const existingAvatar = (typeof m === 'object' && m.avatarUrl) ? m.avatarUrl : '';
+                                if (freshUser) {
+                                    return {
+                                        username: uname,
+                                        fullName: freshUser.fullName || (typeof m === 'object' ? m.fullName : uname),
+                                        avatarUrl: freshUser.avatarUrl || existingAvatar || ''
+                                    };
+                                }
+                                return typeof m === 'string' ? { username: m, fullName: m, avatarUrl: '' } : m;
+                            });
+                        }
+                    });
+                }
+            }
+        }
 
         // 2. Fetch Events
         const { data: eventsData, error: eventsError } = await supabase
@@ -78,7 +163,6 @@ export const POST: APIRoute = async (context) => {
         if (action === 'CREATE_TEAM') {
             const { name, category, members, owner_username, owner_user_obj } = body;
 
-            // Enforce profile verification on server side
             const { data: dbUser } = await supabase.from('users').select('username').eq('id', userId).maybeSingle();
             if (!dbUser || !dbUser.username) {
                 return new Response(JSON.stringify({ error: 'Anda harus memverifikasi profil terlebih dahulu sebelum membuat tim.' }), { status: 403 });
@@ -186,10 +270,31 @@ export const POST: APIRoute = async (context) => {
                 const { data: teamData } = await supabase.from('teams').select('*').eq('id', teamId).single();
                 if (teamData) {
                     const currentMembers = teamData.members || [];
-                    if (!currentMembers.some((m: any) => m.username.toLowerCase() === username.toLowerCase())) {
-                        currentMembers.push(userObj || { username, fullName: username, avatarUrl: '' });
-                        await supabase.from('teams').update({ members: currentMembers }).eq('id', teamId);
+                    const isAlreadyMember = currentMembers.some((m: any) => m.username.toLowerCase() === username.toLowerCase());
+                    if (!isAlreadyMember) {
+                        const newMember = userObj || { username, fullName: username, avatarUrl: '' };
+                        const updatedMembers = [...currentMembers, newMember];
+                        await supabase.from('teams').update({ members: updatedMembers }).eq('id', teamId);
                     }
+                }
+
+                // Notify all recipients
+                const { recipients, teamName } = await getTeamRecipients(teamId, username);
+                const memberNotifs = recipients.map((r: string) => ({
+                    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    recipient_username: r,
+                    sender_username: username.toLowerCase(),
+                    type: 'MEMBER_JOINED',
+                    team_id: teamId,
+                    team_name: teamName,
+                    title: `Anggota Baru: ${teamName}`,
+                    message: `@${username} telah menyetujui undangan dan bergabung ke tim "${teamName}".`,
+                    status: 'UNREAD',
+                    created_at: new Date().toISOString()
+                }));
+
+                if (memberNotifs.length > 0) {
+                    await supabase.from('team_notifications').insert(memberNotifs);
                 }
             } else {
                 await supabase.from('team_notifications').update({ status: 'REJECTED' }).eq('id', notifId);
@@ -201,24 +306,86 @@ export const POST: APIRoute = async (context) => {
             });
         }
 
+        // --- ACTION: LEAVE_TEAM ---
+        if (action === 'LEAVE_TEAM') {
+            const { teamId, username } = body;
+            if (!teamId || !username) {
+                return new Response(JSON.stringify({ error: 'Missing teamId or username' }), { status: 400 });
+            }
+
+            const { recipients, teamName } = await getTeamRecipients(teamId, username);
+            const { data: teamData } = await supabase.from('teams').select('*').eq('id', teamId).single();
+            if (teamData) {
+                const remainingMembers = (teamData.members || []).filter((m: any) => m.username.toLowerCase() !== username.toLowerCase());
+                await supabase.from('teams').update({ members: remainingMembers }).eq('id', teamId);
+            }
+
+            const leaveNotifs = recipients.map((r: string) => ({
+                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                recipient_username: r,
+                sender_username: username.toLowerCase(),
+                type: 'MEMBER_LEFT',
+                team_id: teamId,
+                team_name: teamName,
+                title: `Anggota Keluar: ${teamName}`,
+                message: `@${username} telah keluar dari tim "${teamName}".`,
+                status: 'UNREAD',
+                created_at: new Date().toISOString()
+            }));
+
+            if (leaveNotifs.length > 0) {
+                await supabase.from('team_notifications').insert(leaveNotifs);
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         // --- ACTION: NOTIFY_REMOVED ---
         if (action === 'NOTIFY_REMOVED') {
-            const { recipient_username, sender_username, team_name } = body;
-            const notif = {
+            const { recipient_username, sender_username, team_id, team_name } = body;
+            const notifs: any[] = [];
+
+            // 1. Direct notification to removed member
+            notifs.push({
                 id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 recipient_username: recipient_username.toLowerCase(),
                 sender_username: sender_username.toLowerCase(),
                 type: 'REMOVED_FROM_TEAM',
+                team_id: team_id || '',
                 team_name: team_name || 'Tim Liburan',
                 title: `Status Keanggotaan Tim: ${team_name}`,
                 message: `@${sender_username} telah mengeluarkan Anda dari tim "${team_name}".`,
                 status: 'UNREAD',
                 created_at: new Date().toISOString()
-            };
+            });
 
-            await supabase.from('team_notifications').insert(notif);
+            // 2. Notify other remaining team recipients
+            if (team_id) {
+                const { recipients, teamName } = await getTeamRecipients(team_id, sender_username);
+                recipients
+                    .filter((r: string) => r.toLowerCase() !== recipient_username.toLowerCase())
+                    .forEach((r: string) => {
+                        notifs.push({
+                            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            recipient_username: r,
+                            sender_username: sender_username.toLowerCase(),
+                            type: 'MEMBER_LEFT',
+                            team_id: team_id,
+                            team_name: teamName,
+                            title: `Anggota Dikeluarkan: ${teamName}`,
+                            message: `@${sender_username} telah mengeluarkan @${recipient_username} dari tim "${teamName}".`,
+                            status: 'UNREAD',
+                            created_at: new Date().toISOString()
+                        });
+                    });
+            }
 
-            return new Response(JSON.stringify({ success: true, notification: notif }), {
+            await supabase.from('team_notifications').insert(notifs);
+
+            return new Response(JSON.stringify({ success: true }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -243,9 +410,29 @@ export const POST: APIRoute = async (context) => {
 
         // --- ACTION: DELETE_TEAM ---
         if (action === 'DELETE_TEAM') {
-            const { teamId } = body;
+            const { teamId, username } = body;
             if (!teamId) {
                 return new Response(JSON.stringify({ error: 'Missing teamId' }), { status: 400 });
+            }
+
+            const deleter = username || 'owner';
+            const { recipients, teamName } = await getTeamRecipients(teamId, deleter);
+
+            const notifs = recipients.map((r: string) => ({
+                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                recipient_username: r,
+                sender_username: deleter.toLowerCase(),
+                type: 'TEAM_DELETED',
+                team_id: teamId,
+                team_name: teamName,
+                title: `Tim Dihapus: ${teamName}`,
+                message: `Tim "${teamName}" telah dihapus oleh @${deleter}.`,
+                status: 'UNREAD',
+                created_at: new Date().toISOString()
+            }));
+
+            if (notifs.length > 0) {
+                await supabase.from('team_notifications').insert(notifs);
             }
 
             await supabase.from('teams').delete().eq('id', teamId);
@@ -280,13 +467,39 @@ export const POST: APIRoute = async (context) => {
             }
 
             const { data: existingEvt } = await supabase.from('team_events').select('*').eq('id', eventId).maybeSingle();
+            let eventTitle = 'kegiatan';
+            let teamId = '';
+
             if (existingEvt) {
+                eventTitle = existingEvt.title || 'kegiatan';
+                teamId = existingEvt.team_id || '';
                 const ownerUname = (existingEvt.member_username || existingEvt.owner_username || '').toLowerCase();
                 const isCreator = username && ownerUname && ownerUname === username.toLowerCase();
                 const isTeamOwner = teamOwnerUsername && username && teamOwnerUsername.toLowerCase() === username.toLowerCase();
 
                 if (!isCreator && !isTeamOwner && !existingEvt.is_group_event) {
                     return new Response(JSON.stringify({ error: 'Anda tidak memiliki hak untuk menghapus jadwal ini.' }), { status: 403 });
+                }
+            }
+
+            // Create notification to all team recipients before deletion
+            if (teamId && username) {
+                const { recipients, teamName } = await getTeamRecipients(teamId, username);
+                const notifs = recipients.map((r: string) => ({
+                    id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    recipient_username: r,
+                    sender_username: username.toLowerCase(),
+                    type: 'EVENT_DELETED',
+                    team_id: teamId,
+                    team_name: teamName,
+                    title: `Jadwal Dihapus: ${eventTitle}`,
+                    message: `@${username} menghapus kegiatan "${eventTitle}" dari tim "${teamName}".`,
+                    status: 'UNREAD',
+                    created_at: new Date().toISOString()
+                }));
+
+                if (notifs.length > 0) {
+                    await supabase.from('team_notifications').insert(notifs);
                 }
             }
 
@@ -341,6 +554,25 @@ export const POST: APIRoute = async (context) => {
 
         if (error) {
             console.warn("Insert team_events warning:", error.message);
+        }
+
+        // Send notifications to all recipients of this team
+        const { recipients, teamName } = await getTeamRecipients(team_id, myUsername);
+        const notifs = recipients.map((r: string) => ({
+            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            recipient_username: r,
+            sender_username: myUsername,
+            type: 'EVENT_ADDED',
+            team_id: team_id,
+            team_name: teamName,
+            title: `Jadwal Baru: ${title.trim()}`,
+            message: `@${myUsername} menambahkan kegiatan baru "${title.trim()}" (${event_date}, ${start_time}-${end_time}) di tim "${teamName}".`,
+            status: 'UNREAD',
+            created_at: new Date().toISOString()
+        }));
+
+        if (notifs.length > 0) {
+            await supabase.from('team_notifications').insert(notifs);
         }
 
         return new Response(JSON.stringify({ success: true, event: data || newEvent }), {
