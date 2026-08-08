@@ -106,7 +106,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         const clerkUser = await locals.currentUser();
-        const inviterUsername = (clerkUser?.username || 'user').toLowerCase();
+        const inviterUsername = (
+            userRecord?.username ||
+            clerkUser?.username ||
+            userRecord?.full_name ||
+            clerkUser?.emailAddresses?.[0]?.emailAddress?.split('@')[0] ||
+            'user'
+        ).toLowerCase();
 
         const fullDetails = {
             status: body.status || 'draft',
