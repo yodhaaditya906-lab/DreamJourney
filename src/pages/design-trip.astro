@@ -1320,9 +1320,25 @@ const currentUserEmail = (
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('id') || urlParams.get('edit') || urlParams.get('draftId');
 
-        if (targetId) {
-            const savedGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
+        async function loadGoalData() {
+            if (!targetId) return;
+
+            let savedGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
             let targetGoal = savedGoals.find((g: any) => g.id === targetId);
+
+            if (!targetGoal) {
+                try {
+                    const res = await fetch('/api/goals');
+                    const data = await res.json();
+                    if (data && Array.isArray(data.goals)) {
+                        targetGoal = data.goals.find((g: any) => g.id === targetId || (g.title && g.title.toLowerCase() === targetId.toLowerCase()));
+                        if (targetGoal) {
+                            savedGoals.unshift(targetGoal);
+                            localStorage.setItem('dreamjourney_custom_goals', JSON.stringify(savedGoals));
+                        }
+                    }
+                } catch (e) {}
+            }
 
             if (!targetGoal && savedGoals.length > 0) {
                 targetGoal = savedGoals.find((g: any) => g.title && g.title.toLowerCase() === targetId.toLowerCase());
@@ -1406,5 +1422,7 @@ const currentUserEmail = (
                 calculateBreakdown();
             }
         }
+
+        loadGoalData();
     });
 </script>
