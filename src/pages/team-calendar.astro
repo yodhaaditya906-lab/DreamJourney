@@ -406,13 +406,14 @@ const isVerified = !!(dbUser?.username);
 
     <!-- MODAL 1: BUAT TIM BARU -->
     <div id="create-team-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Plain Clean Header (No Blue Banner) -->
+            <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold">Buat Tim Liburan Baru</h3>
-                    <p class="text-xs text-white/80">Kelompokkan teman/keluarga dengan kalender khusus</p>
+                    <h3 class="text-base sm:text-lg font-black text-slate-900">Buat Tim Liburan Baru</h3>
+                    <p class="text-xs text-slate-500 font-medium">Kelompokkan teman/keluarga dengan kalender khusus</p>
                 </div>
-                <button id="close-create-team-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                <button id="close-create-team-modal-btn" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
                     <i data-feather="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -425,7 +426,7 @@ const isVerified = !!(dbUser?.username);
                         id="new-team-name-input" 
                         required 
                         placeholder="Contoh: Keluarga Inti, Alumni SMA, Tim Kantor" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                     />
                 </div>
 
@@ -433,7 +434,7 @@ const isVerified = !!(dbUser?.username);
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kategori Tim</label>
                     <select 
                         id="new-team-category-select" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                     >
                         <option value="Keluarga">Keluarga</option>
                         <option value="Teman">Teman / Sahabat</option>
@@ -451,7 +452,7 @@ const isVerified = !!(dbUser?.username);
                             type="text" 
                             id="initial-member-input"
                             placeholder="Masukkan @username teman..." 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-primary"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-slate-800"
                         />
                         <button 
                             type="button" 
@@ -480,7 +481,7 @@ const isVerified = !!(dbUser?.username);
                     <button 
                         type="submit" 
                         id="save-team-submit-btn" 
-                        class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer"
+                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                     >
                         Buat Tim Baru
                     </button>
@@ -491,13 +492,14 @@ const isVerified = !!(dbUser?.username);
 
     <!-- MODAL 2: TAMBAH KESIBUKAN PRIBADI SAYA -->
     <div id="add-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Plain Clean Header -->
+            <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold">Tambah Kesibukan Pribadi</h3>
-                    <p class="text-xs text-white/80">Tandai jam sibuk pribadi Anda di kalender tim</p>
+                    <h3 class="text-base sm:text-lg font-black text-slate-900">Tambah Kesibukan Pribadi</h3>
+                    <p class="text-xs text-slate-500 font-medium">Tandai jam sibuk pribadi Anda di kalender tim</p>
                 </div>
-                <button id="close-add-event-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                <button id="close-add-event-modal-btn" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
                     <i data-feather="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -510,14 +512,14 @@ const isVerified = !!(dbUser?.username);
                         id="event-title-input" 
                         required 
                         placeholder="Contoh: Rapat Kantor, Acara Keluarga, Kuliah" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                     />
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pemilik Jadwal</label>
-                    <div class="w-full bg-blue-50/70 border border-blue-100 rounded-xl px-4 py-2.5 text-xs text-blue-900 font-bold flex items-center gap-2">
-                        <i data-feather="user-check" class="w-4 h-4 text-blue-600"></i>
+                    <div class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold flex items-center gap-2">
+                        <i data-feather="user-check" class="w-4 h-4 text-slate-600"></i>
                         <span id="event-owner-display">Akun Anda (@user)</span>
                     </div>
                 </div>
@@ -528,7 +530,7 @@ const isVerified = !!(dbUser?.username);
                         type="date" 
                         id="event-date-input" 
                         required 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                     />
                 </div>
 
@@ -540,7 +542,7 @@ const isVerified = !!(dbUser?.username);
                             id="event-start-time-input" 
                             required 
                             value="08:00"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                         />
                     </div>
                     <div>
@@ -550,7 +552,7 @@ const isVerified = !!(dbUser?.username);
                             id="event-end-time-input" 
                             required 
                             value="12:00"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                         />
                     </div>
                 </div>
@@ -560,7 +562,7 @@ const isVerified = !!(dbUser?.username);
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pengulangan Jadwal</label>
                         <select 
                             id="event-repeat-type-select" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                         >
                             <option value="NONE">Tidak Berulang (Sekali Saja)</option>
                             <option value="DAILY">Setiap Hari</option>
@@ -574,7 +576,7 @@ const isVerified = !!(dbUser?.username);
                         <input 
                             type="date" 
                             id="event-repeat-until-input" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                         />
                     </div>
                 </div>
@@ -585,7 +587,7 @@ const isVerified = !!(dbUser?.username);
                         id="event-desc-input" 
                         rows="2" 
                         placeholder="Detail lokasi atau informasi penting..." 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
                     ></textarea>
                 </div>
 
@@ -600,7 +602,7 @@ const isVerified = !!(dbUser?.username);
                     <button 
                         type="submit" 
                         id="save-event-submit-btn" 
-                        class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer"
+                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
                     >
                         Simpan Kesibukan
                     </button>
@@ -611,15 +613,16 @@ const isVerified = !!(dbUser?.username);
 
     <!-- MODAL 3: BUAT JADWAL BERSAMA TIM -->
     <div id="group-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white flex items-center justify-between">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Plain Clean Header -->
+            <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold flex items-center gap-2">
+                    <h3 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                         <span>🤝 Buat Jadwal Bersama Tim</span>
                     </h3>
-                    <p class="text-xs text-white/80">Meeting pembahasan liburan, main bareng, atau gathering</p>
+                    <p class="text-xs text-slate-500 font-medium">Meeting pembahasan liburan, main bareng, atau gathering</p>
                 </div>
-                <button id="close-group-event-modal-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+                <button id="close-group-event-modal-btn" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer">
                     <i data-feather="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -728,7 +731,7 @@ const isVerified = !!(dbUser?.username);
                     <button 
                         type="submit" 
                         id="save-group-event-submit-btn" 
-                        class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow transition cursor-pointer flex items-center gap-1.5"
+                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
                     >
                         <span>Simpan Jadwal Bersama</span>
                     </button>
