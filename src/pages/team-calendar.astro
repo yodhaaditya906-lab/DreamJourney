@@ -406,9 +406,37 @@ const isVerified = !!(dbUser?.username);
 
     <!-- MODAL 1: BUAT TIM BARU -->
     <div id="create-team-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <!-- Plain Clean Header (No Blue Banner) -->
-            <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between">
+        <div class="bg-gradient-to-b from-sky-50/60 via-white to-indigo-50/40 rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 relative">
+            
+            <!-- Flat Art Nature Vector Background (Semi-Transparent, Blending behind form columns) -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+                <svg class="w-full h-full object-cover" viewBox="0 0 500 400" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Sun / Glowing Disk -->
+                    <circle cx="430" cy="70" r="45" fill="#F59E0B" opacity="0.6"/>
+                    <circle cx="430" cy="70" r="60" fill="#FDE047" opacity="0.2"/>
+
+                    <!-- Clouds Flat Art -->
+                    <path d="M60 50C70 40 90 42 95 48C102 44 115 48 118 55H50C50 50 55 48 60 50Z" fill="#38BDF8" opacity="0.5"/>
+                    <path d="M340 90C348 82 364 84 368 89C374 86 385 89 388 95H332C332 91 336 89 340 90Z" fill="#818CF8" opacity="0.4"/>
+
+                    <!-- Background Mountain Range Layer 1 (Distant Light Purple) -->
+                    <path d="M-20 400L110 240L240 400H-20Z" fill="#818CF8" opacity="0.4"/>
+                    <path d="M150 400L280 210L420 400H150Z" fill="#6366F1" opacity="0.35"/>
+                    <path d="M310 400L430 250L530 400H310Z" fill="#3B82F6" opacity="0.4"/>
+
+                    <!-- Foreground Hill Layer 2 (Emerald / Teal Flat Hills) -->
+                    <path d="M-10 400C80 340 200 330 320 370C400 390 480 370 520 400H-10Z" fill="#10B981" opacity="0.25"/>
+                    <path d="M120 400C220 330 350 340 520 360V400H120Z" fill="#059669" opacity="0.2"/>
+
+                    <!-- Flat Art Pine Trees & Palm Silhouettes at Bottom Corners -->
+                    <path d="M440 380L455 350L450 352L460 330L455 332L465 310L475 332L470 330L480 352L475 350L490 380H440Z" fill="#047857" opacity="0.4"/>
+                    <rect x="462" y="380" width="6" height="15" fill="#78350F" opacity="0.4"/>
+                    <path d="M10 395L25 365L20 367L30 345L25 347L35 325L45 347L40 345L50 367L45 365L60 395H10Z" fill="#065F46" opacity="0.35"/>
+                </svg>
+            </div>
+
+            <!-- Plain Clean Header -->
+            <div class="px-6 py-5 border-b border-slate-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between relative z-10">
                 <div>
                     <h3 class="text-base sm:text-lg font-black text-slate-900">Buat Tim Liburan Baru</h3>
                     <p class="text-xs text-slate-500 font-medium">Kelompokkan teman/keluarga dengan kalender khusus</p>
@@ -418,7 +446,7 @@ const isVerified = !!(dbUser?.username);
                 </button>
             </div>
 
-            <form id="create-team-form" class="p-6 space-y-4">
+            <form id="create-team-form" class="p-6 space-y-4 relative z-10">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nama Tim <span class="text-rose-500">*</span></label>
                     <input 
@@ -426,7 +454,7 @@ const isVerified = !!(dbUser?.username);
                         id="new-team-name-input" 
                         required 
                         placeholder="Contoh: Keluarga Inti, Alumni SMA, Tim Kantor" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                        class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                     />
                 </div>
 
@@ -434,7 +462,7 @@ const isVerified = !!(dbUser?.username);
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kategori Tim</label>
                     <select 
                         id="new-team-category-select" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                        class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                     >
                         <option value="Keluarga">Keluarga</option>
                         <option value="Teman">Teman / Sahabat</option>
@@ -452,12 +480,12 @@ const isVerified = !!(dbUser?.username);
                             type="text" 
                             id="initial-member-input"
                             placeholder="Masukkan @username teman..." 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-slate-800"
+                            class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-slate-800 shadow-2xs"
                         />
                         <button 
                             type="button" 
                             id="add-initial-member-btn" 
-                            class="bg-slate-900 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer flex-shrink-0"
+                            class="bg-slate-900 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer flex-shrink-0 shadow-xs"
                         >
                             + Undang
                         </button>
@@ -470,18 +498,18 @@ const isVerified = !!(dbUser?.username);
                     </div>
                 </div>
 
-                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-200/60">
                     <button 
                         type="button" 
                         id="cancel-create-team-btn" 
-                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                        class="px-5 py-2.5 bg-slate-100/90 hover:bg-slate-200/90 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer backdrop-blur-sm"
                     >
                         Batal
                     </button>
                     <button 
                         type="submit" 
                         id="save-team-submit-btn" 
-                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
                     >
                         Buat Tim Baru
                     </button>
@@ -492,9 +520,28 @@ const isVerified = !!(dbUser?.username);
 
     <!-- MODAL 2: TAMBAH KESIBUKAN PRIBADI SAYA -->
     <div id="add-event-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="bg-gradient-to-b from-sky-50/60 via-white to-emerald-50/40 rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 relative">
+            
+            <!-- Flat Art Nature Vector Background (Semi-Transparent, Blending behind form columns) -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+                <svg class="w-full h-full object-cover" viewBox="0 0 500 400" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="430" cy="70" r="45" fill="#F59E0B" opacity="0.6"/>
+                    <circle cx="430" cy="70" r="60" fill="#FDE047" opacity="0.2"/>
+                    <path d="M60 50C70 40 90 42 95 48C102 44 115 48 118 55H50C50 50 55 48 60 50Z" fill="#38BDF8" opacity="0.5"/>
+                    <path d="M340 90C348 82 364 84 368 89C374 86 385 89 388 95H332C332 91 336 89 340 90Z" fill="#818CF8" opacity="0.4"/>
+                    <path d="M-20 400L110 240L240 400H-20Z" fill="#818CF8" opacity="0.4"/>
+                    <path d="M150 400L280 210L420 400H150Z" fill="#6366F1" opacity="0.35"/>
+                    <path d="M310 400L430 250L530 400H310Z" fill="#3B82F6" opacity="0.4"/>
+                    <path d="M-10 400C80 340 200 330 320 370C400 390 480 370 520 400H-10Z" fill="#10B981" opacity="0.25"/>
+                    <path d="M120 400C220 330 350 340 520 360V400H120Z" fill="#059669" opacity="0.2"/>
+                    <path d="M440 380L455 350L450 352L460 330L455 332L465 310L475 332L470 330L480 352L475 350L490 380H440Z" fill="#047857" opacity="0.4"/>
+                    <rect x="462" y="380" width="6" height="15" fill="#78350F" opacity="0.4"/>
+                    <path d="M10 395L25 365L20 367L30 345L25 347L35 325L45 347L40 345L50 367L45 365L60 395H10Z" fill="#065F46" opacity="0.35"/>
+                </svg>
+            </div>
+
             <!-- Plain Clean Header -->
-            <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-center justify-between">
+            <div class="px-6 py-5 border-b border-slate-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between relative z-10">
                 <div>
                     <h3 class="text-base sm:text-lg font-black text-slate-900">Tambah Kesibukan Pribadi</h3>
                     <p class="text-xs text-slate-500 font-medium">Tandai jam sibuk pribadi Anda di kalender tim</p>
@@ -504,7 +551,7 @@ const isVerified = !!(dbUser?.username);
                 </button>
             </div>
 
-            <form id="add-event-form" class="p-6 space-y-4">
+            <form id="add-event-form" class="p-6 space-y-4 relative z-10">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Judul Kesibukan <span class="text-rose-500">*</span></label>
                     <input 
@@ -512,13 +559,13 @@ const isVerified = !!(dbUser?.username);
                         id="event-title-input" 
                         required 
                         placeholder="Contoh: Rapat Kantor, Acara Keluarga, Kuliah" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                        class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                     />
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pemilik Jadwal</label>
-                    <div class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold flex items-center gap-2">
+                    <div class="w-full bg-white/70 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 font-bold flex items-center gap-2">
                         <i data-feather="user-check" class="w-4 h-4 text-slate-600"></i>
                         <span id="event-owner-display">Akun Anda (@user)</span>
                     </div>
@@ -530,7 +577,7 @@ const isVerified = !!(dbUser?.username);
                         type="date" 
                         id="event-date-input" 
                         required 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                        class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                     />
                 </div>
 
@@ -542,7 +589,7 @@ const isVerified = !!(dbUser?.username);
                             id="event-start-time-input" 
                             required 
                             value="08:00"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                            class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                         />
                     </div>
                     <div>
@@ -552,7 +599,7 @@ const isVerified = !!(dbUser?.username);
                             id="event-end-time-input" 
                             required 
                             value="12:00"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                            class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                         />
                     </div>
                 </div>
@@ -562,7 +609,7 @@ const isVerified = !!(dbUser?.username);
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Pengulangan Jadwal</label>
                         <select 
                             id="event-repeat-type-select" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                            class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                         >
                             <option value="NONE">Tidak Berulang (Sekali Saja)</option>
                             <option value="DAILY">Setiap Hari</option>
@@ -576,7 +623,7 @@ const isVerified = !!(dbUser?.username);
                         <input 
                             type="date" 
                             id="event-repeat-until-input" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                            class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                         />
                     </div>
                 </div>
@@ -587,22 +634,22 @@ const isVerified = !!(dbUser?.username);
                         id="event-desc-input" 
                         rows="2" 
                         placeholder="Detail lokasi atau informasi penting..." 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition"
+                        class="w-full bg-white/80 backdrop-blur-sm border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-slate-800 focus:ring-2 focus:ring-slate-800/10 outline-none transition shadow-2xs"
                     ></textarea>
                 </div>
 
-                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-200/60">
                     <button 
                         type="button" 
                         id="cancel-add-event-btn" 
-                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                        class="px-5 py-2.5 bg-slate-100/90 hover:bg-slate-200/90 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer backdrop-blur-sm"
                     >
                         Batal
                     </button>
                     <button 
                         type="submit" 
                         id="save-event-submit-btn" 
-                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                        class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
                     >
                         Simpan Kesibukan
                     </button>
