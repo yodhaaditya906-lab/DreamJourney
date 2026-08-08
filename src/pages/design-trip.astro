@@ -1363,18 +1363,36 @@ const currentUserEmail = (
                 if (depDateInput && targetGoal.departure_date) depDateInput.value = targetGoal.departure_date;
                 if (endDateInput && targetGoal.saving_end_date) endDateInput.value = targetGoal.saving_end_date;
 
-                if (targetGoal.hotels) setSectionRowData('hotel-list', targetGoal.hotels, 'Nama Hotel / Link Airbnb', true);
-                if (targetGoal.transports) setSectionRowData('transport-list', targetGoal.transports, 'Tiket Pesawat / Kereta / Sewa Mobil', false);
-                if (targetGoal.activities) setSectionRowData('activity-list', targetGoal.activities, 'Tiket Wahana / Tour / Aktivitas', true);
-                if (targetGoal.others) setSectionRowData('other-list', targetGoal.others, 'Visa / Asuransi / Belanja Oleh-oleh', true);
+                const hasSavedRows = (targetGoal.hotels && targetGoal.hotels.length > 0 && targetGoal.hotels.some((h: any) => h.cost)) ||
+                                     (targetGoal.transports && targetGoal.transports.length > 0 && targetGoal.transports.some((t: any) => t.cost)) ||
+                                     (targetGoal.activities && targetGoal.activities.length > 0 && targetGoal.activities.some((a: any) => a.cost)) ||
+                                     (targetGoal.others && targetGoal.others.length > 0 && targetGoal.others.some((o: any) => o.cost));
+
+                if (hasSavedRows) {
+                    if (targetGoal.hotels) setSectionRowData('hotel-list', targetGoal.hotels, 'Nama Hotel / Link Airbnb', true);
+                    if (targetGoal.transports) setSectionRowData('transport-list', targetGoal.transports, 'Tiket Pesawat / Kereta / Sewa Mobil', false);
+                    if (targetGoal.activities) setSectionRowData('activity-list', targetGoal.activities, 'Tiket Wahana / Tour / Aktivitas', true);
+                    if (targetGoal.others) setSectionRowData('other-list', targetGoal.others, 'Visa / Asuransi / Belanja Oleh-oleh', true);
+                } else if (targetGoal.total_rombongan_amount > 0 || targetGoal.target_amount > 0) {
+                    // Fallback for older draft objects: populate target_amount into hotel-list
+                    const fallbackCost = targetGoal.total_rombongan_amount || targetGoal.target_amount || 0;
+                    setSectionRowData('hotel-list', [{ name: `Estimasi Biaya Trip ${targetGoal.title || ''}`, cost: fallbackCost, split: 'split' }], 'Nama Hotel / Link Airbnb', true);
+                }
 
                 const bufferInput = document.getElementById('buffer-input') as HTMLInputElement;
                 const bufferSplitSelect = document.getElementById('buffer-split-select') as HTMLSelectElement;
                 if (bufferInput && targetGoal.buffer_amount) bufferInput.value = targetGoal.buffer_amount;
                 if (bufferSplitSelect && targetGoal.buffer_split) bufferSplitSelect.value = targetGoal.buffer_split;
 
-                if (targetGoal.saving_freq) {
-                    const freqRadio = document.querySelector(`input[name="saving-freq"][value="${targetGoal.saving_freq}"]`) as HTMLInputElement;
+                // Frequency Radio Selection
+                let freqVal = targetGoal.saving_freq;
+                if (!freqVal && targetGoal.frequency) {
+                    if (targetGoal.frequency.includes('bulan') || targetGoal.frequency.includes('month')) freqVal = '30';
+                    else if (targetGoal.frequency.includes('minggu') || targetGoal.frequency.includes('week')) freqVal = '7';
+                    else if (targetGoal.frequency.includes('hari') || targetGoal.frequency.includes('day')) freqVal = '1';
+                }
+                if (freqVal) {
+                    const freqRadio = document.querySelector(`input[name="saving-freq"][value="${freqVal}"]`) as HTMLInputElement;
                     if (freqRadio) freqRadio.checked = true;
                 }
 
