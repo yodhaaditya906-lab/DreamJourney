@@ -1,3 +1,6 @@
+import type { APIRoute } from 'astro';
+import { supabase } from '../../lib/supabase';
+
 // Helper to collect all relevant recipient usernames for a team
 async function getTeamRecipients(teamId: string, senderUsername: string): Promise<{ recipients: string[]; teamName: string }> {
     const recipients = new Set<string>();
