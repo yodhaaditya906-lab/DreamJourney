@@ -10,867 +10,1171 @@ if (clerkUser) {
         return Astro.redirect('/onboarding?redirect_url=/design-trip');
     }
 }
+
+const currentUsername = clerkUser?.username || '';
 ---
 
-<Layout title="Rancang Perjalanan Anda - DreamJourney">
-    <main class="pt-24 pb-16 bg-blue-50/20 min-h-screen relative overflow-hidden" data-current-username={clerkUser?.username?.toLowerCase() || ''}>
-        <div class="container mx-auto px-4 w-11/12 lg:w-3/4 max-w-5xl relative z-10">
-            <div class="text-center mb-6 md:mb-10">
-                <span class="inline-block px-4 py-1.5 md:px-5 md:py-2 bg-white border border-blue-100 text-blue-800 font-bold rounded-full mb-3 md:mb-4 text-[10px] md:text-sm tracking-widest uppercase shadow-sm">Kalkulator Perjalanan</span>
-                <h2 class="text-2xl md:text-5xl font-extrabold text-gray-900 mb-3 md:mb-5 tracking-tight">Rancang Trip & Kalkulasi Biaya</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto text-sm md:text-lg px-2">Catat seluruh kebutuhan akomodasi, transportasi, dan wahana Anda. Sistem akan otomatis menghitung total biaya dan merekomendasikan skema tabungan.</p>
-            </div>
+<Layout title="Rancang Trip & Kalkulasi Biaya - DreamJourney">
+    <main class="pt-24 pb-16 bg-slate-50/70 min-h-screen relative overflow-hidden" data-current-username={currentUsername.toLowerCase()}>
+        <div class="container mx-auto px-4 w-full max-w-6xl relative z-10 space-y-6">
             
-            <form id="design-trip-form" class="bg-white p-4 sm:p-6 md:p-10 rounded-2xl shadow-xl space-y-8 md:space-y-12 mb-12 border border-gray-100 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-full h-2 bg-gradient-to-r from-primary via-blue-400 to-secondary"></div>
-                
-                <div class="relative z-10 space-y-12 mt-4">
-                
-                <!-- STEP 1: INFORMASI DASAR PERJALANAN -->
-                <div class="space-y-5 md:space-y-6">
-                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">1</span>
-                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Informasi Dasar</h3>
+            <!-- Back Navigation & Title Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <a href="/planner" class="inline-flex items-center gap-2 text-xs md:text-sm font-bold text-slate-600 hover:text-indigo-600 transition-all group">
+                    <i data-feather="arrow-left" class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform"></i>
+                    <span>Kembali ke Rencana Perjalanan</span>
+                </a>
+                <span class="text-xs font-semibold text-slate-400">DreamJourney Trip & Tabungan Wizard</span>
+            </div>
+
+            <!-- Stepper Indicator Bar (3 Steps Wizard) -->
+            <div id="stepper-bar" class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between max-w-3xl mx-auto mb-6">
+                <!-- Step 1: Active -->
+                <div id="step-indicator-1" class="flex items-center gap-2.5 text-indigo-600">
+                    <div id="step-badge-1" class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-indigo-500/20">
+                        1
                     </div>
+                    <span class="text-xs md:text-sm font-extrabold">Atur Trip & Tabungan</span>
+                </div>
+
+                <div class="flex-1 max-w-[60px] md:max-w-[100px] h-0.5 bg-slate-200 mx-2"></div>
+
+                <!-- Step 2: Inactive -->
+                <div id="step-indicator-2" class="flex items-center gap-2.5 text-slate-400">
+                    <div id="step-badge-2" class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-xs border border-slate-200">
+                        2
+                    </div>
+                    <span class="text-xs md:text-sm font-semibold hidden sm:inline">Bayar QRIS</span>
+                    <span class="text-xs md:text-sm font-semibold sm:hidden">QRIS</span>
+                </div>
+
+                <div class="flex-1 max-w-[60px] md:max-w-[100px] h-0.5 bg-slate-200 mx-2"></div>
+
+                <!-- Step 3: Inactive -->
+                <div id="step-indicator-3" class="flex items-center gap-2.5 text-slate-400">
+                    <div id="step-badge-3" class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-xs border border-slate-200">
+                        3
+                    </div>
+                    <span class="text-xs md:text-sm font-semibold">Selesai</span>
+                </div>
+            </div>
+
+            <!-- STEP 1: FORM & BREAKDOWN LAYOUT -->
+            <div id="view-step-1" class="space-y-6">
+                <div class="text-center max-w-2xl mx-auto mb-4">
+                    <span class="inline-block px-3.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold rounded-full mb-2 text-xs tracking-wider uppercase">KALKULATOR PERJALANAN</span>
+                    <h1 class="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Rancang Trip & Kalkulasi Biaya</h1>
+                    <p class="text-slate-600 text-xs sm:text-sm mt-2">Catat kebutuhan penginapan, transportasi, dan wahana Anda. Sistem akan menghitung total biaya dan merekomendasikan skema tabungan.</p>
+                </div>
+
+                <form id="design-trip-form" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div class="md:col-span-2">
-                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
-                            <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Paris" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
-                        </div>
+                    <!-- LEFT COLUMN: Input Steps & Options -->
+                    <div class="lg:col-span-7 space-y-6">
                         
-                        <div>
-                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tipe Perjalanan <span class="text-red-500">*</span></label>
-                            <select id="trip-type" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition bg-gray-50 focus:bg-white" required>
-                                <option value="Solo">Solo Trip (Sendiri)</option>
-                                <option value="Couple">Couple (2 Orang)</option>
-                                <option value="Family">Keluarga</option>
-                                <option value="Group">Grup Teman</option>
-                            </select>
-                        </div>
-                        
-
-
-                        <!-- Split Bill Toggle -->
-                        <div id="split-bill-toggle-container" class="hidden md:col-span-2 bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" id="checkbox-split-bill" class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer">
-                                <div>
-                                    <span class="text-sm font-bold text-indigo-900 block">Bagi tagihan dengan anggota grup? (Nabung Bersama)</span>
-                                    <span class="text-xs text-indigo-700 block mt-0.5">Jika dicentang, target tabungan akan dibagi rata ke akun masing-masing.</span>
+                        <!-- 1. INFORMASI DASAR PERJALANAN -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-indigo-600 font-black text-xl md:text-2xl">1</span>
+                                    <h3 class="text-lg font-extrabold text-slate-900">Informasi Dasar</h3>
                                 </div>
-                            </label>
-                            
-                            <!-- Dynamic Group Detail (for Split Bill) -->
-                            <div id="container-group" class="hidden mt-4 bg-white p-4 rounded-xl border border-indigo-200">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="block text-sm font-bold text-indigo-800"><i data-feather="users" class="w-4 h-4 inline-block mr-1"></i> Anggota Grup</label>
-                                    <span class="text-xs font-bold text-indigo-800 bg-indigo-100 px-2 py-1 rounded-full" id="group-counter">0 Teman Ditambahkan</span>
-                                </div>
-                                
-                                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-2 focus-within:ring-2 ring-indigo-300 transition">
-                                    <!-- Chips Container -->
-                                    <div id="friend-chips-container" class="flex flex-wrap gap-2 mb-2 empty:hidden"></div>
+                            </div>
+
+                            <div class="p-6 md:p-8 space-y-5">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-slate-700 text-xs font-bold mb-1.5 uppercase tracking-wider">Ke mana Anda ingin pergi? <span class="text-red-500">*</span></label>
+                                        <input type="text" id="dest-input" placeholder="misal: Bali, Tokyo, Labuan Bajo, Paris" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition bg-slate-50 focus:bg-white" required>
+                                    </div>
                                     
-                                    <div class="flex gap-2">
-                                        <input type="text" id="input-friend" placeholder="Ketik username teman disini..." class="flex-1 bg-transparent border-none outline-none text-sm px-1 placeholder-gray-500">
-                                        <button type="button" id="btn-add-friend" class="bg-indigo-500 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-indigo-600 transition flex items-center">
-                                            <i data-feather="plus" class="w-4 h-4 mr-1"></i> Tambah
+                                    <div>
+                                        <label class="block text-slate-700 text-xs font-bold mb-1.5 uppercase tracking-wider">Tipe Perjalanan <span class="text-red-500">*</span></label>
+                                        <select id="trip-type" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition bg-slate-50 focus:bg-white" required>
+                                            <option value="Solo">Solo Trip (Sendiri)</option>
+                                            <option value="Couple">Couple (2 Orang)</option>
+                                            <option value="Family">Keluarga</option>
+                                            <option value="Group">Grup Teman</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Dynamic Group Detail (Anggota Grup Container) -->
+                                    <div id="container-group" class="hidden md:col-span-2 bg-blue-50/70 p-4 sm:p-5 rounded-2xl border border-blue-200/80 space-y-3.5 transition-all">
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <i data-feather="users" class="w-4 h-4 text-blue-700"></i>
+                                                <label class="block text-sm font-bold text-blue-950">Anggota Grup</label>
+                                            </div>
+                                            <p class="text-xs font-semibold text-blue-800/80 mt-0.5">Ajak Teman Menabung Bersama</p>
+                                        </div>
+
+                                        <!-- Search / Invite Bar -->
+                                        <div class="bg-white p-1.5 pl-3.5 rounded-xl border border-blue-200 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition flex items-center shadow-2xs">
+                                            <input type="text" id="input-friend" placeholder="Ketik username / email teman disini..." class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-slate-800 placeholder-slate-400 py-1 font-medium">
+                                            <button type="button" id="btn-add-friend" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer">
+                                                <i data-feather="plus" class="w-3.5 h-3.5"></i> Undang
+                                            </button>
+                                        </div>
+                                        <p id="friend-validation-msg" class="text-xs font-semibold text-red-600 hidden"></p>
+
+                                        <!-- Header Jumlah & Daftar Anggota yang Ditambahkan (Di bawah search bar) -->
+                                        <div id="friend-list-section" class="hidden space-y-2 pt-1">
+                                            <div class="flex justify-between items-center text-xs font-bold text-blue-950">
+                                                <span id="group-counter">Anggota yang Ditambahkan (0)</span>
+                                            </div>
+                                            
+                                            <!-- Container Card List Anggota -->
+                                            <div id="friend-chips-container" class="space-y-2"></div>
+                                        </div>
+                                        
+                                        <p class="text-xs text-blue-800/80 leading-relaxed flex items-center gap-1.5 pt-1 border-t border-blue-100">
+                                            <i data-feather="info" class="w-3.5 h-3.5 text-blue-600 shrink-0"></i> 
+                                            <span>Undang teman Anda untuk menabung bersama. Mereka akan menerima undangan di dashboard mereka.</span>
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-slate-700 text-xs font-bold mb-1.5 uppercase tracking-wider">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
+                                        <input type="date" id="departure-date" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition bg-slate-50 focus:bg-white" required>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-slate-700 text-xs font-bold mb-1.5 uppercase tracking-wider">Target Selesai Menabung <span class="text-red-500">*</span></label>
+                                        <input type="date" id="saving-end-date" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition bg-slate-50 focus:bg-white" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. AKOMODASI PENGINAPAN -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-indigo-600 font-black text-xl md:text-2xl">2</span>
+                                    <h3 class="text-lg font-extrabold text-slate-900">Akomodasi Penginapan</h3>
+                                </div>
+                                <button type="button" id="btn-add-hotel" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                                    <i data-feather="plus" class="w-3.5 h-3.5"></i> Tambah
+                                </button>
+                            </div>
+                            
+                            <div class="p-6 md:p-8 space-y-4">
+                                <div id="hotel-list" class="space-y-3">
+                                    <div class="expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+                                        <input type="text" placeholder="Nama Hotel / Link Airbnb" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium" required>
+                                        <div class="w-full sm:w-36 relative flex items-center">
+                                            <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                                            <input type="text" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800" required>
+                                        </div>
+                                        <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                                            <option value="split" selected>👥 Patungan</option>
+                                            <option value="personal">👤 Per Orang</option>
+                                        </select>
+                                        <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                                            <i data-feather="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <p class="text-xs text-indigo-600 leading-relaxed"><i data-feather="info" class="w-3 h-3 inline-block"></i> Pastikan username teman terdaftar di sistem. Tagihan akan terbagi otomatis.</p>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Tanggal Keberangkatan <span class="text-red-500">*</span></label>
-                            <input type="date" id="departure-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 text-sm md:text-base font-medium mb-1.5 md:mb-2">Target Selesai Menabung <span class="text-red-500">*</span></label>
-                            <input type="date" id="saving-end-date" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base focus:ring-2 focus:ring-primary outline-none transition bg-gray-50 focus:bg-white" required>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STEP 2: AKOMODASI PENGINAPAN -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
-                        <div class="flex items-center gap-3 md:gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">2</span>
-                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Akomodasi Penginapan</h3>
-                        </div>
-                        <button type="button" id="btn-add-hotel" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
-                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
-                        </button>
-                    </div>
-                    
-                    <div id="hotel-list" class="space-y-3">
-                        <!-- Hotel Row Template -->
-                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                            <div class="flex-grow w-full md:w-auto">
-                                <input type="text" placeholder="Nama Hotel / Link Airbnb" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
-                            </div>
-                            <div class="w-full md:w-1/3 relative">
-                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
-                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
-                            </div>
-                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
-                                <i data-feather="trash-2" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STEP 3: TRANSPORTASI -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
-                        <div class="flex items-center gap-3 md:gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">3</span>
-                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Transportasi</h3>
-                        </div>
-                        <button type="button" id="btn-add-transport" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
-                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500">Catat semua tiket pesawat, kereta api, sewa mobil, hingga ongkos travel.</p>
-                    
-                    <div id="transport-list" class="space-y-3">
-                        <!-- Transport Row Template -->
-                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                            <div class="flex-grow w-full md:w-auto">
-                                <input type="text" placeholder="Tiket Pesawat / Sewa Mobil / Link Traveloka" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
-                            </div>
-                            <div class="w-full md:w-1/3 relative">
-                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
-                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
-                            </div>
-                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
-                                <i data-feather="trash-2" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STEP 4: AKTIVITAS & WAHANA -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
-                        <div class="flex items-center gap-3 md:gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">4</span>
-                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Aktivitas & Wahana</h3>
-                        </div>
-                        <button type="button" id="btn-add-activity" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
-                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
-                        </button>
-                    </div>
-                    
-                    <div id="activity-list" class="space-y-3">
-                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                            <div class="flex-grow w-full md:w-auto">
-                                <input type="text" placeholder="Tiket Masuk / Paket Tour / Wahana" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
-                            </div>
-                            <div class="w-full md:w-1/3 relative">
-                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
-                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
-                            </div>
-                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
-                                <i data-feather="trash-2" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STEP 5: PENGELUARAN LAIN-LAIN -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3 md:pb-4">
-                        <div class="flex items-center gap-3 md:gap-4">
-                            <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">5</span>
-                            <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengeluaran Lain</h3>
-                        </div>
-                        <button type="button" id="btn-add-other" class="text-sm font-bold text-primary hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition flex items-center gap-2">
-                            <i data-feather="plus" class="w-4 h-4"></i> Tambah
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500">Contoh: Visa, Asuransi Perjalanan, Anggaran Belanja Oleh-oleh, Uang Makan Harian.</p>
-                    
-                    <div id="other-list" class="space-y-3">
-                        <div class="flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
-                            <div class="flex-grow w-full md:w-auto">
-                                <input type="text" placeholder="Keterangan Pengeluaran" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
-                            </div>
-                            <div class="w-full md:w-1/3 relative">
-                                <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
-                                <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
-                            </div>
-                            <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
-                                <i data-feather="trash-2" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- STEP 6: ESTIMASI & SKEMA TABUNGAN -->
-                <div class="space-y-6 bg-gradient-to-br from-blue-50 to-indigo-50/30 -mx-4 sm:-mx-6 md:-mx-10 px-4 sm:px-6 md:px-10 py-6 md:py-10 border-y border-blue-100 shadow-inner">
-                    <div class="flex items-center gap-3 md:gap-4 pb-2">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">6</span>
-                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Skema Tabungan Impian</h3>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-                        <!-- Left: Breakdown and Savings -->
-                        <div class="md:col-span-7 space-y-6">
-                            <!-- Summary Box -->
-                            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="text-gray-600 font-medium">Total Estimasi Trip</span>
-                                    <span id="text-subtotal" class="font-bold text-gray-900 text-lg">Rp 0</span>
+                        <!-- 3. TRANSPORTASI -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-indigo-600 font-black text-xl md:text-2xl">3</span>
+                                    <h3 class="text-lg font-extrabold text-slate-900">Transportasi</h3>
                                 </div>
-                                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
-                                    <div class="flex flex-col">
-                                        <span class="text-gray-600 font-medium text-sm">Tambahan Tabungan Ekstra</span>
-                                        <span class="text-xs text-gray-400">Untuk uang jaga-jaga darurat</span>
-                                    </div>
-                                    <div class="w-1/3 relative">
-                                        <span class="absolute left-3 top-2 text-gray-500 text-xs font-bold">Rp</span>
-                                        <input type="text" id="buffer-input" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-8 pr-3 py-1.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold text-right">
+                                <button type="button" id="btn-add-transport" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                                    <i data-feather="plus" class="w-3.5 h-3.5"></i> Tambah
+                                </button>
+                            </div>
+                            
+                            <div class="p-6 md:p-8 space-y-4">
+                                <div id="transport-list" class="space-y-3">
+                                    <div class="expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+                                        <input type="text" placeholder="Tiket Pesawat / Kereta / Sewa Mobil" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium" required>
+                                        <div class="w-full sm:w-36 relative flex items-center">
+                                            <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                                            <input type="text" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800" required>
+                                        </div>
+                                        <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                                            <option value="personal" selected>👤 Per Orang</option>
+                                            <option value="split">👥 Patungan</option>
+                                        </select>
+                                        <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                                            <i data-feather="trash-2" class="w-4 h-4"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-900 font-bold text-lg">GRAND TOTAL</span>
-                                    <span id="text-grandtotal" class="font-extrabold text-primary text-2xl">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <!-- 4. AKTIVITAS & WAHANA -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-indigo-600 font-black text-xl md:text-2xl">4</span>
+                                    <h3 class="text-lg font-extrabold text-slate-900">Aktivitas & Wahana</h3>
                                 </div>
-                                <div id="split-bill-result" class="hidden flex justify-between items-center mt-3 pt-3 border-t border-indigo-100 bg-indigo-50 -mx-5 px-5 pb-5 -mb-5 rounded-b-2xl">
-                                    <div class="flex flex-col pt-2">
-                                        <span class="text-indigo-900 font-bold text-lg">TARGET ANDA (Split Bill)</span>
-                                        <span class="text-xs text-indigo-600">Dibagi rata: Anda + <span id="split-friend-count">0</span> teman</span>
+                                <button type="button" id="btn-add-activity" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                                    <i data-feather="plus" class="w-3.5 h-3.5"></i> Tambah
+                                </button>
+                            </div>
+                            
+                            <div class="p-6 md:p-8 space-y-4">
+                                <div id="activity-list" class="space-y-3">
+                                    <div class="expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+                                        <input type="text" placeholder="Tiket Wahana / Tour / Aktivitas" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium" required>
+                                        <div class="w-full sm:w-36 relative flex items-center">
+                                            <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                                            <input type="text" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800" required>
+                                        </div>
+                                        <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                                            <option value="split" selected>👥 Patungan</option>
+                                            <option value="personal">👤 Per Orang</option>
+                                        </select>
+                                        <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                                            <i data-feather="trash-2" class="w-4 h-4"></i>
+                                        </button>
                                     </div>
-                                    <span id="text-personaltotal" class="font-extrabold text-indigo-600 text-2xl pt-2">Rp 0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. PENGELUARAN LAIN-LAIN -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-indigo-600 font-black text-xl md:text-2xl">5</span>
+                                    <h3 class="text-lg font-extrabold text-slate-900">Pengeluaran Lain</h3>
+                                </div>
+                                <button type="button" id="btn-add-other" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                                    <i data-feather="plus" class="w-3.5 h-3.5"></i> Tambah
+                                </button>
+                            </div>
+                            
+                            <div class="p-6 md:p-8 space-y-4">
+                                <div id="other-list" class="space-y-3">
+                                    <div class="expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+                                        <input type="text" placeholder="Visa / Asuransi / Belanja Oleh-oleh" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium">
+                                        <div class="w-full sm:w-36 relative flex items-center">
+                                            <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                                            <input type="text" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800">
+                                        </div>
+                                        <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                                            <option value="split" selected>👥 Patungan</option>
+                                            <option value="personal">👤 Per Orang</option>
+                                        </select>
+                                        <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                                            <i data-feather="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6. PENGATURAN SKEMA & METODE -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-100/90 overflow-hidden">
+                            <div class="bg-slate-50/90 px-6 py-4 border-b border-slate-200/70 shadow-sm rounded-b-2xl flex items-center gap-3">
+                                <span class="text-indigo-600 font-black text-xl md:text-2xl">6</span>
+                                <h3 class="text-lg font-extrabold text-slate-900">Skema & Metode Pembayaran</h3>
+                            </div>
+
+                            <div class="p-6 md:p-8 space-y-5">
+                                <!-- Buffer Ekstra Input -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Tambahan Uang Jaga-jaga (Buffer Darurat)</label>
+                                    <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                                        <div class="relative flex-1 flex items-center">
+                                            <span class="absolute left-3.5 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                                            <input type="text" id="buffer-input" placeholder="0" class="cost-input w-full border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 font-bold text-slate-800 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        </div>
+                                        <select id="buffer-split-select" class="split-select border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                                            <option value="split" selected>👥 Patungan</option>
+                                            <option value="personal">👤 Per Orang</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Frekuensi Menabung -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Pilih Frekuensi Menabung:</label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <label class="border border-slate-200 bg-slate-50 rounded-xl p-3 text-center cursor-pointer hover:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:bg-white transition relative shadow-2xs">
+                                            <input type="radio" name="saving-freq" value="1" class="hidden peer" checked>
+                                            <span class="text-xs font-black text-slate-800 block mb-0.5">Harian</span>
+                                            <span class="text-[10px] text-slate-400 font-semibold">Tiap Hari</span>
+                                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-indigo-600 rounded-xl pointer-events-none transition-all"></div>
+                                        </label>
+                                        <label class="border border-slate-200 bg-slate-50 rounded-xl p-3 text-center cursor-pointer hover:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:bg-white transition relative shadow-2xs">
+                                            <input type="radio" name="saving-freq" value="7" class="hidden peer">
+                                            <span class="text-xs font-black text-slate-800 block mb-0.5">Mingguan</span>
+                                            <span class="text-[10px] text-slate-400 font-semibold">Akhir Pekan</span>
+                                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-indigo-600 rounded-xl pointer-events-none transition-all"></div>
+                                        </label>
+                                        <label class="border border-slate-200 bg-slate-50 rounded-xl p-3 text-center cursor-pointer hover:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:bg-white transition relative shadow-2xs">
+                                            <input type="radio" name="saving-freq" value="30" class="hidden peer">
+                                            <span class="text-xs font-black text-slate-800 block mb-0.5">Bulanan</span>
+                                            <span class="text-[10px] text-slate-400 font-semibold">Sesuai Gajian</span>
+                                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-indigo-600 rounded-xl pointer-events-none transition-all"></div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Metode Pembayaran -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Metode Pembayaran</label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label class="flex items-start gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/50 transition group relative bg-white">
+                                            <input type="radio" name="payment-method" value="cashless" class="w-4 h-4 text-indigo-600 accent-indigo-600 mt-0.5 peer" checked>
+                                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-indigo-600 rounded-xl pointer-events-none transition-all"></div>
+                                            <div class="relative z-10">
+                                                <span class="font-bold text-xs text-slate-800 block mb-0.5">QRIS / E-Wallet</span>
+                                                <span class="text-[11px] text-slate-500 leading-tight block">Bayar praktis menggunakan QRIS m-Banking / E-Wallet.</span>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-start gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:border-amber-500 hover:bg-amber-50/50 transition group relative bg-white">
+                                            <input type="radio" name="payment-method" value="cash" class="w-4 h-4 text-amber-600 accent-amber-600 mt-0.5 peer">
+                                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-amber-500 rounded-xl pointer-events-none transition-all"></div>
+                                            <div class="relative z-10">
+                                                <span class="font-bold text-xs text-slate-800 block mb-0.5">Transfer Manual / Agen</span>
+                                                <span class="text-[11px] text-slate-500 leading-tight block">Setor mandiri dipandu oleh agen pendamping.</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 7. PILIHAN AKSI RENCANA (SIMPAN DRAF vs LANGSUNG NABUNG) -->
+                        <div class="bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-amber-50/50 rounded-3xl shadow-sm border border-indigo-100/90 overflow-hidden">
+                            <div class="bg-indigo-100/70 px-6 py-4 border-b border-indigo-200/60 shadow-sm rounded-b-2xl flex items-center gap-3">
+                                <span class="text-indigo-700 font-black text-xl md:text-2xl">7</span>
+                                <h3 class="text-lg font-extrabold text-slate-900">Pilihan Tujuan Rencana</h3>
+                            </div>
+                            
+                            <div class="p-6 md:p-8 space-y-4">
+                                <p class="text-xs text-slate-600 font-semibold">Tentukan apakah rencana perjalanan ini ingin Anda simpan sebagai draf terlebih dahulu atau langsung mulai menabung:</p>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <!-- Option 1: Simpan Draf -->
+                                    <label class="border-2 border-slate-200 bg-white rounded-2xl p-4 cursor-pointer hover:border-indigo-400 transition relative shadow-2xs flex flex-col justify-between">
+                                        <input type="radio" name="plan_action_mode" value="draft" id="radio-mode-draft" class="peer sr-only">
+                                        <div>
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                                                    <span>📌</span> Simpan Draf
+                                                </span>
+                                                <span class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-600 transition"></span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed font-medium">Disimpan ke Rencana Perjalanan tanpa perlu melakukan pembayaran sekarang.</p>
+                                        </div>
+                                        <div class="mt-3 pt-2 border-t border-slate-100 text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                                            <i data-feather="bookmark" class="w-3 h-3"></i> Ke Rencana Perjalanan
+                                        </div>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-indigo-600 peer-checked:bg-indigo-50/30 rounded-2xl pointer-events-none transition-all"></div>
+                                    </label>
+
+                                    <!-- Option 2: Langsung Nabung (Default Active) -->
+                                    <label class="border-2 border-slate-200 bg-white rounded-2xl p-4 cursor-pointer hover:border-amber-400 transition relative shadow-2xs flex flex-col justify-between">
+                                        <input type="radio" name="plan_action_mode" value="active" id="radio-mode-active" class="peer sr-only" checked>
+                                        <div>
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                                                    <span>🚀</span> Langsung Nabung
+                                                </span>
+                                                <span class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-amber-500 peer-checked:bg-amber-500 transition"></span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-relaxed font-medium">Lanjut ke pembayaran QRIS setoran pertama dan aktifkan tabungan otomatis.</p>
+                                        </div>
+                                        <div class="mt-3 pt-2 border-t border-slate-100 text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                                            <i data-feather="credit-card" class="w-3 h-3"></i> Lanjut Bayar QRIS
+                                        </div>
+                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-amber-500 peer-checked:bg-amber-50/30 rounded-2xl pointer-events-none transition-all"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Sticky Summary Sidebar (Breakdown matching Gambar 2) -->
+                    <div class="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
+                        <div class="bg-white rounded-3xl p-6 shadow-xl border border-slate-100/80 space-y-5">
+                            
+                            <!-- General Flat Art Nature Landscape Header Banner -->
+                            <div class="relative rounded-2xl overflow-hidden shadow-md group h-44 bg-slate-950">
+                                <svg class="w-full h-full object-cover opacity-90" viewBox="0 0 400 200" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="general-flat-sky" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#1E1B4B"/>
+                                            <stop offset="40%" stop-color="#4C1D95"/>
+                                            <stop offset="75%" stop-color="#BE123C"/>
+                                            <stop offset="100%" stop-color="#F59E0B"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <rect width="400" height="200" fill="url(#general-flat-sky)"/>
+                                    <circle cx="320" cy="100" r="45" fill="#FFFDF0" opacity="0.9"/>
+                                    <circle cx="320" cy="100" r="75" fill="#FDE047" opacity="0.3"/>
+                                    
+                                    <!-- Flying Birds Flat Art -->
+                                    <path d="M80 40Q87 32 95 40Q102 32 110 40" stroke="#FFFDF0" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M120 55Q127 47 135 55Q142 47 150 55" stroke="#FFFDF0" stroke-width="1.5" opacity="0.8" stroke-linecap="round"/>
+
+                                    <!-- Mountain Peaks -->
+                                    <path d="M-20 200 L70 90 L180 200 Z" fill="#6B21A8"/>
+                                    <path d="M110 200 L210 70 L320 200 Z" fill="#581C87"/>
+                                    <path d="M260 200 L350 100 L430 200 Z" fill="#881337"/>
+                                    
+                                    <!-- Coastline & Shoreline -->
+                                    <path d="M-10 200 C100 150 250 160 410 200 Z" fill="#0D9488"/>
+                                    <path d="M50 200 C200 140 320 160 420 200 Z" fill="#0284C7"/>
+                                    
+                                    <!-- Pine Trees Silhouettes Left -->
+                                    <path d="M10 200 L25 150 L22 152 L30 130 L38 152 L35 150 L50 200 Z" fill="#022C22"/>
+                                    <path d="M40 200 L50 160 L47 161 L54 140 L61 161 L58 160 L68 200 Z" fill="#064E3B"/>
+                                </svg>
+                                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex flex-col justify-end p-4 text-white">
+                                    <span class="inline-block bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full w-max mb-1 uppercase tracking-wider">Destinasi Impian</span>
+                                    <h2 class="text-xl font-black leading-tight text-white drop-shadow-md" id="summary-dest-title">Bali, Indonesia</h2>
                                 </div>
                             </div>
 
-                            <!-- Frequency Selection -->
+                            <!-- Escrow Protection Badge -->
+                            <div class="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border border-amber-200/90 rounded-2xl p-3.5 flex items-center gap-3 shadow-2xs">
+                                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-500/20">
+                                    <i data-feather="shield" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wide">Jaminan Proteksi 100%</h4>
+                                    <p class="text-[11px] text-amber-800/90 leading-tight">Dana tersimpan aman dalam Rekening Penampung (Escrow) DreamJourney.</p>
+                                </div>
+                            </div>
+
+                            <!-- Target Breakdown Details -->
+                            <div class="bg-slate-50/90 rounded-2xl p-4 border border-slate-100 space-y-3 text-sm">
+                                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2.5">
+                                    <span class="text-slate-500 font-medium text-xs">Total Trip (Rombongan)</span>
+                                    <span class="font-bold text-slate-700 text-xs sm:text-sm" id="summary-total-target">Rp 0</span>
+                                </div>
+
+                                <div id="summary-personal-container" class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl p-3.5 flex justify-between items-center shadow-md">
+                                    <div>
+                                        <span class="text-white font-black text-xs block tracking-wide">TARGET TABUNGAN ANDA</span>
+                                        <span class="text-[10px] text-indigo-100 font-medium block mt-0.5" id="summary-group-size-label">Porsi Anda (1 Orang)</span>
+                                    </div>
+                                    <span class="font-black text-white text-base sm:text-lg" id="summary-personal-target">Rp 0</span>
+                                </div>
+
+                                <!-- RINCIAN ESTIMASI BIAYA BREAKDOWN -->
+                                <div class="space-y-2 border-b border-slate-200/60 pb-2.5 pt-0.5">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rincian Tabungan Porsi Anda</p>
+                                        <span class="text-[10px] text-indigo-600 font-extrabold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100" id="summary-split-badge">Kalkulasi Per Row</span>
+                                    </div>
+                                    
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600 flex items-center gap-1.5 font-medium">
+                                            <span>🏨</span> Penginapan
+                                        </span>
+                                        <span class="font-bold text-slate-800" id="summary-hotel-total">Rp 0</span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600 flex items-center gap-1.5 font-medium">
+                                            <span>🚆</span> Transportasi
+                                        </span>
+                                        <span class="font-bold text-slate-800" id="summary-transport-total">Rp 0</span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600 flex items-center gap-1.5 font-medium">
+                                            <span>🎟️</span> Wahana & Tiket
+                                        </span>
+                                        <span class="font-bold text-slate-800" id="summary-activity-total">Rp 0</span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600 flex items-center gap-1.5 font-medium">
+                                            <span>🛍️</span> Pengeluaran Lain
+                                        </span>
+                                        <span class="font-bold text-slate-800" id="summary-other-total">Rp 0</span>
+                                    </div>
+
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="text-slate-600 flex items-center gap-1.5 font-medium">
+                                            <span>🛡️</span> Buffer Ekstra
+                                        </span>
+                                        <span class="font-bold text-slate-800" id="summary-buffer-total">Rp 0</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-between items-center text-xs pt-0.5">
+                                    <span class="text-slate-500 font-semibold">Estimasi Setoran Rutin Anda</span>
+                                    <span class="font-black text-indigo-700 text-sm" id="summary-saving-rate">Rp 0 /hari</span>
+                                </div>
+                            </div>
+
+                            <!-- CTA Submit Button -->
                             <div>
-                                <label class="block text-gray-700 font-bold mb-3">Pilih Frekuensi Menabung Anda:</label>
-                                <div class="grid grid-cols-3 gap-3">
-                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
-                                        <input type="radio" name="saving-freq" value="1" class="hidden peer" checked>
-                                        <span class="text-sm font-bold text-gray-700 block mb-1">Harian</span>
-                                        <span class="text-xs text-gray-400">Setiap Hari</span>
-                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
-                                    </label>
-                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
-                                        <input type="radio" name="saving-freq" value="7" class="hidden peer">
-                                        <span class="text-sm font-bold text-gray-700 block mb-1">Mingguan</span>
-                                        <span class="text-xs text-gray-400">Tiap Akhir Pekan</span>
-                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
-                                    </label>
-                                    <label class="border border-gray-300 bg-white rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 peer-checked:border-primary peer-checked:bg-blue-50 transition relative shadow-sm">
-                                        <input type="radio" name="saving-freq" value="30" class="hidden peer">
-                                        <span class="text-sm font-bold text-gray-700 block mb-1">Bulanan</span>
-                                        <span class="text-xs text-gray-400">Sesuai Gajian</span>
-                                        <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
-                                    </label>
-                                </div>
+                                <button type="submit" id="btn-main-submit" class="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black py-3.5 rounded-2xl text-sm transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer">
+                                    <span id="btn-submit-label">🚀 Lanjut ke Pembayaran QRIS</span>
+                                </button>
                             </div>
+
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- STEP 2: BAYAR QRIS VIEW (Hidden by default) -->
+            <div id="view-step-2" class="hidden space-y-6 max-w-4xl mx-auto">
+                <div class="text-center max-w-xl mx-auto mb-2">
+                    <span class="inline-block px-3.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-full mb-2 text-xs tracking-wider uppercase">LANGKAH 2 DARI 3</span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900">Pembayaran QRIS Setoran Pertama</h2>
+                    <p class="text-slate-600 text-xs sm:text-sm mt-1">Scan kode QRIS di bawah ini menggunakan M-Banking atau E-Wallet pilihan Anda untuk mengaktifkan tabungan.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                    <!-- Left: QRIS Card -->
+                    <div class="md:col-span-7 bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 text-center space-y-5">
+                        <div class="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span>QRIS Official DreamJourney</span>
                         </div>
 
-                        <!-- Right: Calculator Result Focus -->
-                        <div class="md:col-span-5">
-                            <div class="bg-primary text-white p-6 rounded-2xl shadow-xl flex flex-col justify-center text-center relative overflow-hidden h-full">
-                                <!-- Abstract circles -->
-                                <div class="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white opacity-10"></div>
-                                <div class="absolute -left-10 -bottom-10 w-24 h-24 rounded-full bg-white opacity-10"></div>
-                                
-                                <div class="relative z-10">
-                                    <span class="text-sm font-bold text-blue-100 uppercase tracking-wider mb-2 block">Target Nabung Rutin</span>
-                                    <div id="saving-simulation-result" class="text-4xl lg:text-4xl font-extrabold text-white mb-2 drop-shadow-md py-4">Rp 0</div>
-                                    <div class="bg-black/20 rounded-lg py-2 px-4 inline-block mt-2">
-                                        <span id="saving-simulation-label" class="text-blue-50 font-medium text-sm">per hari selama -- bulan</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- QRIS Barcode Box -->
+                        <div class="bg-slate-50 border-2 border-dashed border-indigo-200 rounded-2xl p-6 max-w-xs mx-auto space-y-3 relative group">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226670016COM.DREAMJOURNEY.WWW01189360091438294729110215ID10203948572910303UMI51440014ID.CO.QRIS.WWW0215ID10203948572910303UMI5204581253033605802ID5912DreamJourney6007Jakarta61051234062070703A0163041D2E" alt="Kode QRIS" class="w-52 h-52 mx-auto rounded-xl shadow-md border border-white" />
+                            <div class="text-xs font-bold text-slate-700">NMH: DREAMJOURNEY ESCROW</div>
+                            <div class="text-[11px] text-slate-400">NMID: ID1020394857291</div>
+                        </div>
+
+                        <!-- Amount Box -->
+                        <div class="bg-indigo-50/80 border border-indigo-100 rounded-2xl p-4 max-w-xs mx-auto">
+                            <span class="text-xs text-slate-500 font-medium block">Total Setoran Pertama</span>
+                            <div class="text-2xl font-black text-indigo-700" id="qris-amount-display">Rp 0</div>
+                        </div>
+
+                        <!-- Timer -->
+                        <div class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-4 py-2 rounded-xl inline-block">
+                            ⏱️ Selesaikan pembayaran dalam <span id="qris-timer" class="font-black text-amber-900">23:59:59</span>
+                        </div>
+
+                        <!-- Action Confirm -->
+                        <div class="pt-2">
+                            <button type="button" id="btn-confirm-qris" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-black py-3.5 rounded-2xl text-sm transition-all shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer">
+                                <i data-feather="check-circle" class="w-4 h-4"></i>
+                                <span>Konfirmasi & Selesaikan Pembayaran</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Instructions & Summary -->
+                    <div class="md:col-span-5 space-y-4">
+                        <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-100 space-y-4">
+                            <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                                <i data-feather="info" class="w-4 h-4 text-indigo-600"></i> Cara Membayar
+                            </h3>
+                            <ol class="space-y-2.5 text-xs text-slate-600 font-medium list-decimal pl-4">
+                                <li>Buka aplikasi <strong>GoPay, OVO, ShopeePay, Dana, BCA Mobile, Mandiri, DLL</strong>.</li>
+                                <li>Pilih menu <strong>Scan / Bayar QRIS</strong>.</li>
+                                <li>Arahkan kamera ke kode QRIS di samping.</li>
+                                <li>Periksa nama merchant <strong>DREAMJOURNEY ESCROW</strong>.</li>
+                                <li>Masukkan PIN transaksi aplikasi Anda.</li>
+                                <li>Klik tombol <strong>Konfirmasi Pembayaran</strong> di bawah QRIS.</li>
+                            </ol>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- STEP 7: PENGATURAN TABUNGAN -->
-                <div class="space-y-5 md:space-y-6">
-                    <div class="flex items-center gap-3 md:gap-4 border-b border-gray-100 pb-3 md:pb-4">
-                        <span class="bg-gradient-to-br from-primary to-blue-600 text-white rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-bold shadow-md text-sm md:text-base">7</span>
-                        <h3 class="text-lg md:text-2xl font-bold text-gray-800">Pengaturan Tabungan</h3>
+            <!-- STEP 3: SELESAI / UCAPAN SELAMAT VIEW (Hidden by default) -->
+            <div id="view-step-3" class="hidden space-y-6 max-w-2xl mx-auto text-center py-6">
+                <div class="bg-white rounded-3xl p-8 sm:p-10 shadow-2xl border border-slate-100 space-y-6 relative overflow-hidden">
+                    <!-- Confetti Graphic Header -->
+                    <div class="w-20 h-20 bg-gradient-to-tr from-emerald-400 to-teal-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 transform rotate-6">
+                        <i data-feather="award" class="w-10 h-10"></i>
                     </div>
-                    
-                    <!-- Tipe Tabungan -->
+
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-3">Tipe Tabungan</label>
-                        <div class="flex flex-col md:flex-row gap-4">
-                            <label class="flex-1 cursor-pointer">
-                                <input type="radio" name="saving_type" value="Konvensional" class="peer sr-only" checked required>
-                                <div class="text-center p-4 rounded-xl border-2 border-gray-200 peer-checked:border-primary peer-checked:bg-blue-50 transition font-semibold text-gray-600 peer-checked:text-primary flex flex-col items-center justify-center h-full">
-                                    <i data-feather="box" class="w-6 h-6 mb-2"></i>
-                                    <span>Konvensional</span>
-                                    <span class="text-xs font-normal mt-2 opacity-80">Estimasi hasil:<br><strong class="text-sm" id="hasil-konvensional">Rp 0</strong></span>
-                                </div>
-                            </label>
-                            <label class="flex-1 cursor-not-allowed flex flex-col relative overflow-hidden bg-gray-50 rounded-xl border-2 border-gray-200 opacity-75">
-                                <input type="radio" name="saving_type" value="Investasi" class="peer sr-only" disabled>
-                                <div class="text-center p-4 font-semibold text-gray-500 flex-1 flex flex-col items-center justify-center h-full">
-                                    <i data-feather="trending-up" class="w-6 h-6 mb-2 text-gray-400"></i>
-                                    <span class="text-gray-600">Investasi Reksadana</span>
-                                    <span class="text-[11px] font-medium text-amber-700 mt-2 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200/80">
-                                        ⚠️ Fitur ini sedang dikaji terlebih dahulu
-                                    </span>
-                                </div>
-                                <div class="absolute top-0 right-0 bg-gray-400 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">DALAM PENGKAJIAN</div>
-                            </label>
+                        <span class="inline-block px-3.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-xs uppercase tracking-wider mb-2">BERHASIL DILAKUKAN</span>
+                        <h2 class="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">Selamat! Tabungan Impian Berhasil Dimulai! 🎉</h2>
+                        <p class="text-slate-600 text-xs sm:text-sm mt-2 max-w-md mx-auto">Target tabungan perjalanan Anda sudah aktif dan terlindungi oleh Rekening Penampung (Escrow) DreamJourney.</p>
+                    </div>
+
+                    <!-- Final Summary Details Card -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 text-left space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-2 text-xs">
+                            <span class="text-slate-500 font-medium">Destinasi</span>
+                            <span class="font-bold text-slate-900 text-sm" id="final-dest-name">Bali</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-2 text-xs">
+                            <span class="text-slate-500 font-medium">Total Target Dana</span>
+                            <span class="font-black text-indigo-600 text-sm" id="final-target-amount">Rp 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">Status Tabungan</span>
+                            <span class="font-bold text-emerald-600 flex items-center gap-1">
+                                <i data-feather="check-circle" class="w-3.5 h-3.5"></i> Aktif (Escrow Protected)
+                            </span>
                         </div>
                     </div>
 
-                    <div class="space-y-4">
-                        <label class="block text-gray-700 text-sm font-bold">Metode Pembayaran</label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-blue-50 transition group relative bg-white">
-                            <input type="radio" name="payment-method" value="cashless" class="w-5 h-5 text-primary accent-primary mt-0.5 peer" checked>
-                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-primary rounded-xl pointer-events-none transition-all"></div>
-                            <div class="relative z-10">
-                                <span class="font-bold text-gray-800 block mb-1">QRIS / E-Wallet</span>
-                                <span class="text-xs text-gray-500 leading-relaxed">Bayar praktis menggunakan kode QRIS. Didukung oleh semua M-Banking dan E-Wallet.</span>
-                            </div>
-                        </label>
-                        <label class="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-primary hover:bg-orange-50 transition group relative bg-white">
-                            <input type="radio" name="payment-method" value="cash" class="w-5 h-5 text-primary accent-primary mt-0.5 peer">
-                            <div class="absolute inset-0 border-2 border-transparent peer-checked:border-orange-400 rounded-xl pointer-events-none transition-all"></div>
-                            <div class="relative z-10">
-                                <span class="font-bold text-gray-800 block mb-1">Transfer Manual (Via Lentera)</span>
-                                <span class="text-xs text-gray-500 leading-relaxed">Setor mandiri dan dipandu oleh agen pendamping Lentera pilihan Anda. Cocok buat yang butuh pengingat rutin.</span>
-                            </div>
-                        </label>
-                        </div>
-                    </div>
-
-                    <!-- Cashless Fields (Removed for QRIS) -->
-                    <div id="cashless-details" class="hidden">
-                        <input type="hidden" value="QRIS" />
-                    </div>
-
-                    <!-- Cash Fields -->
-                    <div id="cash-details" class="hidden space-y-4 p-5 bg-orange-50/50 rounded-xl border border-orange-100">
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">ID Lentera Pendamping (Opsional)</label>
-                            <input type="text" placeholder="Misal: 001131JK (Kosongkan jika belum ada)" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-300 outline-none text-sm bg-white">
-                            <p class="text-xs text-orange-600 mt-2">Agen Lentera akan menghubungi Anda untuk membantu mengatur jadwal setoran tabungan manual secara aman.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Custom Warning Modal -->
-            <div id="user-not-found-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
-                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
-                <div class="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 relative z-10 transform scale-100 transition-transform">
-                    <div class="text-center">
-                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
-                        </div>
-                        <h3 id="warning-modal-title" class="text-xl font-bold text-gray-900 mb-2">Peringatan</h3>
-                        <p id="user-not-found-msg" class="text-gray-600 mb-6 leading-relaxed text-sm">
-                            Pesan peringatan akan muncul di sini.
-                        </p>
-                        <button type="button" id="btn-close-warning" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition">
-                            Mengerti
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <a href="/dashboard" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-2">
+                            <i data-feather="pie-chart" class="w-4 h-4"></i>
+                            <span>Lihat Target di Dashboard</span>
+                        </a>
+                        <a href="/planner" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                            <i data-feather="bookmark" class="w-4 h-4"></i>
+                            <span>Ke Rencana Perjalanan</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
-                <div class="pt-6 md:pt-8 border-t border-gray-200 mt-6 md:mt-0">
-                    <button type="submit" class="w-full bg-accent hover:bg-yellow-500 text-gray-900 py-3.5 md:py-4 rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                        <i data-feather="check-circle" class="w-5 h-5 md:w-6 md:h-6"></i>
-                        Simpan Rencana & Mulai Menabung
-                    </button>
-                    <p class="text-center text-xs text-gray-500 mt-4">Sistem akan menyimpan rincian biaya Anda untuk dilacak melalui Dashboard.</p>
-                </div>
-                
-                </div>
-            </form>
         </div>
     </main>
 </Layout>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- FORM TOGGLES ---
+        // Elements & Dynamic Row Lists
+        const form = document.getElementById('design-trip-form') as HTMLFormElement;
         const tripTypeSelect = document.getElementById('trip-type') as HTMLSelectElement;
         const splitBillToggleContainer = document.getElementById('split-bill-toggle-container');
-        const splitBillResult = document.getElementById('split-bill-result');
-        const splitFriendCountText = document.getElementById('split-friend-count');
-        const personalTotalText = document.getElementById('text-personaltotal');
-        
-        let splitBillMembers: string[] = [];
-        
-        if (tripTypeSelect && splitBillToggleContainer) {
-            tripTypeSelect.addEventListener('change', (e) => {
-                const val = (e.target as HTMLSelectElement).value;
-                if (val !== 'Solo') {
-                    splitBillToggleContainer.classList.remove('hidden');
-                } else {
-                    splitBillToggleContainer.classList.add('hidden');
-                    // Reset if switched to Solo
-                    (document.getElementById('checkbox-split-bill') as HTMLInputElement).checked = false;
-                    splitBillMembers = [];
-                    renderSplitFriends();
-                    calculateGrandTotal();
-                }
-            });
-        }
-        
-        // Split Bill Checkbox Toggle
         const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
         const containerGroup = document.getElementById('container-group');
-        if (checkboxSplitBill && containerGroup) {
-            checkboxSplitBill.addEventListener('change', () => {
-                if (checkboxSplitBill.checked) {
-                    containerGroup.classList.remove('hidden');
-                } else {
-                    containerGroup.classList.add('hidden');
-                }
-                calculateGrandTotal();
-            });
+
+        // Target Summary Elements
+        const destInput = document.getElementById('dest-input') as HTMLInputElement;
+        const summaryDestTitle = document.getElementById('summary-dest-title');
+        const summaryTotalTarget = document.getElementById('summary-total-target');
+        const summaryHotelTotal = document.getElementById('summary-hotel-total');
+        const summaryTransportTotal = document.getElementById('summary-transport-total');
+        const summaryActivityTotal = document.getElementById('summary-activity-total');
+        const summaryOtherTotal = document.getElementById('summary-other-total');
+        const summaryBufferTotal = document.getElementById('summary-buffer-total');
+        const summarySavingRate = document.getElementById('summary-saving-rate');
+        const btnSubmitLabel = document.getElementById('btn-submit-label');
+
+        // Mode Radios
+        const modeDraft = document.getElementById('radio-mode-draft') as HTMLInputElement;
+        const modeActive = document.getElementById('radio-mode-active') as HTMLInputElement;
+
+        // Stepper Elements
+        const viewStep1 = document.getElementById('view-step-1');
+        const viewStep2 = document.getElementById('view-step-2');
+        const viewStep3 = document.getElementById('view-step-3');
+
+        // Trip Type Change Handler (Directly shows Anggota Grup when not Solo)
+        tripTypeSelect?.addEventListener('change', () => {
+            const val = tripTypeSelect.value;
+            if (val !== 'Solo') {
+                containerGroup?.classList.remove('hidden');
+            } else {
+                containerGroup?.classList.add('hidden');
+                groupMembersData = [];
+                groupFriends = [];
+                renderFriends();
+                calculateBreakdown();
+            }
+        });
+
+        // Friend List Data & Logic (Matching Image 1)
+        interface GroupMemberData {
+            username: string;
+            fullName: string;
+            avatarUrl?: string | null;
         }
 
-        // Friend List Logic
+        let groupMembersData: GroupMemberData[] = [];
+        let groupFriends: string[] = [];
+
         const btnAddFriend = document.getElementById('btn-add-friend');
         const inputFriend = document.getElementById('input-friend') as HTMLInputElement;
-        const friendListEl = document.getElementById('friend-chips-container');
-        
-        function renderSplitFriends() {
-            if (!friendListEl) return;
-            friendListEl.innerHTML = '';
-            splitBillMembers.forEach((friend, idx) => {
-                const chip = document.createElement('div');
-                chip.className = 'flex items-center bg-indigo-100 text-indigo-800 text-sm px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm';
-                chip.innerHTML = `
-                    <span class="font-medium mr-2">${friend}</span>
-                    <button type="button" class="text-indigo-600 hover:text-red-500 transition btn-remove-friend" data-idx="${idx}">
-                        <i data-feather="x" class="w-3 h-3"></i>
+        const friendChipsContainer = document.getElementById('friend-chips-container');
+        const groupCounter = document.getElementById('group-counter');
+        const friendMsg = document.getElementById('friend-validation-msg');
+        const friendListSection = document.getElementById('friend-list-section');
+
+        // Allow pressing Enter in input-friend to add friend
+        inputFriend?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnAddFriend?.click();
+            }
+        });
+
+        const avatarColors = [
+            'bg-cyan-500', 'bg-pink-500', 'bg-amber-500', 'bg-blue-500',
+            'bg-purple-500', 'bg-emerald-500', 'bg-rose-500', 'bg-indigo-600'
+        ];
+
+        function getAvatarBg(str: string): string {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % avatarColors.length;
+            return avatarColors[index];
+        }
+
+        function getInitials(name: string): string {
+            const parts = name.trim().split(' ').filter(Boolean);
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function renderFriends() {
+            if (!friendChipsContainer || !groupCounter) return;
+            friendChipsContainer.innerHTML = '';
+
+            if (friendListSection) {
+                if (groupMembersData.length > 0) {
+                    friendListSection.classList.remove('hidden');
+                } else {
+                    friendListSection.classList.add('hidden');
+                }
+            }
+
+            groupCounter.innerText = `Anggota yang Ditambahkan (${groupMembersData.length})`;
+
+            groupMembersData.forEach((friend, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100 shadow-2xs hover:border-blue-200 transition w-full';
+                
+                const displayName = friend.fullName || friend.username;
+                const initials = getInitials(displayName);
+                const bgColor = getAvatarBg(displayName);
+
+                const avatarHtml = friend.avatarUrl 
+                    ? `<img src="${friend.avatarUrl}" alt="${displayName}" class="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-2xs shrink-0">`
+                    : `<div class="w-10 h-10 rounded-full ${bgColor} text-white font-black text-xs flex items-center justify-center uppercase shadow-2xs shrink-0">${initials}</div>`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        ${avatarHtml}
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-black text-xs sm:text-sm text-slate-900 truncate">${displayName}</span>
+                            <span class="text-[11px] text-slate-500 font-semibold truncate">@${friend.username}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition btn-remove-friend cursor-pointer shrink-0 ml-2" data-idx="${idx}" title="Hapus">
+                        <i data-feather="x" class="w-4 h-4"></i>
                     </button>
                 `;
-                friendListEl.appendChild(chip);
+                friendChipsContainer.appendChild(item);
             });
-            if (window.feather) window.feather.replace();
-            
-            const counter = document.getElementById('group-counter');
-            if (counter) counter.innerText = `${splitBillMembers.length} Teman Ditambahkan`;
-            
-            // Trigger calculation
-            calculateGrandTotal();
-        }
 
-        if (friendListEl) {
-            friendListEl.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const btn = target.closest('.btn-remove-friend');
-                if (btn) {
-                    const idxStr = btn.getAttribute('data-idx');
+            if ((window as any).feather) {
+                (window as any).feather.replace();
+            }
+
+            // Remove logic
+            const removeBtns = document.querySelectorAll('.btn-remove-friend');
+            removeBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idxStr = (e.currentTarget as HTMLElement).getAttribute('data-idx');
                     if (idxStr !== null) {
-                        splitBillMembers.splice(parseInt(idxStr, 10), 1);
-                        renderSplitFriends();
+                        const i = parseInt(idxStr, 10);
+                        groupMembersData.splice(i, 1);
+                        groupFriends = groupMembersData.map(m => m.username);
+                        renderFriends();
+                        calculateBreakdown();
                     }
-                }
+                });
             });
         }
 
+        // Add Friend Button handler with API lookup & fallback
         btnAddFriend?.addEventListener('click', async () => {
-            const val = inputFriend.value.trim();
-            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username');
+            if (!inputFriend) return;
+            const val = inputFriend.value.trim().replace(/^@/, '');
             
-            if (!val || splitBillMembers.includes(val)) return;
-            
-            if (val.toLowerCase() === currentUsername) {
-                const modal = document.getElementById('user-not-found-modal');
-                const msg = document.getElementById('user-not-found-msg');
-                const title = document.getElementById('warning-modal-title');
-                if (modal && msg && title) {
-                    title.innerText = "Tindakan Ditolak";
-                    msg.innerText = "Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.";
-                    modal.classList.remove('hidden');
-                    document.getElementById('btn-close-warning')?.addEventListener('click', () => {
-                        modal.classList.add('hidden');
-                    }, { once: true });
-                } else {
-                    alert("Anda tidak bisa menambahkan username Anda sendiri ke dalam daftar teman.");
+            if (friendMsg) {
+                friendMsg.classList.add('hidden');
+                friendMsg.innerText = '';
+            }
+
+            if (!val) return;
+
+            if (groupMembersData.some(m => m.username.toLowerCase() === val.toLowerCase())) {
+                if (friendMsg) {
+                    friendMsg.innerText = `⚠️ Username "${val}" sudah ada dalam daftar anggota.`;
+                    friendMsg.classList.remove('hidden');
                 }
-                inputFriend.value = '';
+                return;
+            }
+
+            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username') || '';
+            if (val.toLowerCase() === currentUsername.toLowerCase()) {
+                if (friendMsg) {
+                    friendMsg.innerText = `⚠️ Anda tidak dapat mengundang username akun Anda sendiri.`;
+                    friendMsg.classList.remove('hidden');
+                }
                 return;
             }
 
             const originalText = btnAddFriend.innerHTML;
-            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-4 h-4 mr-1 animate-spin"></i> Cek...';
+            btnAddFriend.innerHTML = '<i data-feather="loader" class="w-3.5 h-3.5 animate-spin"></i> Cek...';
             (btnAddFriend as HTMLButtonElement).disabled = true;
 
             try {
                 const res = await fetch(`/api/check-username?username=${encodeURIComponent(val)}`);
                 const data = await res.json();
 
-                if (res.ok && data.isAvailable) {
-                    const modal = document.getElementById('user-not-found-modal');
-                    const msg = document.getElementById('user-not-found-msg');
-                    const title = document.getElementById('warning-modal-title');
-                    if (modal && msg && title) {
-                        title.innerText = "Pengguna Tidak Ditemukan";
-                        msg.innerText = `Teman dengan username "${val}" tidak ditemukan di database kami. Pastikan penulisannya benar.`;
-                        modal.classList.remove('hidden');
-                        document.getElementById('btn-close-warning')?.addEventListener('click', () => {
-                            modal.classList.add('hidden');
-                        }, { once: true });
-                    }
-                } else if (res.ok && !data.isAvailable) {
-                    splitBillMembers.push(val);
-                    inputFriend.value = '';
-                    renderSplitFriends();
+                if (res.ok && !data.isAvailable && data.user) {
+                    const u = data.user;
+                    groupMembersData.push({
+                        username: u.username || val,
+                        fullName: u.fullName || u.username || val,
+                        avatarUrl: u.avatarUrl || null
+                    });
+                } else {
+                    // Fallback
+                    groupMembersData.push({
+                        username: val,
+                        fullName: val,
+                        avatarUrl: null
+                    });
                 }
+                groupFriends = groupMembersData.map(m => m.username);
+                inputFriend.value = '';
+                renderFriends();
+                calculateBreakdown();
             } catch (err) {
-                alert("Kesalahan jaringan saat mengecek pengguna.");
+                // Fallback
+                groupMembersData.push({
+                    username: val,
+                    fullName: val,
+                    avatarUrl: null
+                });
+                groupFriends = groupMembersData.map(m => m.username);
+                inputFriend.value = '';
+                renderFriends();
+                calculateBreakdown();
             } finally {
                 btnAddFriend.innerHTML = originalText;
                 (btnAddFriend as HTMLButtonElement).disabled = false;
-                if (window.feather) window.feather.replace();
+                if ((window as any).feather) (window as any).feather.replace();
             }
         });
 
-        const paymentRadios = document.querySelectorAll('input[name="payment-method"]');
-        const cashDetails = document.getElementById('cash-details');
-        const cashlessDetails = document.getElementById('cashless-details');
-        if (paymentRadios.length > 0 && cashDetails && cashlessDetails) {
-            paymentRadios.forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    const target = e.target as HTMLInputElement;
-                    if (target.value === 'cash') {
-                        cashDetails.classList.remove('hidden');
-                        cashlessDetails.classList.add('hidden');
-                    } else {
-                        cashDetails.classList.add('hidden');
-                        cashlessDetails.classList.remove('hidden');
-                    }
-                });
+        // Add Row Functions for lists (with Patungan dropdown select)
+        function setupAddRow(btnId: string, listId: string, placeholderName: string, defaultSplit: boolean = true) {
+            const btn = document.getElementById(btnId);
+            const list = document.getElementById(listId);
+            if (!btn || !list) return;
+
+            btn.addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.className = 'expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition';
+                row.innerHTML = `
+                    <input type="text" placeholder="${placeholderName}" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium" required>
+                    <div class="w-full sm:w-36 relative flex items-center">
+                        <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                        <input type="text" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800" required>
+                    </div>
+                    <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                        <option value="split" ${defaultSplit ? 'selected' : ''}>👥 Patungan</option>
+                        <option value="personal" ${!defaultSplit ? 'selected' : ''}>👤 Per Orang</option>
+                    </select>
+                    <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                        <i data-feather="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                list.appendChild(row);
+                if ((window as any).feather) (window as any).feather.replace();
+                bindCostInputs();
+                bindSplitSelects();
+                calculateBreakdown();
             });
         }
 
-        // --- DYNAMIC CALCULATOR LOGIC ---
-        const departureInput = document.getElementById('departure-date') as HTMLInputElement;
-        const savingEndInput = document.getElementById('saving-end-date') as HTMLInputElement;
-        
-        // Set min date to tomorrow
-        if (departureInput && savingEndInput) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowString = tomorrow.toISOString().split('T')[0];
-            departureInput.min = tomorrowString;
-            savingEndInput.min = tomorrowString;
+        setupAddRow('btn-add-hotel', 'hotel-list', 'Nama Hotel / Link Airbnb', true);
+        setupAddRow('btn-add-transport', 'transport-list', 'Tiket Pesawat / Kereta / Sewa Mobil', false);
+        setupAddRow('btn-add-activity', 'activity-list', 'Tiket Wahana / Tour / Aktivitas', true);
+        setupAddRow('btn-add-other', 'other-list', 'Visa / Asuransi / Belanja Oleh-oleh', true);
+
+        // Change Event Listener for Split Select Dropdowns
+        function bindSplitSelects() {
+            document.querySelectorAll('.split-select').forEach(sel => {
+                sel.removeEventListener('change', calculateBreakdown);
+                sel.addEventListener('change', calculateBreakdown);
+            });
         }
 
-        const savingFreqRadios = document.querySelectorAll('input[name="saving-freq"]');
-        const subtotalText = document.getElementById('text-subtotal');
-        const grandtotalText = document.getElementById('text-grandtotal');
-        const resultVal = document.getElementById('saving-simulation-result');
-        const resultLabel = document.getElementById('saving-simulation-label');
+        bindSplitSelects();
 
-        // Format Currency Helper
-        const formatCurrency = (amount: number) => {
-            return 'Rp ' + amount.toLocaleString('id-ID');
-        };
-
-        // Parse Currency string to number
-        const parseCurrency = (str: string) => {
-            if (!str) return 0;
-            const numeric = parseInt(str.replace(/[^\d]/g, ''));
-            return isNaN(numeric) ? 0 : numeric;
-        };
-
-        // Format input while typing
-        const attachCurrencyFormatter = (input: HTMLInputElement) => {
-            input.addEventListener('input', function(e) {
-                // Get unformatted number
-                let value = parseCurrency(this.value);
-                // Set formatted string back
-                if (value === 0 && this.value.replace(/[^\d]/g, '') === '') {
-                    this.value = '';
-                } else {
-                    this.value = value.toLocaleString('id-ID');
-                }
-                calculateGrandTotal();
-            });
-        };
-
-        // Attach formatter to all existing cost inputs
-        document.querySelectorAll('.cost-input').forEach(input => {
-            attachCurrencyFormatter(input as HTMLInputElement);
-        });
-
-        // Add Row Template Logic
-        const createRowTemplate = (placeholderText: string) => {
-            const div = document.createElement('div');
-            div.className = 'flex flex-col md:flex-row gap-3 items-start md:items-center bg-gray-50 p-3 rounded-xl border border-gray-200 mb-3';
-            div.innerHTML = `
-                <div class="flex-grow w-full md:w-auto">
-                    <input type="text" placeholder="${placeholderText}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white" required>
-                </div>
-                <div class="w-full md:w-1/3 relative">
-                    <span class="absolute left-4 top-2.5 text-gray-500 text-sm font-bold">Rp</span>
-                    <input type="text" placeholder="0" class="cost-input w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-primary outline-none text-sm bg-white font-semibold" required>
-                </div>
-                <button type="button" class="btn-remove-row text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition w-full md:w-auto flex justify-center">
-                    <i data-feather="trash-2" class="w-5 h-5"></i>
-                </button>
-            `;
-            
-            // Attach events
-            const newCostInput = div.querySelector('.cost-input') as HTMLInputElement;
-            attachCurrencyFormatter(newCostInput);
-            
-            const removeBtn = div.querySelector('.btn-remove-row');
-            removeBtn?.addEventListener('click', () => {
-                div.remove();
-                calculateGrandTotal();
-            });
-            
-            return div;
-        };
-
-        // Attach Remove handlers to initial static rows
-        document.querySelectorAll('.btn-remove-row').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const row = this.closest('div.flex.gap-3, div.flex-col');
-                if (row) {
+        // Remove row delegated event listener
+        document.addEventListener('click', (e) => {
+            const btn = (e.target as HTMLElement).closest('.btn-remove-row');
+            if (btn) {
+                const row = btn.closest('.expense-row');
+                if (row && row.parentElement?.children.length && row.parentElement.children.length > 1) {
                     row.remove();
-                    calculateGrandTotal();
+                    calculateBreakdown();
                 }
-            });
-        });
-
-        // Add Buttons mapping
-        const addConfig = [
-            { btnId: 'btn-add-hotel', containerId: 'hotel-list', placeholder: 'Nama Hotel / Link Airbnb' },
-            { btnId: 'btn-add-transport', containerId: 'transport-list', placeholder: 'Tiket Pesawat / Sewa Mobil' },
-            { btnId: 'btn-add-activity', containerId: 'activity-list', placeholder: 'Tiket Masuk / Paket Tour / Wahana' },
-            { btnId: 'btn-add-other', containerId: 'other-list', placeholder: 'Keterangan Pengeluaran (Visa/Asuransi)' }
-        ];
-
-        addConfig.forEach(config => {
-            const btn = document.getElementById(config.btnId);
-            const container = document.getElementById(config.containerId);
-            if (btn && container) {
-                btn.addEventListener('click', () => {
-                    const newRow = createRowTemplate(config.placeholder);
-                    container.appendChild(newRow);
-                    // Re-init feather icons for the new trash bin
-                    if (window.feather) window.feather.replace();
-                });
             }
         });
 
-        function calculateGrandTotal() {
-            let sumSubtotal = 0;
-            let sumBuffer = 0;
-
+        // Format Inputs with Thousand Separator
+        function bindCostInputs() {
             document.querySelectorAll('.cost-input').forEach(input => {
-                const el = input as HTMLInputElement;
-                const val = parseCurrency(el.value);
-                if (el.id === 'buffer-input') {
-                    sumBuffer = val;
-                } else {
-                    sumSubtotal += val;
-                }
+                input.removeEventListener('input', handleCostInput);
+                input.addEventListener('input', handleCostInput);
             });
-
-            const grandTotal = sumSubtotal + sumBuffer;
-            
-            // Split Bill Logic
-            let personalTarget = grandTotal;
-            if (checkboxSplitBill && checkboxSplitBill.checked && splitBillResult && splitFriendCountText && personalTotalText) {
-                splitBillResult.classList.remove('hidden');
-                splitBillResult.classList.add('flex');
-                
-                const divider = 1 + splitBillMembers.length;
-                personalTarget = Math.ceil(grandTotal / divider);
-                
-                splitFriendCountText.innerText = splitBillMembers.length.toString();
-                personalTotalText.textContent = formatCurrency(personalTarget);
-            } else if (splitBillResult) {
-                splitBillResult.classList.add('hidden');
-                splitBillResult.classList.remove('flex');
-            }
-
-            // Update UI
-            if (subtotalText) subtotalText.textContent = formatCurrency(sumSubtotal);
-            if (grandtotalText) grandtotalText.textContent = formatCurrency(grandTotal);
-
-            const hasilKonvensional = document.getElementById('hasil-konvensional');
-            if (hasilKonvensional) hasilKonvensional.textContent = formatCurrency(personalTarget);
-            
-            const hasilInvestasi = document.getElementById('hasil-investasi');
-            if (hasilInvestasi) hasilInvestasi.textContent = formatCurrency(Math.round(personalTarget * 1.06));
-
-            // Calculate Installments using personalTarget
-            calculateSavingInstallments(personalTarget);
         }
 
-        function calculateSavingInstallments(targetAmount: number) {
-            if (!resultVal || !resultLabel || !savingEndInput) return;
-
-            if (targetAmount === 0) {
-                resultVal.textContent = "Rp 0";
-                resultLabel.textContent = "Masukkan biaya untuk simulasi";
-                return;
+        function handleCostInput(e: Event) {
+            const input = e.target as HTMLInputElement;
+            const rawDigits = input.value.replace(/[^0-9]/g, '');
+            if (rawDigits) {
+                input.value = parseInt(rawDigits, 10).toLocaleString('id-ID');
+            } else {
+                input.value = '';
             }
-
-            const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
-            const freqDays = parseInt(freqEl?.value || "1");
-            let freqText = freqDays === 1 ? 'hari' : (freqDays === 7 ? 'minggu' : 'bulan');
-
-            let totalDays = 180; // Default 6 months
-            let monthsDiff = 6;
-            
-            if (savingEndInput.value) {
-                const targetDate = new Date(savingEndInput.value);
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                
-                const diffTime = targetDate.getTime() - today.getTime();
-                totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                if (totalDays <= 0) totalDays = 1;
-                monthsDiff = Math.max(1, Math.round(totalDays / 30));
-            }
-
-            const periods = Math.max(1, Math.floor(totalDays / freqDays));
-            const savingPerPeriod = targetAmount / periods;
-
-            resultVal.textContent = formatCurrency(Math.ceil(savingPerPeriod));
-            resultLabel.textContent = `per ${freqText} selama ${monthsDiff} bulan`;
+            calculateBreakdown();
         }
 
-        // Listeners for triggers
-        if (savingEndInput) savingEndInput.addEventListener('change', calculateGrandTotal);
-        savingFreqRadios.forEach(radio => radio.addEventListener('change', calculateGrandTotal));
+        bindCostInputs();
 
-        // Initial Calc
-        calculateGrandTotal();
+        // Calculate Totals & Breakdown (Rombongan vs Personal Per Item)
+        function calculateSectionTotals(listId: string) {
+            const list = document.getElementById(listId);
+            if (!list) return { rombongan: 0, personal: 0 };
 
-        // Handle Submit
-        const form = document.getElementById('design-trip-form');
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                // Recalculate safely
-                calculateGrandTotal();
-                
-                const title = (document.getElementById('dest-input') as HTMLInputElement)?.value || "Custom Trip";
-                const tripType = (document.getElementById('trip-type') as HTMLSelectElement)?.value || "Solo";
-                
-                // Fetch the calculated Personal Target (not Grand Total)
-                let personalTarget = parseInt(grandtotalText?.textContent?.replace(/[^\d]/g, '') || "0");
-                const checkboxSplitBill = document.getElementById('checkbox-split-bill') as HTMLInputElement;
-                if (checkboxSplitBill && checkboxSplitBill.checked && splitBillMembers.length > 0) {
-                    const personalTotalText = document.getElementById('text-personaltotal');
-                    if (personalTotalText) {
-                        personalTarget = parseInt(personalTotalText.textContent?.replace(/[^\d]/g, '') || "0");
-                    }
-                }
-                
-                const savingAmount = parseInt(resultVal?.textContent?.replace(/[^\d]/g, '') || "0");
-                const freqEl = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
-                const freqDays = parseInt(freqEl?.value || "1");
-                
-                const savingTypeEl = document.querySelector('input[name="saving_type"]:checked') as HTMLInputElement;
-                const savingType = savingTypeEl?.value || 'Konvensional';
-                
-                const paymentRadio = document.querySelector('input[name="payment-method"]:checked') as HTMLInputElement;
-                const paymentMethod = paymentRadio?.value || 'cashless';
-                
-                let paymentDetail = '';
-                if (paymentMethod === 'cashless') {
-                    paymentDetail = 'QRIS Dynamic';
-                } else {
-                    paymentDetail = 'Lentera: ' + (document.querySelector('#cash-details input') as HTMLInputElement)?.value;
-                }
+            const groupSize = Math.max(1, 1 + groupMembersData.length);
+            let rombongan = 0;
+            let personal = 0;
 
-                // --- GATHER DETAILED LINE ITEMS ---
-                const gatherItems = (containerId: string) => {
-                    const items: any[] = [];
-                    document.querySelectorAll(`#${containerId} > div`).forEach(row => {
-                        const textInput = row.querySelector('input[type="text"]:not(.cost-input)') as HTMLInputElement;
-                        const costInput = row.querySelector('.cost-input') as HTMLInputElement;
-                        if (textInput && costInput && textInput.value.trim() !== '') {
-                            items.push({
-                                name: textInput.value.trim(),
-                                price: parseCurrency(costInput.value)
-                            });
-                        }
-                    });
-                    return items;
-                };
+            list.querySelectorAll('.expense-row').forEach((row) => {
+                const costInp = row.querySelector('.cost-input') as HTMLInputElement;
+                const splitSelect = row.querySelector('.split-select') as HTMLSelectElement;
 
-                const tripDetails = {
-                    accommodations: gatherItems('hotel-list'),
-                    transports: gatherItems('transport-list'),
-                    activities: gatherItems('activity-list'),
-                    others: gatherItems('other-list'),
-                    buffer: parseCurrency((document.getElementById('buffer-input') as HTMLInputElement)?.value || '0')
-                };
-
-                const tripDetailsJSON = JSON.stringify(tripDetails);
-                // Append serialized JSON to paymentDetail using separator
-                paymentDetail = paymentDetail + '|||' + tripDetailsJSON;
-
-                try {
-                    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-                    const originalText = submitBtn.innerHTML;
-                    submitBtn.innerHTML = '<i data-feather="loader" class="w-6 h-6 animate-spin"></i> Menyimpan...';
-                    submitBtn.disabled = true;
-                    if (window.feather) window.feather.replace();
-
-                    const res = await fetch('/api/goals', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            title,
-                            trip_type: tripType,
-                            target_amount: personalTarget,
-                            auto_debit_amount: savingAmount,
-                            frequency: freqDays,
-                            saving_type: savingType,
-                            payment_method: paymentMethod,
-                            payment_detail: paymentDetail,
-                            group_members: splitBillMembers
-                        })
-                    });
-
-                    if (res.ok) {
-                        const data = await res.json();
-                        const goalId = data.id || `TRIP-${Date.now()}`;
-                        
-                        if (paymentMethod === 'cashless') {
-                            // Redirect to payment page for QRIS
-                            window.location.href = `/payment?amount=${savingAmount}&title=Tabungan ${encodeURIComponent(title)}&ref=${goalId}`;
+                if (costInp) {
+                    const rawVal = parseInt(costInp.value.replace(/[^0-9]/g, '') || '0', 10);
+                    if (rawVal > 0) {
+                        const isPatungan = splitSelect ? splitSelect.value === 'split' : true;
+                        if (isPatungan) {
+                            // Opsi Patungan: Angka input adalah Total Biaya Rombongan
+                            rombongan += rawVal;
+                            personal += Math.ceil(rawVal / groupSize);
                         } else {
-                            alert(`Rencana perjalanan Anda ke ${title} telah disimpan!\nSistem akan otomatis mengarahkan ke Dashboard Anda.`);
-                            window.location.href = '/dashboard';
+                            // Opsi Per Orang: Angka input adalah Biaya Per Orang
+                            personal += rawVal;
+                            rombongan += rawVal * groupSize;
                         }
-                    } else {
-                        const err = await res.json();
-                        alert("Gagal menyimpan rencana: " + (err.error || 'Unknown Error'));
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                        if (window.feather) window.feather.replace();
                     }
-                } catch (error) {
-                    alert("Terjadi kesalahan jaringan.");
                 }
             });
+
+            return { rombongan, personal };
         }
+
+        function calculateBreakdown() {
+            const groupSize = Math.max(1, 1 + groupMembersData.length);
+
+            const hotel = calculateSectionTotals('hotel-list');
+            const transport = calculateSectionTotals('transport-list');
+            const activity = calculateSectionTotals('activity-list');
+            const other = calculateSectionTotals('other-list');
+
+            const bufferInput = document.getElementById('buffer-input') as HTMLInputElement;
+            const bufferSplitSelect = document.getElementById('buffer-split-select') as HTMLSelectElement;
+            const rawBuffer = parseInt(bufferInput?.value.replace(/[^0-9]/g, '') || '0', 10);
+
+            let bufferRombongan = 0;
+            let bufferPersonal = 0;
+
+            if (rawBuffer > 0) {
+                const isBufferPatungan = bufferSplitSelect ? bufferSplitSelect.value === 'split' : true;
+                if (isBufferPatungan) {
+                    // Patungan: rawBuffer adalah total buffer rombongan
+                    bufferRombongan = rawBuffer;
+                    bufferPersonal = Math.ceil(rawBuffer / groupSize);
+                } else {
+                    // Per Orang: rawBuffer adalah buffer per individu
+                    bufferPersonal = rawBuffer;
+                    bufferRombongan = rawBuffer * groupSize;
+                }
+            }
+
+            const grandTotalRombongan = hotel.rombongan + transport.rombongan + activity.rombongan + other.rombongan + bufferRombongan;
+            const grandTotalPersonal = hotel.personal + transport.personal + activity.personal + other.personal + bufferPersonal;
+
+            // Destination Title
+            const destVal = destInput?.value.trim() || 'Bali, Indonesia';
+            if (summaryDestTitle) summaryDestTitle.innerText = destVal;
+
+            const summaryPersonalTarget = document.getElementById('summary-personal-target');
+            const summaryGroupSizeLabel = document.getElementById('summary-group-size-label');
+
+            if (summaryTotalTarget) summaryTotalTarget.innerText = `Rp ${grandTotalRombongan.toLocaleString('id-ID')}`;
+            if (summaryPersonalTarget) summaryPersonalTarget.innerText = `Rp ${grandTotalPersonal.toLocaleString('id-ID')}`;
+            if (summaryGroupSizeLabel) summaryGroupSizeLabel.innerText = `Porsi Anda (${groupSize} Orang di Rencana)`;
+
+            if (summaryHotelTotal) summaryHotelTotal.innerText = `Rp ${hotel.personal.toLocaleString('id-ID')}`;
+            if (summaryTransportTotal) summaryTransportTotal.innerText = `Rp ${transport.personal.toLocaleString('id-ID')}`;
+            if (summaryActivityTotal) summaryActivityTotal.innerText = `Rp ${activity.personal.toLocaleString('id-ID')}`;
+            if (summaryOtherTotal) summaryOtherTotal.innerText = `Rp ${other.personal.toLocaleString('id-ID')}`;
+            if (summaryBufferTotal) summaryBufferTotal.innerText = `Rp ${bufferPersonal.toLocaleString('id-ID')}`;
+
+            // Calculate Installment Rate based on Target Selesai Menabung date
+            const freqInput = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+            const freqVal = parseInt(freqInput?.value || '1', 10);
+
+            const depDateInput = document.getElementById('departure-date') as HTMLInputElement;
+            const endDateInput = document.getElementById('saving-end-date') as HTMLInputElement;
+
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            let targetDate: Date | null = null;
+
+            if (endDateInput && endDateInput.value) {
+                targetDate = new Date(endDateInput.value);
+            } else if (depDateInput && depDateInput.value) {
+                targetDate = new Date(depDateInput.value);
+            }
+
+            // Hitung jumlah hari dari hari ini menuju tanggal selesai menabung
+            let remainingDays = 180; // default 6 bulan jika tanggal belum diisi
+            if (targetDate && !isNaN(targetDate.getTime())) {
+                targetDate.setHours(0, 0, 0, 0);
+                const diffMs = targetDate.getTime() - now.getTime();
+                const calculatedDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                remainingDays = Math.max(1, calculatedDays);
+            }
+
+            let amountPerFreq = grandTotalPersonal;
+            let labelUnit = '/hari';
+
+            if (freqVal === 1) {
+                // Harian: Target Tabungan Anda ÷ Jumlah Hari Tersisa
+                amountPerFreq = Math.ceil(grandTotalPersonal / remainingDays);
+                labelUnit = '/hari';
+            } else if (freqVal === 7) {
+                // Mingguan: Target Tabungan Anda ÷ Jumlah Minggu Tersisa
+                const remainingWeeks = Math.max(1, Math.ceil(remainingDays / 7));
+                amountPerFreq = Math.ceil(grandTotalPersonal / remainingWeeks);
+                labelUnit = '/minggu';
+            } else if (freqVal === 30) {
+                // Bulanan: Target Tabungan Anda ÷ Jumlah Bulan Tersisa
+                const remainingMonths = Math.max(1, Math.ceil(remainingDays / 30));
+                amountPerFreq = Math.ceil(grandTotalPersonal / remainingMonths);
+                labelUnit = '/bulan';
+            }
+
+            if (summarySavingRate) {
+                summarySavingRate.innerText = `Rp ${amountPerFreq.toLocaleString('id-ID')} ${labelUnit}`;
+            }
+
+            return { grandTotalRombongan, grandTotalPersonal, amountPerFreq, labelUnit };
+        }
+
+        // Destination & Date Input Listeners
+        destInput?.addEventListener('input', calculateBreakdown);
+
+        const depDateEl = document.getElementById('departure-date');
+        const endDateEl = document.getElementById('saving-end-date');
+        const bufferEl = document.getElementById('buffer-input');
+        const bufferSplitSelectEl = document.getElementById('buffer-split-select');
+
+        depDateEl?.addEventListener('change', calculateBreakdown);
+        endDateEl?.addEventListener('change', calculateBreakdown);
+        depDateEl?.addEventListener('input', calculateBreakdown);
+        endDateEl?.addEventListener('input', calculateBreakdown);
+        bufferEl?.addEventListener('input', calculateBreakdown);
+        bufferSplitSelectEl?.addEventListener('change', calculateBreakdown);
+
+        // Frequency Change Listener
+        document.querySelectorAll('input[name="saving-freq"]').forEach(radio => {
+            radio.addEventListener('change', calculateBreakdown);
+        });
+
+        // FORM SUBMISSION (STEP 1)
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { grandTotalRombongan, grandTotalPersonal, amountPerFreq, labelUnit } = calculateBreakdown();
+
+            const isDraft = modeDraft && modeDraft.checked;
+            const title = destInput?.value.trim() || 'Perjalanan Impian';
+
+            const goalData = {
+                id: 'goal_' + Date.now(),
+                title: title,
+                target_amount: grandTotalPersonal,
+                total_rombongan_amount: grandTotalRombongan,
+                auto_debit_amount: amountPerFreq,
+                frequency: labelUnit,
+                trip_type: tripTypeSelect?.value || 'Solo',
+                group_members: groupFriends,
+                saving_type: 'Konvensional',
+                payment_method: 'QRIS',
+                status: isDraft ? 'draft' : 'active',
+                created_at: new Date().toISOString()
+            };
+
+            // Save to LocalStorage array for persistent client tracking
+            const existingGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
+            existingGoals.unshift(goalData);
+            localStorage.setItem('dreamjourney_custom_goals', JSON.stringify(existingGoals));
+
+            // Also post to Supabase API if possible
+            try {
+                await fetch('/api/goals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(goalData)
+                });
+            } catch (err) {
+                console.log('Supabase API post fallback:', err);
+            }
+
+            if (isDraft) {
+                // USER CHOSE SIMPAN SEBAGAI DRAF:
+                // Alert Toast notification and redirect directly to /planner! NO Step 2 / QRIS.
+                alert(`✨ Rencana Perjalanan "${title}" berhasil disimpan sebagai Draf!\n\nAnda dapat melihat dan mengeditnya kembali kapan saja di halaman Rencana Perjalanan.`);
+                window.location.href = '/planner';
+            } else {
+                // USER CHOSE LANGSUNG MULAI NABUNG:
+                // Move UI to Step 2: Bayar QRIS!
+                viewStep1?.classList.add('hidden');
+                viewStep2?.classList.remove('hidden');
+
+                // Update Stepper
+                if (stepBadge1) stepBadge1.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-extrabold text-xs shadow-md';
+                if (stepBadge2) stepBadge2.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-indigo-500/20';
+
+                // Display First Setoran Amount
+                const qrisAmountDisplay = document.getElementById('qris-amount-display');
+                if (qrisAmountDisplay) qrisAmountDisplay.innerText = `Rp ${amountPerFreq.toLocaleString('id-ID')}`;
+            }
+        });
+
+        // STEP 2 QRIS CONFIRMATION -> STEP 3 SELESAI
+        const btnConfirmQris = document.getElementById('btn-confirm-qris');
+        btnConfirmQris?.addEventListener('click', () => {
+            viewStep2?.classList.add('hidden');
+            viewStep3?.classList.remove('hidden');
+
+            // Update Stepper to Step 3 Active
+            if (stepBadge2) stepBadge2.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-extrabold text-xs shadow-md';
+            if (stepBadge3) stepBadge3.className = 'w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-indigo-500/20';
+
+            // Set final summary values
+            const finalDestName = document.getElementById('final-dest-name');
+            const finalTargetAmount = document.getElementById('final-target-amount');
+
+            const { grandTotal } = calculateBreakdown();
+            if (finalDestName) finalDestName.innerText = destInput?.value.trim() || 'Bali';
+            if (finalTargetAmount) finalTargetAmount.innerText = `Rp ${grandTotal.toLocaleString('id-ID')}`;
+        });
     });
 </script>

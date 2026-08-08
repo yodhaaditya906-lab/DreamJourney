@@ -21,47 +21,91 @@ const isVerified = !!(dbUser?.username);
     <main class="min-h-screen bg-slate-50/70">
         
         <!-- Full-Width Edge-to-Edge Flat Art Hero Banner Header -->
-        <section class="w-full bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white pt-28 pb-10 sm:pb-12 mb-8 relative border-b border-indigo-500/20 shadow-lg z-30">
-            <!-- Flat Art Nature Landscape Background (Semi-Transparent, Edge-to-Edge) -->
-            <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <section class="w-full bg-gradient-to-r from-indigo-950 via-purple-900 to-rose-950 text-white pt-28 pb-10 sm:pb-12 mb-8 relative border-b border-rose-500/20 shadow-lg z-30 overflow-hidden">
+            <!-- Vibrant Flat Art Daybreak Landscape Background (Semi-Transparent, Edge-to-Edge) -->
+            <div class="absolute inset-0 pointer-events-none z-0">
                 <!-- Soft Glow Orbs -->
-                <div class="absolute -right-12 -top-12 w-96 h-96 bg-indigo-500/25 rounded-full blur-3xl"></div>
-                <div class="absolute left-1/4 -bottom-12 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl"></div>
-                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:20px_20px]"></div>
+                <div class="absolute -right-12 -top-12 w-96 h-96 bg-amber-500/30 rounded-full blur-3xl"></div>
+                <div class="absolute left-1/4 -bottom-12 w-80 h-80 bg-rose-500/25 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#f43f5e_1px,transparent_1px)] [background-size:20px_20px]"></div>
 
-                <!-- Full-Width Flat Art Nature Landscape SVG -->
-                <svg class="absolute bottom-0 left-0 w-full h-full object-cover opacity-25" viewBox="0 0 1440 320" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Sun Disk -->
-                    <circle cx="1200" cy="80" r="70" fill="#F59E0B" opacity="0.6"/>
-                    <circle cx="1200" cy="80" r="100" fill="#FDE047" opacity="0.15"/>
+                <!-- Full-Width Vibrant Flat Art Landscape SVG (Rooted & Solid Mountains) -->
+                <svg class="absolute bottom-0 left-0 w-full h-full object-cover opacity-90" viewBox="0 0 1440 260" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Sky Gradient: Vibrant Sunset/Daybreak -->
+                        <linearGradient id="vibrant-sky-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#312E81"/>
+                            <stop offset="30%" stop-color="#581C87"/>
+                            <stop offset="60%" stop-color="#9F1239"/>
+                            <stop offset="85%" stop-color="#E11D48"/>
+                            <stop offset="100%" stop-color="#F59E0B"/>
+                        </linearGradient>
 
-                    <!-- Clouds -->
-                    <path d="M120 70C135 55 165 58 172 67C182 61 202 67 206 77H105C105 70 112 67 120 70Z" fill="#38BDF8" opacity="0.6"/>
-                    <path d="M680 95C692 82 718 85 724 93C733 87 750 93 754 102H668C668 96 673 93 680 95Z" fill="#818CF8" opacity="0.5"/>
+                        <!-- Sun Radial Glow -->
+                        <radialGradient id="vibrant-sun-glow" cx="0.5" cy="0.5" r="0.5">
+                            <stop offset="0%" stop-color="#FFFDF0" stop-opacity="1"/>
+                            <stop offset="45%" stop-color="#FDE047" stop-opacity="0.95"/>
+                            <stop offset="75%" stop-color="#F59E0B" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
+                        </radialGradient>
 
-                    <!-- Flying Birds Flat Art -->
-                    <path d="M300 60Q310 50 320 60Q330 50 340 60" stroke="#F8FAFC" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
-                    <path d="M330 75Q337 67 345 75Q352 67 360 75" stroke="#F8FAFC" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+                        <!-- Lake Waters Gradient -->
+                        <linearGradient id="lake-grad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#38BDF8"/>
+                            <stop offset="60%" stop-color="#06B6D4"/>
+                            <stop offset="100%" stop-color="#0F766E"/>
+                        </linearGradient>
+                    </defs>
 
-                    <!-- Mountain Layer 1 (Distant Peaks) -->
-                    <path d="M-50 320L180 140L410 320H-50Z" fill="#6366F1" opacity="0.5"/>
-                    <path d="M320 320L580 110L840 320H320Z" fill="#4F46E5" opacity="0.4"/>
-                    <path d="M750 320L980 150L1210 320H750Z" fill="#3B82F6" opacity="0.45"/>
-                    <path d="M1100 320L1310 180L1500 320H1100Z" fill="#6366F1" opacity="0.5"/>
+                    <!-- Vibrant Sky Base -->
+                    <rect width="1440" height="260" fill="url(#vibrant-sky-grad)"/>
 
-                    <!-- Mountain Snow Caps Flat Art -->
-                    <path d="M580 110L545 155L560 150L580 160L600 150L615 155L580 110Z" fill="#E0E7FF" opacity="0.6"/>
-                    <path d="M180 140L155 175L170 170L180 178L190 170L205 175L180 140Z" fill="#E0E7FF" opacity="0.5"/>
-                    <path d="M980 150L955 185L970 180L980 188L990 180L1005 185L980 150Z" fill="#E0E7FF" opacity="0.5"/>
+                    <!-- Radiant Sun Disk Horizon -->
+                    <circle cx="1180" cy="130" r="90" fill="url(#vibrant-sun-glow)"/>
+                    <circle cx="1180" cy="130" r="55" fill="#FFFDF0"/>
 
-                    <!-- Hills Layer 2 (Rolling Foreground Hills) -->
-                    <path d="M-20 320C200 240 450 250 700 280C950 310 1200 260 1480 320H-20Z" fill="#0EA5E9" opacity="0.3"/>
-                    <path d="M100 320C350 230 650 260 950 290C1200 320 1350 280 1500 320H100Z" fill="#10B981" opacity="0.25"/>
+                    <!-- Bright Fluffy Coral & Amber Clouds -->
+                    <path d="M100 65C115 45 155 48 165 60C178 52 205 60 210 72H80C80 65 88 62 100 65Z" fill="#FDE047" opacity="0.8"/>
+                    <path d="M920 50C935 32 970 35 980 47C993 39 1018 47 1022 58H900C900 52 908 49 920 50Z" fill="#FB7185" opacity="0.8"/>
+                    <path d="M520 80C532 67 558 70 564 78C573 72 590 78 594 87H508C508 81 513 78 520 80Z" fill="#FDA4AF" opacity="0.75"/>
 
-                    <!-- Pine Tree Silhouettes along the Bottom Layer -->
-                    <path d="M50 320L65 290L60 292L70 270L65 272L75 250L85 272L80 270L90 292L85 290L100 320H50Z" fill="#064E3B" opacity="0.6"/>
-                    <path d="M1350 320L1365 285L1360 287L1370 265L1365 267L1375 245L1385 267L1380 265L1390 287L1385 285L1400 320H1350Z" fill="#064E3B" opacity="0.6"/>
+                    <!-- Flying Birds -->
+                    <path d="M280 45Q290 35 300 45Q310 35 320 45" stroke="#FFFDF0" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M315 60Q322 52 330 60Q337 52 345 60" stroke="#FFFDF0" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M720 35Q728 27 736 35Q743 27 750 35" stroke="#FFFDF0" stroke-width="2" stroke-linecap="round"/>
+
+                    <!-- Back Mountain Range Layer 1 (SOLID Vivid Purple & Violet) -->
+                    <path d="M-50 260 L180 80 L440 260 Z" fill="#6B21A8"/>
+                    <path d="M320 260 L580 50 L840 260 Z" fill="#581C87"/>
+                    <path d="M750 260 L980 90 L1220 260 Z" fill="#4C1D95"/>
+                    <path d="M1100 260 L1310 110 L1520 260 Z" fill="#6B21A8"/>
+
+                    <!-- Solid Mountain Snow Caps -->
+                    <path d="M580 50 L545 100 L560 95 L580 105 L600 95 L615 100 L580 50 Z" fill="#FFFDF0"/>
+                    <path d="M180 80 L155 120 L170 115 L180 123 L190 115 L205 120 L180 80 Z" fill="#FFFDF0"/>
+                    <path d="M980 90 L955 130 L970 125 L980 133 L990 125 L1005 130 L980 90 Z" fill="#FFFDF0"/>
+
+                    <!-- Mid Mountain Range Layer 2 (SOLID Coral Crimson & Fuchsia Magenta) -->
+                    <path d="M60 260 L280 100 L520 260 Z" fill="#BE123C"/>
+                    <path d="M620 260 L850 110 L1080 260 Z" fill="#A21CAF"/>
+
+                    <!-- Rolling Foreground Hills & Tropical Shoreline (SOLID Teal & Turquoise) -->
+                    <path d="M-20 260 C200 180 450 190 700 220 C950 250 1200 200 1480 260 H-20 Z" fill="#0F766E"/>
+                    <path d="M100 260 C350 170 650 200 950 230 C1200 260 1350 220 1500 260 H100 Z" fill="url(#lake-grad)"/>
+
+                    <!-- Water Ripples -->
+                    <rect x="200" y="235" width="130" height="3" rx="1.5" fill="#E0F2FE" opacity="0.9"/>
+                    <rect x="420" y="215" width="100" height="3" rx="1.5" fill="#E0F2FE" opacity="0.8"/>
+                    <rect x="650" y="230" width="80" height="2.5" rx="1.2" fill="#E0F2FE" opacity="0.8"/>
+
+                    <!-- Tropical Palm & Pine Tree Silhouettes at Bottom Edges (SOLID) -->
+                    <path d="M20 260 L45 170 L40 173 L52 145 L48 147 L58 120 L68 147 L64 145 L76 173 L71 170 L96 260 Z" fill="#022C22"/>
+                    <path d="M80 260 L100 185 L96 187 L106 160 L103 161 L111 135 L119 161 L116 160 L126 187 L122 185 L142 260 Z" fill="#064E3B"/>
+                    <path d="M1360 260 C1362 230 1368 200 1375 160 C1360 160 1340 168 1320 180 C1340 165 1360 155 1375 158 C1370 142 1360 130 1340 120 C1360 128 1372 140 1378 156 C1388 140 1400 130 1420 125 C1405 135 1395 148 1382 160 C1398 165 1415 175 1425 190 C1408 180 1390 172 1378 165 C1373 200 1367 230 1365 260 Z" fill="#022C22"/>
                 </svg>
+
+                <!-- Tint Overlay for Text Readability -->
+                <div class="absolute inset-0 bg-gradient-to-r from-slate-950/40 via-purple-950/20 to-slate-950/40 backdrop-blur-[0.5px]"></div>
             </div>
 
             <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">

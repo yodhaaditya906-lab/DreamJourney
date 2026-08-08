@@ -5,140 +5,330 @@ import { Show, SignInButton } from '@clerk/astro/components';
 
 <Layout title="Trip Planner - DreamJourney">
     <main class="min-h-screen bg-slate-50/70">
-        <!-- Header Banner Rencana Perjalanan (Polos) -->
-        <section class="w-full bg-white text-slate-900 pt-28 pb-10 sm:pb-12 mb-8 border-b border-slate-200">
-            <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Full-Width Edge-to-Edge Flat Art Hero Banner Header for Trip Planner -->
+        <section class="w-full bg-slate-950 text-white pt-28 pb-14 sm:pb-16 mb-8 relative border-b border-indigo-500/20 shadow-xl overflow-hidden">
+            <!-- Flat Art Landscape Background SVG Overlay (Rooted firmly to ground) -->
+            <div class="absolute inset-0 pointer-events-none z-0">
+                <svg class="w-full h-full object-cover" viewBox="0 0 1440 260" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Sky Gradient -->
+                        <linearGradient id="sky-grad-260" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#0F4C5C"/>
+                            <stop offset="40%" stop-color="#1B6B7D"/>
+                            <stop offset="75%" stop-color="#E38981"/>
+                            <stop offset="100%" stop-color="#F7B28E"/>
+                        </linearGradient>
+
+                        <!-- Sun Glow -->
+                        <radialGradient id="sun-glow-260" cx="0.5" cy="0.5" r="0.5">
+                            <stop offset="0%" stop-color="#FFF8E7" stop-opacity="1"/>
+                            <stop offset="50%" stop-color="#FDE047" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+                        </radialGradient>
+
+                        <!-- River Water Gradient -->
+                        <linearGradient id="river-grad-260" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#38BDF8"/>
+                            <stop offset="50%" stop-color="#0284C7"/>
+                            <stop offset="100%" stop-color="#0F4C5C"/>
+                        </linearGradient>
+
+                        <!-- Path Gradient -->
+                        <linearGradient id="path-grad-260" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#8338EC"/>
+                            <stop offset="60%" stop-color="#9A5073"/>
+                            <stop offset="100%" stop-color="#5B2146"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Sky Base -->
+                    <rect width="1440" height="260" fill="url(#sky-grad-260)"/>
+
+                    <!-- Crescent Moon Top Right -->
+                    <path d="M1020 30C1015 30 1010 33 1008 38C1014 37 1020 41 1020 48C1020 55 1014 59 1008 58C1012 62 1017 63 1021 61C1027 58 1030 51 1028 44C1026 36 1020 30 1020 30Z" fill="#FFF8E7" opacity="0.9"/>
+
+                    <!-- Fluffy Peach Clouds Layer -->
+                    <path d="M-50 70 C30 40, 110 40, 160 70 C210 40, 310 30, 380 70 C440 50, 520 60, 560 90 L-50 110 Z" fill="#F09B87" opacity="0.5"/>
+                    <path d="M980 60 C1060 30, 1160 20, 1240 50 C1300 30, 1400 40, 1460 70 L1460 110 L930 110 Z" fill="#F09B87" opacity="0.5"/>
+
+                    <!-- Sun Horizon (Setting behind mountains) -->
+                    <circle cx="760" cy="150" r="70" fill="url(#sun-glow-260)"/>
+                    <circle cx="760" cy="150" r="45" fill="#FFFDF0"/>
+
+                    <!-- Back Mountain Peaks (Rooted to Y = 260) -->
+                    <path d="M420 260 L540 100 L680 260 Z" fill="#B4658B"/>
+                    <path d="M580 260 L730 80 L880 260 Z" fill="#934B76"/>
+                    <path d="M780 260 L940 95 L1100 260 Z" fill="#753564"/>
+                    <path d="M960 260 L1150 70 L1340 260 Z" fill="#58234D"/>
+
+                    <!-- Main Left Mountain Range (Rooted to Y = 260) -->
+                    <path d="M-60 260 L150 40 L480 260 Z" fill="#2B6B8A"/>
+                    <!-- Mountain Highlight Ridge Layer -->
+                    <path d="M150 40 L260 160 L480 260 L150 260 Z" fill="#1D526D"/>
+                    <path d="M-50 260 L70 90 L220 260 Z" fill="#18465E"/>
+
+                    <!-- Center-Left River Valley (Flowing down to Y = 260) -->
+                    <path d="M0 200 C200 190, 450 150, 760 150 C1000 150, 1200 190, 1440 200 L1440 260 L0 260 Z" fill="#16394C"/>
+                    <path d="M-50 220 C150 210, 300 190, 450 160 C600 150, 780 150, 950 160 C780 180, 500 210, 200 260 L-50 260 Z" fill="url(#river-grad-260)"/>
+
+                    <!-- Water Reflections -->
+                    <rect x="100" y="235" width="120" height="3" rx="1.5" fill="#7DD3FC" opacity="0.6"/>
+                    <rect x="250" y="210" width="90" height="3" rx="1.5" fill="#7DD3FC" opacity="0.5"/>
+                    <rect x="380" y="185" width="70" height="2.5" rx="1.2" fill="#7DD3FC" opacity="0.5"/>
+
+                    <!-- Foreground Land Mass Left (Rooted to Y = 260) -->
+                    <path d="M-50 180 C100 190, 250 210, 380 235 C250 255, 100 260, -50 260 Z" fill="#0D2837"/>
+
+                    <!-- Foreground Land Mass Right (Rooted to Y = 260) -->
+                    <path d="M680 260 C800 220, 1050 175, 1440 160 L1480 260 Z" fill="#0C202C"/>
+
+                    <!-- Pine Tree Silhouettes Left (Anchored firmly at bottom) -->
+                    <path d="M-20 260 L5 170 L0 173 L15 140 L10 142 L20 110 L30 142 L25 140 L40 173 L35 170 L60 260 Z" fill="#081822"/>
+                    <path d="M30 260 L55 190 L50 192 L65 160 L60 162 L70 130 L80 162 L75 160 L90 192 L85 190 L110 260 Z" fill="#0A1D2A"/>
+                    <path d="M80 260 L105 200 L100 202 L112 175 L108 177 L118 150 L128 177 L124 175 L136 202 L131 200 L156 260 Z" fill="#0D2738"/>
+
+                    <!-- Pine Tree Silhouettes Right (Anchored firmly at bottom) -->
+                    <path d="M1280 260 L1315 150 L1308 153 L1328 120 L1320 122 L1335 90 L1350 122 L1342 120 L1362 153 L1355 150 L1390 260 Z" fill="#06121B"/>
+                    <path d="M1200 260 L1230 180 L1224 182 L1240 150 L1234 152 L1247 125 L1260 152 L1254 150 L1270 182 L1264 180 L1294 260 Z" fill="#081824"/>
+                    <path d="M1130 260 L1155 195 L1150 197 L1163 175 L1158 177 L1169 155 L1180 177 L1175 175 L1188 197 L1183 195 L1208 260 Z" fill="#0A1F2D"/>
+                </svg>
+
+                <!-- Subtle Dark Tint Overlay for Readability -->
+                <div class="absolute inset-0 bg-slate-950/20 backdrop-blur-[0.5px]"></div>
+            </div>
+
+            <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div class="max-w-2xl">
-                    <div class="inline-flex items-center gap-2 bg-slate-100 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-700 mb-3">
-                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <div class="inline-flex items-center gap-2 bg-slate-900/70 backdrop-blur-md border border-white/20 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300 mb-3 shadow-lg">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         <span>RENCANA PERJALANAN LIBURAN</span>
                     </div>
-                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight mb-2 leading-tight">
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mb-2 leading-tight drop-shadow-md">
                         Rancang Liburan Impian Anda
                     </h1>
-                    <p class="text-slate-600 text-xs sm:text-sm font-medium leading-relaxed max-w-xl">
+                    <p class="text-slate-100 text-xs sm:text-sm font-medium leading-relaxed max-w-xl drop-shadow-sm">
                         Rencanakan destinasi impian, hitung estimasi biaya pengeluaran akomodasi & aktivitas, serta simulasikan target tabungan liburan Anda secara otomatis.
                     </p>
                 </div>
             </div>
         </section>
 
-        <!-- Trip Planner Body -->
-        <section id="planner" class="pb-16">
-            <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Trip Planner Body with Flat Art Backdrop & Glassmorphic Cards -->
+        <section id="planner" class="pb-16 relative overflow-hidden bg-gradient-to-b from-slate-50 via-purple-50/30 to-indigo-50/40">
+            <!-- Subtle Flat Art Background Overlay for Lower Section -->
+            <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                <!-- Soft Glow Orbs -->
+                <div class="absolute right-0 top-1/4 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl"></div>
+                <div class="absolute left-0 bottom-10 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl"></div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    <!-- Steps -->
-                    <div class="space-y-8">
-                        <div class="flex items-start">
-                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">1</div>
-                            <div>
-                                <h3 class="font-bold text-xl mb-2">Tentukan Informasi Dasar</h3>
-                                <p class="text-gray-600">Pilih destinasi impian, tipe perjalanan, dan tentukan target bulan keberangkatan Anda.</p>
+                <!-- Flat Art Nature & Voyage Line Vectors -->
+                <svg class="absolute w-full h-full object-cover opacity-15" viewBox="0 0 1440 800" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Distant Waves / Rolling Hills -->
+                    <path d="M-100 250 C300 180 600 300 900 220 C1200 140 1400 240 1600 200 L1600 800 L-100 800 Z" fill="#818CF8" opacity="0.3"/>
+                    <path d="M-50 400 C250 320 550 420 850 350 C1150 280 1350 380 1550 320 L1550 800 L-50 800 Z" fill="#C084FC" opacity="0.25"/>
+
+                    <!-- Pine Trees Line Art along right side -->
+                    <path d="M1280 550 L1310 420 L1305 423 L1320 370 L1315 372 L1328 320 L1341 372 L1336 370 L1351 423 L1346 420 L1376 550 Z" fill="#4338CA" opacity="0.2"/>
+                    <path d="M1360 620 L1385 490 L1380 493 L1393 450 L1388 452 L1399 410 L1410 452 L1405 450 L1418 493 L1413 490 L1438 620 Z" fill="#3730A3" opacity="0.25"/>
+                    
+                    <!-- Flight Dash Line Arc -->
+                    <path d="M150 150 Q450 50 800 250 T1350 150" stroke="#6366F1" stroke-width="2" stroke-dasharray="6 6" opacity="0.4"/>
+                    <circle cx="800" cy="250" r="6" fill="#EC4899" opacity="0.6"/>
+                </svg>
+            </div>
+
+            <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-4">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 items-start">
+                    <!-- Steps Cards (Glassmorphic Semi-Transparent with Flat Art Stickers) -->
+                    <div class="space-y-4">
+                        <!-- Step 1 Card -->
+                        <div class="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:bg-white/95 transition-all duration-300 relative overflow-hidden group">
+                            <!-- Flat Art Passport/Ticket Sticker Overlay -->
+                            <div class="absolute -right-4 -bottom-4 opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none transform group-hover:scale-105">
+                                <svg class="w-28 h-28 text-indigo-600" viewBox="0 0 100 100" fill="currentColor">
+                                    <rect x="20" y="15" width="50" height="70" rx="8" fill="#4338CA" opacity="0.8"/>
+                                    <rect x="28" y="25" width="34" height="24" rx="4" fill="#818CF8"/>
+                                    <circle cx="45" cy="37" r="6" fill="#FDE047"/>
+                                    <path d="M30 60H60M30 70H50" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+                                    <path d="M45 10L75 30L65 85" stroke="#EC4899" stroke-width="4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="flex items-start relative z-10">
+                                <div class="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-xl w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-black shadow-md shadow-indigo-500/20 text-sm">1</div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-900 mb-1">Tentukan Informasi Dasar</h3>
+                                    <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">Pilih destinasi impian, tipe perjalanan, dan tentukan target bulan keberangkatan Anda.</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="flex items-start">
-                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">2</div>
-                            <div>
-                                <h3 class="font-bold text-xl mb-2">Input Detail Pengeluaran</h3>
-                                <p class="text-gray-600">Catat secara leluasa seluruh biaya akomodasi penginapan, transportasi, tiket wahana, hingga asuransi/visa.</p>
+                        <!-- Step 2 Card -->
+                        <div class="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:bg-white/95 transition-all duration-300 relative overflow-hidden group">
+                            <!-- Flat Art Wallet/Expense Sticker Overlay -->
+                            <div class="absolute -right-4 -bottom-4 opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none transform group-hover:scale-105">
+                                <svg class="w-28 h-28 text-purple-600" viewBox="0 0 100 100" fill="currentColor">
+                                    <rect x="15" y="25" width="65" height="50" rx="10" fill="#7C3AED" opacity="0.8"/>
+                                    <path d="M50 25V18C50 14 54 10 60 10H70" stroke="#A855F7" stroke-width="4"/>
+                                    <rect x="55" y="42" width="25" height="16" rx="4" fill="#F59E0B"/>
+                                    <circle cx="67" cy="50" r="3" fill="#FFFFFF"/>
+                                </svg>
+                            </div>
+                            <div class="flex items-start relative z-10">
+                                <div class="bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-xl w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-black shadow-md shadow-purple-500/20 text-sm">2</div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-900 mb-1">Input Detail Pengeluaran</h3>
+                                    <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">Catat secara leluasa seluruh biaya akomodasi penginapan, transportasi, tiket wahana, hingga asuransi/visa.</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="flex items-start">
-                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">3</div>
-                            <div>
-                                <h3 class="font-bold text-xl mb-2">Kalkulasi Otomatis & Buffer Ekstra</h3>
-                                <p class="text-gray-600">Sistem akan merekap total biaya perjalanan secara otomatis. Anda juga bisa menambahkan uang jaga-jaga (buffer) darurat.</p>
+                        <!-- Step 3 Card -->
+                        <div class="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:bg-white/95 transition-all duration-300 relative overflow-hidden group">
+                            <!-- Flat Art Calculator/Shield Sticker Overlay -->
+                            <div class="absolute -right-4 -bottom-4 opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none transform group-hover:scale-105">
+                                <svg class="w-28 h-28 text-emerald-600" viewBox="0 0 100 100" fill="currentColor">
+                                    <rect x="20" y="15" width="50" height="70" rx="10" fill="#059669" opacity="0.8"/>
+                                    <rect x="28" y="23" width="34" height="18" rx="4" fill="#A7F3D0"/>
+                                    <circle cx="34" cy="52" r="4" fill="#FFFFFF"/>
+                                    <circle cx="45" cy="52" r="4" fill="#FFFFFF"/>
+                                    <circle cx="56" cy="52" r="4" fill="#FFFFFF"/>
+                                    <circle cx="34" cy="67" r="4" fill="#FFFFFF"/>
+                                    <circle cx="45" cy="67" r="4" fill="#FFFFFF"/>
+                                    <rect x="52" y="63" width="10" height="8" rx="2" fill="#F59E0B"/>
+                                </svg>
+                            </div>
+                            <div class="flex items-start relative z-10">
+                                <div class="bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-xl w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-black shadow-md shadow-emerald-500/20 text-sm">3</div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-900 mb-1">Kalkulasi Otomatis & Buffer Ekstra</h3>
+                                    <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">Sistem akan merekap total biaya perjalanan secara otomatis. Anda juga bisa menambahkan uang jaga-jaga (buffer) darurat.</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="flex items-start">
-                            <div class="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-bold">4</div>
-                            <div>
-                                <h3 class="font-bold text-xl mb-2">Simulasi Skema Menabung</h3>
-                                <p class="text-gray-600">Pilih untuk menabung harian, mingguan, atau bulanan. DreamJourney akan menghitung cicilan pas untuk Anda!</p>
+                        <!-- Step 4 Card -->
+                        <div class="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:bg-white/95 transition-all duration-300 relative overflow-hidden group">
+                            <!-- Flat Art Piggy Bank Sticker Overlay -->
+                            <div class="absolute -right-4 -bottom-4 opacity-15 group-hover:opacity-30 transition-opacity pointer-events-none transform group-hover:scale-105">
+                                <svg class="w-28 h-28 text-amber-600" viewBox="0 0 100 100" fill="currentColor">
+                                    <ellipse cx="48" cy="52" rx="30" ry="22" fill="#D97706" opacity="0.8"/>
+                                    <circle cx="32" cy="46" r="3" fill="#FFFFFF"/>
+                                    <rect x="42" y="24" width="12" height="6" rx="2" fill="#FBBF24"/>
+                                    <path d="M72 45L82 48L76 58Z" fill="#B45309"/>
+                                </svg>
+                            </div>
+                            <div class="flex items-start relative z-10">
+                                <div class="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-xl w-10 h-10 flex items-center justify-center mr-4 flex-shrink-0 font-black shadow-md shadow-amber-500/20 text-sm">4</div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-900 mb-1">Simulasi Skema Menabung</h3>
+                                    <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">Pilih untuk menabung harian, mingguan, atau bulanan. DreamJourney akan menghitung cicilan pas untuk Anda!</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <Show when="signed-in">
-                            <a href="/design-trip" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md">
-                                Mulai Rancang Perjalanan Anda
-                            </a>
-                        </Show>
-                        <Show when="signed-out">
-                            <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="mt-6 inline-block bg-secondary hover:bg-secondary-dark text-white px-8 py-3 rounded-lg font-semibold text-center transition shadow-md w-fit cursor-pointer">
-                                Mulai Rancang Perjalanan Anda
-                            </button>
-                        </Show>
+                        <div class="pt-2">
+                            <Show when="signed-in">
+                                <a href="/design-trip" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-indigo-500/25 transform hover:-translate-y-0.5">
+                                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    <span>Mulai Rancang Perjalanan Anda</span>
+                                </a>
+                            </Show>
+                            <Show when="signed-out">
+                                <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-indigo-500/25 transform hover:-translate-y-0.5 cursor-pointer">
+                                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    <span>Mulai Rancang Perjalanan Anda</span>
+                                </button>
+                            </Show>
+                        </div>
                     </div>
                     
-                    <!-- Interactive Quick Simulator -->
-                    <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 flex flex-col justify-center relative overflow-hidden">
-                        <!-- Decorative background elements -->
-                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
-                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-50 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
-
-                        <div class="relative z-10 text-center mb-8">
-                            <div class="bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
-                                <i data-feather="pie-chart" class="w-8 h-8"></i>
-                            </div>
-                            <h3 class="font-black text-2xl text-gray-800 tracking-tight">Simulasi Cepat</h3>
-                            <p class="text-gray-500 text-sm mt-2">Hitung estimasi tabungan untuk liburan impianmu!</p>
+                    <!-- Interactive Quick Simulator (Glassmorphic Semi-Transparent Card) -->
+                    <div class="bg-white/85 backdrop-blur-xl p-7 sm:p-8 rounded-3xl shadow-xl border border-slate-200/90 flex flex-col justify-center relative overflow-hidden">
+                        <!-- Decorative Flat Art Island & Compass Background -->
+                        <div class="absolute -top-10 -right-10 opacity-10 pointer-events-none">
+                            <svg class="w-56 h-56 text-indigo-900" viewBox="0 0 200 200" fill="currentColor">
+                                <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="8 6"/>
+                                <polygon points="100,30 115,90 170,100 115,110 100,170 85,110 30,100 85,90"/>
+                            </svg>
                         </div>
 
-                        <div class="relative z-10 space-y-6">
+                        <div class="relative z-10 text-center mb-6">
+                            <h3 class="font-black text-2xl text-slate-900 tracking-tight">Simulasi Cepat</h3>
+                            <p class="text-slate-500 text-xs sm:text-sm mt-1 font-medium">Hitung estimasi tabungan untuk liburan impianmu!</p>
+                        </div>
+
+                        <div class="relative z-10 space-y-5">
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Target Dana Liburan</label>
-                                <div class="relative group">
-                                    <span class="absolute left-4 top-3.5 font-bold text-gray-400 group-focus-within:text-primary transition-colors">Rp</span>
-                                    <input type="text" id="quick-target" value="10.000.000" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 font-bold text-gray-800 focus:outline-none focus:border-primary focus:ring-2 focus:ring-blue-100 transition-all text-lg" placeholder="10.000.000">
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Target Dana Liburan</label>
+                                <div class="relative group flex items-center">
+                                    <span class="absolute left-4 font-black text-slate-500 group-focus-within:text-indigo-600 transition-colors text-base pointer-events-none z-10">Rp.</span>
+                                    <input type="text" id="quick-target" value="10.000.000" class="w-full bg-slate-50/80 backdrop-blur-sm border border-slate-200 rounded-xl py-3.5 pl-14 pr-4 font-black text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all text-lg shadow-2xs" placeholder="10.000.000">
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between items-center">
-                                    Waktu Menabung
-                                    <span id="quick-time-label" class="text-primary bg-blue-50 px-3 py-1 rounded-full text-xs">6 Bulan</span>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5 flex justify-between items-center uppercase tracking-wider">
+                                    <span>Waktu Menabung</span>
+                                    <span id="quick-time-label" class="text-indigo-700 bg-indigo-100/80 border border-indigo-200 px-3 py-0.5 rounded-full text-xs font-bold shadow-2xs">6 Bulan</span>
                                 </label>
-                                <input type="range" id="quick-time" min="1" max="24" value="6" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary mt-2">
-                                <div class="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                                <input type="range" id="quick-time" min="1" max="24" value="6" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 mt-2">
+                                <div class="flex justify-between text-xs text-slate-400 mt-1.5 font-semibold">
                                     <span>1 Bln</span>
                                     <span>24 Bln</span>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Frekuensi Menabung</label>
-                                <div class="grid grid-cols-3 gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-                                    <button type="button" data-freq="daily" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all bg-white text-primary shadow-sm cursor-pointer border border-gray-100 text-center">Harian</button>
-                                    <button type="button" data-freq="weekly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-gray-600 hover:text-primary cursor-pointer text-center">Mingguan</button>
-                                    <button type="button" data-freq="monthly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-gray-600 hover:text-primary cursor-pointer text-center">Bulanan</button>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Frekuensi Menabung</label>
+                                <div class="grid grid-cols-3 gap-1.5 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200/80">
+                                    <button type="button" data-freq="daily" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all bg-white text-indigo-600 shadow-xs cursor-pointer border border-slate-200 text-center">Harian</button>
+                                    <button type="button" data-freq="weekly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-indigo-600 cursor-pointer text-center">Mingguan</button>
+                                    <button type="button" data-freq="monthly" class="freq-btn py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-indigo-600 cursor-pointer text-center">Bulanan</button>
                                 </div>
                             </div>
 
-                            <div class="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-6 text-center shadow-sm relative mt-4">
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/80 text-primary text-xs font-bold mb-3">
-                                    <i data-feather="sparkles" class="w-3.5 h-3.5"></i>
+                            <div class="bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-blue-50/90 border border-indigo-200/80 rounded-2xl p-5 text-center shadow-sm relative mt-3 backdrop-blur-md">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-bold mb-2 shadow-xs">
+                                    <i data-feather="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
                                     <span>Estimasi Tabungan</span>
                                 </div>
-                                <p class="text-xs text-gray-500 font-medium mb-1">Cukup Sisihkan</p>
-                                <div class="text-4xl font-black text-primary mb-2 tracking-tight" id="quick-result">Rp 55.556<span class="text-xl text-blue-500 font-bold ml-1">/hari</span></div>
-                                <p class="text-xs text-blue-600/90 font-medium">Makin cepat mulai, makin ringan langkahmu! ✨</p>
+                                <p class="text-xs text-slate-500 font-medium mb-1">Cukup Sisihkan</p>
+                                <div class="text-3xl sm:text-4xl font-black text-indigo-700 mb-1 tracking-tight" id="quick-result">Rp 55.556<span class="text-lg text-indigo-500 font-bold ml-1">/hari</span></div>
+                                <p class="text-xs text-indigo-600/90 font-medium">Makin cepat mulai, makin ringan langkahmu!</p>
                             </div>
                             
                             <Show when="signed-in">
-                                <button onclick="window.location.href='/design-trip'" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
-                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                <button onclick="window.location.href='/design-trip'" class="w-full mt-3 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-amber-500/20 transform hover:-translate-y-0.5">
+                                    <span>Langsung Rancang Sekarang</span>
+                                    <i data-feather="arrow-right" class="w-4 h-4"></i>
                                 </button>
                             </Show>
                             <Show when="signed-out">
-                                <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full mt-4 border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-3 rounded-xl transition-all duration-300 flex items-center justify-center cursor-pointer">
-                                    <i data-feather="arrow-right" class="w-4 h-4 mr-2"></i> Langsung Rancang Sekarang
+                                <button onclick="document.getElementById('custom-login-modal').classList.remove('hidden')" class="w-full mt-3 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-amber-500/20 transform hover:-translate-y-0.5">
+                                    <span>Langsung Rancang Sekarang</span>
+                                    <i data-feather="arrow-right" class="w-4 h-4"></i>
                                 </button>
                             </Show>
                         </div>
+                    </div>
+                <!-- Saved Drafts & Trip Plans List Section -->
+                <div id="drafts-section" class="mt-12 pt-8 border-t border-slate-200/80">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-extrabold uppercase tracking-wider mb-1">
+                                <i data-feather="bookmark" class="w-3.5 h-3.5"></i>
+                                <span>Draf Rencana Perjalanan Anda</span>
+                            </span>
+                            <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Kumpulan Draf & Perjalanan Tersimpan</h2>
+                        </div>
+                        <a href="/design-trip" class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm w-max">
+                            <i data-feather="plus" class="w-4 h-4"></i> Buat Rencana Baru
+                        </a>
+                    </div>
+
+                    <div id="drafts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Dynamic Draft Cards rendered by JS -->
                     </div>
                 </div>
             </div>
@@ -209,5 +399,46 @@ import { Show, SignInButton } from '@clerk/astro/components';
         quickTime?.addEventListener('input', calculateQuick);
         
         calculateQuick();
+
+        // Render saved draft plans from localStorage
+        const draftsGrid = document.getElementById('drafts-grid');
+        if (draftsGrid) {
+            const savedCustomGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
+            
+            if (savedCustomGoals.length === 0) {
+                draftsGrid.innerHTML = `
+                    <div class="col-span-full bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-8 text-center text-slate-500">
+                        <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                        <p class="font-bold text-slate-800 text-sm">Belum ada draf rencana perjalanan</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Rancang perjalanan impian Anda di menu Rancang Trip & Kalkulasi Biaya dan simpan sebagai draf untuk dilanjutkan kapan saja.</p>
+                        <a href="/design-trip" class="inline-block mt-4 bg-indigo-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-indigo-700 transition shadow-sm">Buat Rencana Pertama</a>
+                    </div>
+                `;
+            } else {
+                draftsGrid.innerHTML = savedCustomGoals.map((g: any) => `
+                    <div class="bg-white/85 backdrop-blur-md border border-slate-200/90 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between group">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'draft' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}">
+                                    ${g.status === 'draft' ? '📌 Draf Rencana' : '🚀 Tabungan Aktif'}
+                                </span>
+                                <span class="text-[11px] text-slate-400 font-semibold">${g.trip_type || 'Solo'} Trip</span>
+                            </div>
+                            <h3 class="font-black text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${g.title || 'Perjalanan Impian'}</h3>
+                            <div class="text-xs text-slate-500 font-semibold mb-3">Target Dana: <span class="font-black text-slate-900">Rp ${(g.target_amount || 0).toLocaleString('id-ID')}</span></div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-2">
+                            <span class="text-xs font-bold text-indigo-600">Rp ${(g.auto_debit_amount || 0).toLocaleString('id-ID')} ${g.frequency || '/hari'}</span>
+                            <a href="/design-trip" class="text-xs font-bold bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                                <span>Lanjutkan</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            if ((window as any).feather) (window as any).feather.replace();
+        }
     });
 </script>
