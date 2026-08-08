@@ -1053,16 +1053,12 @@ const isVerified = !!(dbUser?.username);
                 const res = await fetch(`/api/team-calendar?username=${encodeURIComponent(currentUser.username)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.teams && data.teams.length > 0) {
-                        const mergedMap = new Map();
-                        [...teams, ...data.teams.filter(t => t.id !== 'team_default_1')].forEach(t => mergedMap.set(t.id, t));
-                        teams = Array.from(mergedMap.values());
+                    if (Array.isArray(data.teams)) {
+                        teams = data.teams.filter(t => t.id !== 'team_default_1');
                         saveLocalTeams();
                     }
-                    if (data.events && data.events.length > 0) {
-                        const mergedEvtMap = new Map();
-                        [...allEvents, ...data.events].forEach(e => mergedEvtMap.set(e.id, e));
-                        allEvents = Array.from(mergedEvtMap.values());
+                    if (Array.isArray(data.events)) {
+                        allEvents = data.events;
                         saveLocalEvents();
                     }
                     if (Array.isArray(data.notifications)) {
