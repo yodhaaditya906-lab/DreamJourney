@@ -664,6 +664,21 @@ const currentUsername = clerkUser?.username || '';
         const modeDraft = document.getElementById('radio-mode-draft') as HTMLInputElement;
         const modeActive = document.getElementById('radio-mode-active') as HTMLInputElement;
 
+        // Action Mode (Draft vs Active) Listener to update Button Label
+        function updateSubmitButtonLabel() {
+            if (btnSubmitLabel) {
+                if (modeDraft && modeDraft.checked) {
+                    btnSubmitLabel.innerHTML = '💾 Simpan Rencana (Draf)';
+                } else {
+                    btnSubmitLabel.innerHTML = '🚀 Lanjut ke Pembayaran QRIS';
+                }
+            }
+        }
+
+        modeDraft?.addEventListener('change', updateSubmitButtonLabel);
+        modeActive?.addEventListener('change', updateSubmitButtonLabel);
+        updateSubmitButtonLabel();
+
         // Stepper Elements
         const viewStep1 = document.getElementById('view-step-1');
         const viewStep2 = document.getElementById('view-step-2');
