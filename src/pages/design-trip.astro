@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
 
+const { userId, sessionClaims } = Astro.locals.auth();
 const clerkUser = await Astro.locals.currentUser();
 if (clerkUser) {
     const hasDomisili = clerkUser.unsafeMetadata?.domisili;
@@ -11,11 +13,29 @@ if (clerkUser) {
     }
 }
 
-const currentUsername = clerkUser?.username || '';
+let dbUser = null;
+if (userId) {
+    const { data } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    dbUser = data;
+}
+
+const currentUsername = (
+    dbUser?.username || 
+    (sessionClaims?.username as string) || 
+    clerkUser?.username || 
+    clerkUser?.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 
+    ''
+).toLowerCase();
+
+const currentUserEmail = (
+    dbUser?.email || 
+    clerkUser?.emailAddresses?.[0]?.emailAddress || 
+    ''
+).toLowerCase();
 ---
 
 <Layout title="Rancang Trip & Kalkulasi Biaya - DreamJourney">
-    <main class="pt-24 pb-16 bg-slate-50/70 min-h-screen relative overflow-hidden" data-current-username={currentUsername.toLowerCase()}>
+    <main class="pt-24 pb-16 bg-slate-50/70 min-h-screen relative overflow-hidden" data-current-username={currentUsername} data-current-email={currentUserEmail}>
         <div class="container mx-auto px-4 w-full max-w-6xl relative z-10 space-y-6">
             
             <!-- Back Navigation & Title Header -->
@@ -826,10 +846,18 @@ const currentUsername = clerkUser?.username || '';
                 return;
             }
 
-            const currentUsername = document.querySelector('main')?.getAttribute('data-current-username') || '';
-            if (val.toLowerCase() === currentUsername.toLowerCase()) {
+            const mainEl = document.querySelector('main');
+            const currentUsername = (mainEl?.getAttribute('data-current-username') || '').toLowerCase();
+            const currentUserEmail = (mainEl?.getAttribute('data-current-email') || '').toLowerCase();
+            const valLower = val.toLowerCase();
+
+            if (
+                (currentUsername && valLower === currentUsername) ||
+                (currentUserEmail && valLower === currentUserEmail) ||
+                (currentUserEmail && valLower === currentUserEmail.split('@')[0])
+            ) {
                 if (friendMsg) {
-                    friendMsg.innerText = `⚠️ Anda tidak dapat mengundang username akun Anda sendiri.`;
+                    friendMsg.innerText = `⚠️ Anda tidak dapat mengundang akun Anda sendiri ke dalam grup.`;
                     friendMsg.classList.remove('hidden');
                 }
                 return;
@@ -845,6 +873,20 @@ const currentUsername = clerkUser?.username || '';
 
                 if (res.ok && !data.isAvailable && data.user) {
                     const u = data.user;
+                    const fetchedUname = (u.username || '').toLowerCase();
+                    const fetchedEmail = (u.email || '').toLowerCase();
+
+                    if (
+                        (currentUsername && fetchedUname === currentUsername) ||
+                        (currentUserEmail && fetchedEmail === currentUserEmail)
+                    ) {
+                        if (friendMsg) {
+                            friendMsg.innerText = `⚠️ Anda tidak dapat mengundang akun Anda sendiri ke dalam grup.`;
+                            friendMsg.classList.remove('hidden');
+                        }
+                        return;
+                    }
+
                     groupMembersData.push({
                         username: u.username || val,
                         fullName: u.fullName || u.username || val,
