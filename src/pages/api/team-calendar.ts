@@ -233,8 +233,10 @@ export const POST: APIRoute = async (context) => {
                 return new Response(JSON.stringify({ error: 'Missing parameters' }), { status: 400 });
             }
 
+            const notifId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+
             const notif = {
-                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                id: notifId,
                 recipient_username: recipient_username.toLowerCase(),
                 sender_username: sender_username.toLowerCase(),
                 sender_fullname: sender_fullname || sender_username,
@@ -248,9 +250,17 @@ export const POST: APIRoute = async (context) => {
                 created_at: new Date().toISOString()
             };
 
-            await supabase.from('team_notifications').insert(notif);
+            const { data: insertedData, error: insertErr } = await supabase.from('team_notifications').insert(notif).select();
 
-            return new Response(JSON.stringify({ success: true, notification: notif }), {
+            if (insertErr) {
+                console.error("SEND_INVITE_NOTIF insert error:", insertErr);
+                return new Response(JSON.stringify({ error: insertErr.message || 'Gagal menyimpan undangan ke database.' }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            return new Response(JSON.stringify({ success: true, notification: insertedData?.[0] || notif }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });

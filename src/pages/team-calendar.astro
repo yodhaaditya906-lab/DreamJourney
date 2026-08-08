@@ -1537,22 +1537,7 @@ const isVerified = !!(dbUser?.username);
                             isOwner: false
                         };
 
-                        const notifObj = {
-                            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                            recipient_username: invitedUser.username.toLowerCase(),
-                            sender_username: currentUser.username.toLowerCase(),
-                            type: 'TEAM_INVITE',
-                            team_id: activeTeamId,
-                            team_name: activeTeam.name,
-                            team_category: activeTeam.category || 'Lainnya',
-                            title: `Undangan Tim: ${activeTeam.name}`,
-                            message: `@${currentUser.username} mengundang Anda bergabung ke tim "${activeTeam.name}".`,
-                            status: 'PENDING',
-                            created_at: new Date().toISOString()
-                        };
-                        pushGlobalNotification(notifObj);
-
-                        fetch('/api/team-calendar', {
+                        const notifRes = await fetch('/api/team-calendar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1564,15 +1549,34 @@ const isVerified = !!(dbUser?.username);
                                 team_name: activeTeam.name,
                                 team_category: activeTeam.category
                             })
-                        }).catch(() => {});
+                        });
 
-                        searchInput.value = '';
-                        showFeedback(`Undangan telah dikirim ke Inbox @${invitedUser.username}`, "text-emerald-600");
+                        const notifData = await notifRes.json();
+                        if (notifRes.ok && notifData.success) {
+                            const notifObj = notifData.notification || {
+                                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                recipient_username: invitedUser.username.toLowerCase(),
+                                sender_username: currentUser.username.toLowerCase(),
+                                type: 'TEAM_INVITE',
+                                team_id: activeTeamId,
+                                team_name: activeTeam.name,
+                                team_category: activeTeam.category || 'Lainnya',
+                                title: `Undangan Tim: ${activeTeam.name}`,
+                                message: `@${currentUser.username} mengundang Anda bergabung ke tim "${activeTeam.name}".`,
+                                status: 'PENDING',
+                                created_at: new Date().toISOString()
+                            };
+                            pushGlobalNotification(notifObj);
+                            searchInput.value = '';
+                            showFeedback(`Undangan telah berhasil dikirim ke @${invitedUser.username}`, "text-emerald-600");
+                        } else {
+                            showFeedback(notifData.error || "Gagal mengirim undangan ke server Supabase.", "text-rose-500");
+                        }
                     } else {
                         showFeedback(`Username @${usernameVal} tidak ditemukan di database.`, "text-rose-500");
                     }
                 } catch (err) {
-                    showFeedback("Kesalahan koneksi.", "text-rose-500");
+                    showFeedback("Kesalahan koneksi ke server.", "text-rose-500");
                 } finally {
                     addBtn.disabled = false;
                     addBtn.innerHTML = `<i data-feather="send" class="w-3.5 h-3.5"></i><span>Undang</span>`;
@@ -2078,57 +2082,72 @@ const isVerified = !!(dbUser?.username);
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Membuat...';
 
-                const newTeamId = 'team_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-
-                const newTeam = {
-                    id: newTeamId,
-                    name: name,
-                    category: category,
-                    owner_username: currentUser.username,
-                    members: [currentUser]
-                };
-
-                teams.unshift(newTeam);
-                saveLocalTeams();
-
-                tempCreateMembers.forEach(m => {
-                    const notifObj = {
-                        id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                        recipient_username: m.username.toLowerCase(),
-                        sender_username: currentUser.username.toLowerCase(),
-                        type: 'TEAM_INVITE',
-                        team_id: newTeamId,
-                        team_name: name,
-                        team_category: category,
-                        title: `Undangan Tim: ${name}`,
-                        message: `@${currentUser.username} mengundang Anda bergabung ke tim "${name}" (${category}).`,
-                        status: 'PENDING',
-                        created_at: new Date().toISOString()
-                    };
-                    pushGlobalNotification(notifObj);
-                });
-
-                closeCreateTeamModal();
-                createTeamForm.reset();
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Buat Tim Baru';
-
                 try {
-                    await fetch('/api/team-calendar', {
+                    const res = await fetch('/api/team-calendar', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             action: 'CREATE_TEAM',
-                            name: newTeam.name,
-                            category: newTeam.category,
+                            name: name,
+                            category: category,
                             members: tempCreateMembers,
                             owner_username: currentUser.username,
                             owner_user_obj: currentUser
                         })
                     });
-                } catch (err) {}
 
-                openTeamCalendarView(newTeam.id);
+                    const resData = await res.json();
+                    if (!res.ok || resData.error) {
+                        alert(resData.error || "Gagal membuat tim di server Supabase.");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Buat Tim Baru';
+                        return;
+                    }
+
+                    const createdTeam = resData.team || {
+                        id: newTeamId,
+                        name: name,
+                        category: category,
+                        owner_username: currentUser.username,
+                        members: [currentUser]
+                    };
+
+                    teams.unshift(createdTeam);
+                    saveLocalTeams();
+
+                    if (Array.isArray(resData.notifications)) {
+                        resData.notifications.forEach(n => pushGlobalNotification(n));
+                    } else {
+                        tempCreateMembers.forEach(m => {
+                            const notifObj = {
+                                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                                recipient_username: m.username.toLowerCase(),
+                                sender_username: currentUser.username.toLowerCase(),
+                                type: 'TEAM_INVITE',
+                                team_id: createdTeam.id,
+                                team_name: name,
+                                team_category: category,
+                                title: `Undangan Tim: ${name}`,
+                                message: `@${currentUser.username} mengundang Anda bergabung ke tim "${name}" (${category}).`,
+                                status: 'PENDING',
+                                created_at: new Date().toISOString()
+                            };
+                            pushGlobalNotification(notifObj);
+                        });
+                    }
+
+                    closeCreateTeamModal();
+                    createTeamForm.reset();
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Buat Tim Baru';
+                    openTeamCalendarView(createdTeam.id);
+
+                } catch (err) {
+                    console.error("CREATE_TEAM API error:", err);
+                    alert("Terjadi kesalahan koneksi server saat membuat tim.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Buat Tim Baru';
+                }
             });
         }
 
