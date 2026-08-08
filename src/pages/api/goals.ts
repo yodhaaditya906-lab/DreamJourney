@@ -41,7 +41,7 @@ export const GET: APIRoute = async (context) => {
 
         const allGoals = Array.from(goalMap.values());
 
-        // Process payment_detail JSON if present
+        // Process payment_detail JSON if present as fallback
         const processedGoals = allGoals.map(g => {
             let detailsObj: any = {};
             if (g.payment_detail) {
@@ -63,19 +63,18 @@ export const GET: APIRoute = async (context) => {
                 saving_type: g.saving_type,
                 group_members: g.group_members || [],
                 created_at: g.created_at,
-                status: detailsObj.status || (g.saved_amount > 0 ? 'active' : 'draft'),
-                departure_date: detailsObj.departure_date || '',
-                saving_end_date: detailsObj.saving_end_date || '',
-                hotels: detailsObj.hotels || [],
-                transports: detailsObj.transports || [],
-                activities: detailsObj.activities || [],
-                others: detailsObj.others || [],
-                buffer_amount: detailsObj.buffer_amount || '',
-                buffer_split: detailsObj.buffer_split || 'split',
+                status: g.status || detailsObj.status || (g.saved_amount > 0 ? 'active' : 'draft'),
+                departure_date: g.departure_date || detailsObj.departure_date || '',
+                saving_end_date: g.saving_end_date || detailsObj.saving_end_date || '',
+                hotels: (Array.isArray(g.hotels) && g.hotels.length > 0) ? g.hotels : (detailsObj.hotels || []),
+                transports: (Array.isArray(g.transports) && g.transports.length > 0) ? g.transports : (detailsObj.transports || []),
+                activities: (Array.isArray(g.activities) && g.activities.length > 0) ? g.activities : (detailsObj.activities || []),
+                others: (Array.isArray(g.others) && g.others.length > 0) ? g.others : (detailsObj.others || []),
+                buffer_amount: g.buffer_amount || detailsObj.buffer_amount || '',
+                buffer_split: g.buffer_split || detailsObj.buffer_split || 'split',
                 saving_freq: detailsObj.saving_freq || '1',
                 group_members_data: detailsObj.group_members_data || [],
-                payment_method: g.payment_method,
-                raw_details: detailsObj
+                payment_method: g.payment_method
             };
         });
 
@@ -100,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const body = await request.json();
         
         // Ensure user exists in users table first
-        const { data: userRecord } = await supabase.from('users').select('id').eq('id', userId).maybeSingle();
+        const { data: userRecord } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
         if (!userRecord) {
             await supabase.from('users').insert({ id: userId });
         }
@@ -141,7 +140,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
             payment_detail: paymentDetailStr,
             trip_type: body.trip_type || 'Solo',
             saving_type: body.saving_type || 'Konvensional',
-            group_members: body.group_members || []
+            group_members: body.group_members || [],
+            status: body.status || 'draft',
+            departure_date: body.departure_date || null,
+            saving_end_date: body.saving_end_date || null,
+            hotels: body.hotels || [],
+            transports: body.transports || [],
+            activities: body.activities || [],
+            others: body.others || [],
+            buffer_amount: body.buffer_amount || null,
+            buffer_split: body.buffer_split || 'split'
         };
 
         let resultData = null;
@@ -174,7 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 .single();
 
             if (insertErr) {
-                console.warn("Goals API Insert warning (retrying without id):", insertErr.message);
+                console.warn("Goals API Insert warning (retrying without custom id):", insertErr.message);
                 delete goalPayload.id;
                 const { data: retryData, error: retryErr } = await supabase
                     .from('goals')
