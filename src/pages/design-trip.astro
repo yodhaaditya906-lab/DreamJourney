@@ -1155,6 +1155,67 @@ const currentUserEmail = (
             radio.addEventListener('change', calculateBreakdown);
         });
 
+        let editingGoalId: string | null = null;
+
+        function getSectionRowData(listId: string) {
+            const list = document.getElementById(listId);
+            if (!list) return [];
+            const rows: { name: string; cost: string; split: string }[] = [];
+            list.querySelectorAll('.expense-row').forEach(row => {
+                const nameInp = row.querySelector('input[type="text"]:not(.cost-input)') as HTMLInputElement;
+                const costInp = row.querySelector('.cost-input') as HTMLInputElement;
+                const splitSel = row.querySelector('.split-select') as HTMLSelectElement;
+                if (nameInp || costInp) {
+                    rows.push({
+                        name: nameInp?.value || '',
+                        cost: costInp?.value || '',
+                        split: splitSel?.value || 'split'
+                    });
+                }
+            });
+            return rows;
+        }
+
+        function setSectionRowData(listId: string, rowsData: { name?: string; cost?: string | number; split?: string }[], placeholderName: string, defaultSplit: boolean = true) {
+            const list = document.getElementById(listId);
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (!rowsData || rowsData.length === 0) {
+                rowsData = [{ name: '', cost: '', split: defaultSplit ? 'split' : 'personal' }];
+            }
+
+            rowsData.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'expense-row flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition';
+                const costFormatted = (typeof item.cost === 'number' && item.cost > 0) 
+                    ? item.cost.toLocaleString('id-ID') 
+                    : (item.cost || '');
+                
+                const isSplit = item.split ? item.split === 'split' : defaultSplit;
+
+                row.innerHTML = `
+                    <input type="text" value="${item.name || ''}" placeholder="${placeholderName}" class="flex-1 border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-medium" required>
+                    <div class="w-full sm:w-36 relative flex items-center">
+                        <span class="absolute left-3 font-bold text-slate-400 text-xs pointer-events-none">Rp.</span>
+                        <input type="text" value="${costFormatted}" placeholder="0" class="cost-input w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs sm:text-sm bg-white font-bold text-slate-800" required>
+                    </div>
+                    <select class="split-select border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shrink-0 shadow-2xs">
+                        <option value="split" ${isSplit ? 'selected' : ''}>👥 Patungan</option>
+                        <option value="personal" ${!isSplit ? 'selected' : ''}>👤 Per Orang</option>
+                    </select>
+                    <button type="button" class="btn-remove-row text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition cursor-pointer shrink-0">
+                        <i data-feather="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                list.appendChild(row);
+            });
+
+            if ((window as any).feather) (window as any).feather.replace();
+            bindCostInputs();
+            bindSplitSelects();
+        }
+
         // FORM SUBMISSION (STEP 1)
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1163,24 +1224,45 @@ const currentUserEmail = (
             const isDraft = modeDraft && modeDraft.checked;
             const title = destInput?.value.trim() || 'Perjalanan Impian';
 
+            const bufferInput = document.getElementById('buffer-input') as HTMLInputElement;
+            const bufferSplitSelect = document.getElementById('buffer-split-select') as HTMLSelectElement;
+            const freqInput = document.querySelector('input[name="saving-freq"]:checked') as HTMLInputElement;
+
+            const goalId = editingGoalId || ('goal_' + Date.now());
+
             const goalData = {
-                id: 'goal_' + Date.now(),
+                id: goalId,
                 title: title,
                 target_amount: grandTotalPersonal,
                 total_rombongan_amount: grandTotalRombongan,
                 auto_debit_amount: amountPerFreq,
                 frequency: labelUnit,
                 trip_type: tripTypeSelect?.value || 'Solo',
+                group_members_data: groupMembersData,
                 group_members: groupFriends,
+                departure_date: (document.getElementById('departure-date') as HTMLInputElement)?.value || '',
+                saving_end_date: (document.getElementById('saving-end-date') as HTMLInputElement)?.value || '',
+                hotels: getSectionRowData('hotel-list'),
+                transports: getSectionRowData('transport-list'),
+                activities: getSectionRowData('activity-list'),
+                others: getSectionRowData('other-list'),
+                buffer_amount: bufferInput?.value || '',
+                buffer_split: bufferSplitSelect?.value || 'split',
+                saving_freq: freqInput?.value || '1',
                 saving_type: 'Konvensional',
                 payment_method: 'QRIS',
                 status: isDraft ? 'draft' : 'active',
                 created_at: new Date().toISOString()
             };
 
-            // Save to LocalStorage array for persistent client tracking
-            const existingGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
-            existingGoals.unshift(goalData);
+            // Save to LocalStorage array (Replace existing goal if editing, or unshift if new)
+            let existingGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
+            const existingIndex = existingGoals.findIndex((g: any) => g.id === goalId);
+            if (existingIndex >= 0) {
+                existingGoals[existingIndex] = goalData;
+            } else {
+                existingGoals.unshift(goalData);
+            }
             localStorage.setItem('dreamjourney_custom_goals', JSON.stringify(existingGoals));
 
             // Also post to Supabase API if possible
@@ -1229,9 +1311,82 @@ const currentUserEmail = (
             const finalDestName = document.getElementById('final-dest-name');
             const finalTargetAmount = document.getElementById('final-target-amount');
 
-            const { grandTotal } = calculateBreakdown();
+            const { grandTotalPersonal } = calculateBreakdown();
             if (finalDestName) finalDestName.innerText = destInput?.value.trim() || 'Bali';
-            if (finalTargetAmount) finalTargetAmount.innerText = `Rp ${grandTotal.toLocaleString('id-ID')}`;
+            if (finalTargetAmount) finalTargetAmount.innerText = `Rp ${grandTotalPersonal.toLocaleString('id-ID')}`;
         });
+
+        // Load Draft / Goal Data from URL Param (?id=... or ?edit=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id') || urlParams.get('edit') || urlParams.get('draftId');
+
+        if (targetId) {
+            const savedGoals = JSON.parse(localStorage.getItem('dreamjourney_custom_goals') || '[]');
+            let targetGoal = savedGoals.find((g: any) => g.id === targetId);
+
+            if (!targetGoal && savedGoals.length > 0) {
+                targetGoal = savedGoals.find((g: any) => g.title && g.title.toLowerCase() === targetId.toLowerCase());
+            }
+
+            if (targetGoal) {
+                editingGoalId = targetGoal.id;
+
+                if (destInput && targetGoal.title) {
+                    destInput.value = targetGoal.title;
+                }
+
+                if (tripTypeSelect && targetGoal.trip_type) {
+                    tripTypeSelect.value = targetGoal.trip_type;
+                    if (targetGoal.trip_type !== 'Solo') {
+                        containerGroup?.classList.remove('hidden');
+                    } else {
+                        containerGroup?.classList.add('hidden');
+                    }
+                }
+
+                if (Array.isArray(targetGoal.group_members_data) && targetGoal.group_members_data.length > 0) {
+                    groupMembersData = targetGoal.group_members_data;
+                    groupFriends = targetGoal.group_members || groupMembersData.map(m => m.username);
+                    renderFriends();
+                } else if (Array.isArray(targetGoal.group_members) && targetGoal.group_members.length > 0) {
+                    groupMembersData = targetGoal.group_members.map((uname: string) => ({
+                        username: uname,
+                        fullName: uname,
+                        avatarUrl: null
+                    }));
+                    groupFriends = targetGoal.group_members;
+                    renderFriends();
+                }
+
+                const depDateInput = document.getElementById('departure-date') as HTMLInputElement;
+                const endDateInput = document.getElementById('saving-end-date') as HTMLInputElement;
+                if (depDateInput && targetGoal.departure_date) depDateInput.value = targetGoal.departure_date;
+                if (endDateInput && targetGoal.saving_end_date) endDateInput.value = targetGoal.saving_end_date;
+
+                if (targetGoal.hotels) setSectionRowData('hotel-list', targetGoal.hotels, 'Nama Hotel / Link Airbnb', true);
+                if (targetGoal.transports) setSectionRowData('transport-list', targetGoal.transports, 'Tiket Pesawat / Kereta / Sewa Mobil', false);
+                if (targetGoal.activities) setSectionRowData('activity-list', targetGoal.activities, 'Tiket Wahana / Tour / Aktivitas', true);
+                if (targetGoal.others) setSectionRowData('other-list', targetGoal.others, 'Visa / Asuransi / Belanja Oleh-oleh', true);
+
+                const bufferInput = document.getElementById('buffer-input') as HTMLInputElement;
+                const bufferSplitSelect = document.getElementById('buffer-split-select') as HTMLSelectElement;
+                if (bufferInput && targetGoal.buffer_amount) bufferInput.value = targetGoal.buffer_amount;
+                if (bufferSplitSelect && targetGoal.buffer_split) bufferSplitSelect.value = targetGoal.buffer_split;
+
+                if (targetGoal.saving_freq) {
+                    const freqRadio = document.querySelector(`input[name="saving-freq"][value="${targetGoal.saving_freq}"]`) as HTMLInputElement;
+                    if (freqRadio) freqRadio.checked = true;
+                }
+
+                if (targetGoal.status === 'draft' && modeDraft) {
+                    modeDraft.checked = true;
+                } else if (modeActive) {
+                    modeActive.checked = true;
+                }
+                updateSubmitButtonLabel();
+
+                calculateBreakdown();
+            }
+        }
     });
 </script>
