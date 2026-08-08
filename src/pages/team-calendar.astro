@@ -22,11 +22,46 @@ const isVerified = !!(dbUser?.username);
         
         <!-- Full-Width Edge-to-Edge Flat Art Hero Banner Header -->
         <section class="w-full bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white pt-28 pb-10 sm:pb-12 mb-8 relative border-b border-indigo-500/20 shadow-lg z-30">
-            <!-- Flat Art Background Vector Elements (overflow-hidden scoped to vectors) -->
-            <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                <div class="absolute -right-12 -top-12 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl"></div>
-                <div class="absolute right-1/3 -bottom-12 w-72 h-72 bg-amber-500/15 rounded-full blur-2xl"></div>
-                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <!-- Flat Art Nature Landscape Background (Semi-Transparent, Edge-to-Edge) -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                <!-- Soft Glow Orbs -->
+                <div class="absolute -right-12 -top-12 w-96 h-96 bg-indigo-500/25 rounded-full blur-3xl"></div>
+                <div class="absolute left-1/4 -bottom-12 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl"></div>
+                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:20px_20px]"></div>
+
+                <!-- Full-Width Flat Art Nature Landscape SVG -->
+                <svg class="absolute bottom-0 left-0 w-full h-full object-cover opacity-25" viewBox="0 0 1440 320" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Sun Disk -->
+                    <circle cx="1200" cy="80" r="70" fill="#F59E0B" opacity="0.6"/>
+                    <circle cx="1200" cy="80" r="100" fill="#FDE047" opacity="0.15"/>
+
+                    <!-- Clouds -->
+                    <path d="M120 70C135 55 165 58 172 67C182 61 202 67 206 77H105C105 70 112 67 120 70Z" fill="#38BDF8" opacity="0.6"/>
+                    <path d="M680 95C692 82 718 85 724 93C733 87 750 93 754 102H668C668 96 673 93 680 95Z" fill="#818CF8" opacity="0.5"/>
+
+                    <!-- Flying Birds Flat Art -->
+                    <path d="M300 60Q310 50 320 60Q330 50 340 60" stroke="#F8FAFC" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+                    <path d="M330 75Q337 67 345 75Q352 67 360 75" stroke="#F8FAFC" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+
+                    <!-- Mountain Layer 1 (Distant Peaks) -->
+                    <path d="M-50 320L180 140L410 320H-50Z" fill="#6366F1" opacity="0.5"/>
+                    <path d="M320 320L580 110L840 320H320Z" fill="#4F46E5" opacity="0.4"/>
+                    <path d="M750 320L980 150L1210 320H750Z" fill="#3B82F6" opacity="0.45"/>
+                    <path d="M1100 320L1310 180L1500 320H1100Z" fill="#6366F1" opacity="0.5"/>
+
+                    <!-- Mountain Snow Caps Flat Art -->
+                    <path d="M580 110L545 155L560 150L580 160L600 150L615 155L580 110Z" fill="#E0E7FF" opacity="0.6"/>
+                    <path d="M180 140L155 175L170 170L180 178L190 170L205 175L180 140Z" fill="#E0E7FF" opacity="0.5"/>
+                    <path d="M980 150L955 185L970 180L980 188L990 180L1005 185L980 150Z" fill="#E0E7FF" opacity="0.5"/>
+
+                    <!-- Hills Layer 2 (Rolling Foreground Hills) -->
+                    <path d="M-20 320C200 240 450 250 700 280C950 310 1200 260 1480 320H-20Z" fill="#0EA5E9" opacity="0.3"/>
+                    <path d="M100 320C350 230 650 260 950 290C1200 320 1350 280 1500 320H100Z" fill="#10B981" opacity="0.25"/>
+
+                    <!-- Pine Tree Silhouettes along the Bottom Layer -->
+                    <path d="M50 320L65 290L60 292L70 270L65 272L75 250L85 272L80 270L90 292L85 290L100 320H50Z" fill="#064E3B" opacity="0.6"/>
+                    <path d="M1350 320L1365 285L1360 287L1370 265L1365 267L1375 245L1385 267L1380 265L1390 287L1385 285L1400 320H1350Z" fill="#064E3B" opacity="0.6"/>
+                </svg>
             </div>
 
             <div class="w-full lg:w-[90%] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
