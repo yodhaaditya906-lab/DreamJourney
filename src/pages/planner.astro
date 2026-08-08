@@ -312,7 +312,9 @@ import { Show, SignInButton } from '@clerk/astro/components';
                             </Show>
                         </div>
                     </div>
-                <!-- Saved Drafts & Trip Plans List Section -->
+                </div>
+
+                <!-- Saved Drafts & Trip Plans List Section (Full Width, Vertical Stacked Cards) -->
                 <div id="drafts-section" class="mt-12 pt-8 border-t border-slate-200/80">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div>
@@ -327,7 +329,7 @@ import { Show, SignInButton } from '@clerk/astro/components';
                         </a>
                     </div>
 
-                    <div id="drafts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div id="drafts-grid" class="space-y-4 w-full">
                         <!-- Dynamic Draft Cards rendered by JS -->
                     </div>
                 </div>
@@ -407,7 +409,7 @@ import { Show, SignInButton } from '@clerk/astro/components';
             
             if (savedCustomGoals.length === 0) {
                 draftsGrid.innerHTML = `
-                    <div class="col-span-full bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-8 text-center text-slate-500">
+                    <div class="w-full bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-8 text-center text-slate-500">
                         <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
                         <p class="font-bold text-slate-800 text-sm">Belum ada draf rencana perjalanan</p>
                         <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Rancang perjalanan impian Anda di menu Rancang Trip & Kalkulasi Biaya dan simpan sebagai draf untuk dilanjutkan kapan saja.</p>
@@ -416,23 +418,31 @@ import { Show, SignInButton } from '@clerk/astro/components';
                 `;
             } else {
                 draftsGrid.innerHTML = savedCustomGoals.map((g: any) => `
-                    <div class="bg-white/85 backdrop-blur-md border border-slate-200/90 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between group">
-                        <div>
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'draft' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}">
-                                    ${g.status === 'draft' ? '📌 Draf Rencana' : '🚀 Tabungan Aktif'}
-                                </span>
-                                <span class="text-[11px] text-slate-400 font-semibold">${g.trip_type || 'Solo'} Trip</span>
+                    <div class="bg-white/85 backdrop-blur-md border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
+                                🗺️
                             </div>
-                            <h3 class="font-black text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">${g.title || 'Perjalanan Impian'}</h3>
-                            <div class="text-xs text-slate-500 font-semibold mb-3">Target Dana: <span class="font-black text-slate-900">Rp ${(g.target_amount || 0).toLocaleString('id-ID')}</span></div>
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'draft' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}">
+                                        ${g.status === 'draft' ? '📌 Draf Rencana' : '🚀 Tabungan Aktif'}
+                                    </span>
+                                    <span class="text-xs text-slate-400 font-semibold">• ${g.trip_type || 'Solo'} Trip</span>
+                                </div>
+                                <h3 class="font-black text-lg sm:text-xl text-slate-900 group-hover:text-indigo-600 transition-colors truncate capitalize">${g.title || 'Perjalanan Impian'}</h3>
+                                <p class="text-xs text-slate-500 font-medium mt-0.5">Target Dana: <span class="font-black text-slate-900">Rp ${(g.target_amount || 0).toLocaleString('id-ID')}</span></p>
+                            </div>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-2">
-                            <span class="text-xs font-bold text-indigo-600">Rp ${(g.auto_debit_amount || 0).toLocaleString('id-ID')} ${g.frequency || '/hari'}</span>
-                            <a href="/design-trip" class="text-xs font-bold bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-700 px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                        <div class="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                            <div class="text-left sm:text-right">
+                                <span class="text-[11px] text-slate-400 font-medium block">Simulasi Tabungan</span>
+                                <span class="text-sm sm:text-base font-black text-indigo-600">Rp ${(g.auto_debit_amount || 0).toLocaleString('id-ID')} <span class="text-xs font-semibold text-slate-500">${g.frequency || '/hari'}</span></span>
+                            </div>
+                            <a href="/design-trip" class="text-xs font-bold bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-xs shrink-0">
                                 <span>Lanjutkan</span>
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </a>
                         </div>
                     </div>
